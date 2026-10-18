@@ -1,0 +1,61 @@
+/* src/pages/farm/Farm.css — NEW FILE
+   Styles shared by every farm screen. Class prefix: farm-. Colours, spacing and type come from tokens only. */
+.farm { display: grid; gap: var(--space-5); max-width: 1180px; padding-bottom: var(--space-8); }
+.farm-head { display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: space-between; align-items: end; }
+.farm-head__title { margin: 0; font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-text); }
+.farm-head__lead { margin: var(--space-1) 0 0; color: var(--color-text-muted); font-size: var(--text-sm); }
+.farm-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.farm-form { display: grid; gap: var(--space-4); }
+.farm-form__row { display: grid; gap: var(--space-4); grid-template-columns: 1fr; }
+@media (min-width: 640px) { .farm-form__row { grid-template-columns: 1fr 1fr; } }
+
+.farm-tabs { display: flex; gap: var(--space-1); overflow-x: auto; border-bottom: 1px solid var(--color-border); scrollbar-width: thin; }
+.farm-tab { appearance: none; background: none; border: 0; border-bottom: 3px solid transparent; padding: var(--space-3) var(--space-4); min-height: 44px; color: var(--color-text-muted); font: inherit; font-weight: var(--weight-medium); cursor: pointer; white-space: nowrap; }
+.farm-tab:hover { color: var(--color-text); }
+.farm-tab[aria-selected="true"] { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+.farm-tab:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.farm-tab__n { margin-left: var(--space-2); background: var(--color-neutral-bg); color: var(--color-neutral-text); border-radius: var(--radius-full); padding: 0 var(--space-2); font-size: var(--text-xs); }
+
+.farm-stats { display: grid; gap: var(--space-3); grid-template-columns: 1fr 1fr; }
+@media (min-width: 1024px) { .farm-stats { grid-template-columns: repeat(4, 1fr); } }
+.farm-stat { display: grid; gap: var(--space-1); text-decoration: none; color: inherit; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-4); box-shadow: var(--shadow-sm); }
+a.farm-stat:hover { box-shadow: var(--shadow-md); }
+.farm-stat__label { color: var(--color-text-muted); font-size: var(--text-sm); }
+.farm-stat__value { font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-text); overflow-wrap: anywhere; }
+.farm-stat__note { color: var(--color-text-muted); font-size: var(--text-xs); }
+.farm-stat--warn .farm-stat__value { color: var(--color-warning-text); }
+.farm-stat--bad .farm-stat__value { color: var(--color-error-text); }
+.farm-stat--good .farm-stat__value { color: var(--color-success-text); }
+
+.farm-grid { display: grid; gap: var(--space-4); grid-template-columns: 1fr; }
+@media (min-width: 900px) { .farm-grid--2 { grid-template-columns: 1fr 1fr; } .farm-grid--sidebar { grid-template-columns: 2fr 1fr; } }
+.farm-cards { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.farm-card { display: grid; gap: var(--space-2); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-4); box-shadow: var(--shadow-sm); text-align: left; font: inherit; color: inherit; text-decoration: none; }
+a.farm-card:hover, button.farm-card:hover { box-shadow: var(--shadow-md); }
+button.farm-card { cursor: pointer; width: 100%; }
+.farm-card:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.farm-card__title { margin: 0; font-size: var(--text-lg); font-weight: var(--weight-semibold); color: var(--color-text); overflow-wrap: anywhere; }
+.farm-card__meta { margin: 0; color: var(--color-text-muted); font-size: var(--text-sm); }
+.farm-card__row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: space-between; }
+
+.farm-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.farm-list > li { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; justify-content: space-between; padding: var(--space-3) 0; border-bottom: 1px solid var(--color-border); }
+.farm-list > li:last-child { border-bottom: 0; }
+.farm-list__main { display: grid; gap: 2px; min-width: 0; flex: 1 1 200px; }
+.farm-list__title { color: var(--color-text); font-weight: var(--weight-medium); overflow-wrap: anywhere; }
+.farm-list__sub { color: var(--color-text-muted); font-size: var(--text-sm); }
+.farm-list__end { display: flex; gap: var(--space-2); align-items: center; }
+.farm-amount { font-weight: var(--weight-semibold); color: var(--color-text); white-space: nowrap; }
+.farm-amount--in { color: var(--color-success-text); }
+.farm-amount--out { color: var(--color-error-text); }
+
+.farm-bar { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: end; }
+.farm-bar > * { flex: 1 1 180px; }
+.farm-bar > .farm-bar__fit { flex: 0 0 auto; }
+.farm-more { display: flex; justify-content: center; padding-top: var(--space-3); }
+.farm-due { color: var(--color-error-text); font-weight: var(--weight-medium); }
+.farm-done { text-decoration: line-through; color: var(--color-text-muted); }
+.farm-meter { height: 8px; border-radius: var(--radius-full); background: var(--color-neutral-bg); overflow: hidden; }
+.farm-meter > span { display: block; height: 100%; background: var(--color-primary); }
+.farm-meter--low > span { background: var(--color-warning); }
+.farm-split { display: flex; flex-wrap: wrap; gap: var(--space-2); }

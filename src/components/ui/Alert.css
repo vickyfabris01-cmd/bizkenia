@@ -1,0 +1,65 @@
+/* src/components/ui/Alert.css — MODIFIED FILE (step 5: close-button hover is a tint of the alert's own colour)
+   Styles for Alert.jsx. Tokens only: no hex values.
+   Each type uses a background token with its matching text token (a tested pair). */
+
+.ui-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid transparent;
+  border-inline-start-width: 4px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.ui-alert__icon {
+  display: flex;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.ui-alert__body {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ui-alert__title {
+  margin: 0;
+  font-weight: var(--weight-semibold);
+}
+.ui-alert__message {
+  margin: 0;
+}
+.ui-alert__title + .ui-alert__message {
+  margin-top: var(--space-1);
+}
+
+.ui-alert__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+  margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) calc(var(--space-2) * -1) 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .ui-alert__close:hover {
+    background: color-mix(in srgb, currentColor 14%, transparent);
+  }
+}
+.ui-alert__close:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.ui-alert--info    { background: var(--color-info-bg);    color: var(--color-info-text);    border-color: var(--color-info); }
+.ui-alert--success { background: var(--color-success-bg); color: var(--color-success-text); border-color: var(--color-success); }
+.ui-alert--warning { background: var(--color-warning-bg); color: var(--color-warning-text); border-color: var(--color-warning); }
+.ui-alert--error   { background: var(--color-error-bg);   color: var(--color-error-text);   border-color: var(--color-error); }

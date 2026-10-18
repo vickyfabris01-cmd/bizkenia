@@ -1,0 +1,70 @@
+/* src/pages/storefront/Storefront.css — NEW FILE (Phase 5 step 2). Shopper screens. Class prefix: sf-. Tokens only. */
+.sf { display: grid; gap: var(--space-5); padding-bottom: var(--space-8); }
+.sf-bar { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; justify-content: space-between; border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-3); }
+.sf-bar__name { display: flex; align-items: center; gap: var(--space-2); font-weight: var(--weight-bold); font-size: var(--text-lg); color: var(--color-text); text-decoration: none; }
+.sf-bar__logo { width: 36px; height: 36px; border-radius: var(--radius-full); object-fit: cover; background: var(--color-neutral-bg); display: inline-grid; place-items: center; }
+.sf-bar__links { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.sf-cartbtn { position: relative; }
+.sf-cartbtn__n { margin-left: var(--space-2); background: var(--color-primary); color: var(--color-on-primary, #fff); border-radius: var(--radius-full); padding: 0 var(--space-2); font-size: var(--text-xs); min-width: 20px; text-align: center; }
+.sf-hero { border-radius: var(--radius-lg); min-height: 180px; background: var(--color-primary-soft, var(--color-neutral-bg)) center/cover no-repeat; display: grid; align-content: end; padding: var(--space-5); color: var(--color-text); }
+.sf-hero--img { color: #fff; box-shadow: inset 0 -90px 80px -40px rgba(0,0,0,.65); }
+.sf-hero h1 { margin: 0; font-size: var(--text-2xl); }
+.sf-hero p { margin: var(--space-1) 0 0; max-width: 60ch; }
+.sf-chips { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.sf-chip { appearance: none; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); border-radius: var(--radius-full); padding: var(--space-2) var(--space-4); min-height: 40px; font: inherit; cursor: pointer; }
+.sf-chip[aria-pressed="true"] { background: var(--color-primary); color: var(--color-on-primary, #fff); border-color: var(--color-primary); }
+.sf-chip:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.sf-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(2, 1fr); }
+@media (min-width: 720px) { .sf-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1024px) { .sf-grid { grid-template-columns: repeat(4, 1fr); } }
+.sf-pcard { position: relative; display: grid; gap: var(--space-2); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); }
+.sf-pcard:hover { box-shadow: var(--shadow-md); }
+.sf-pcard__link { display: grid; gap: var(--space-2); color: inherit; text-decoration: none; }
+.sf-pcard__img { aspect-ratio: 1 / 1; background: var(--color-neutral-bg) center/cover no-repeat; display: grid; place-items: center; color: var(--color-text-muted); font-size: var(--text-2xl); }
+.sf-pcard__body { display: grid; gap: var(--space-1); padding: 0 var(--space-3) var(--space-3); }
+.sf-pcard__name { margin: 0; font-size: var(--text-md); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
+.sf-price { font-weight: var(--weight-bold); color: var(--color-text); }
+.sf-was { color: var(--color-text-muted); text-decoration: line-through; font-size: var(--text-sm); margin-left: var(--space-2); }
+.sf-heart { position: absolute; top: var(--space-2); right: var(--space-2); width: 40px; height: 40px; border-radius: var(--radius-full); border: 0; background: var(--color-surface); color: var(--color-text); cursor: pointer; display: grid; place-items: center; box-shadow: var(--shadow-sm); }
+.sf-heart[aria-pressed="true"] { color: var(--color-error-text); }
+.sf-heart:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.sf-product { display: grid; gap: var(--space-6); grid-template-columns: 1fr; }
+@media (min-width: 860px) { .sf-product { grid-template-columns: 1.1fr 1fr; } }
+.sf-gallery__main { aspect-ratio: 1 / 1; border-radius: var(--radius-lg); background: var(--color-neutral-bg) center/contain no-repeat; border: 1px solid var(--color-border); }
+.sf-gallery__thumbs { display: flex; gap: var(--space-2); margin-top: var(--space-2); flex-wrap: wrap; }
+.sf-thumb { width: 64px; height: 64px; border-radius: var(--radius-md); border: 2px solid transparent; background: var(--color-neutral-bg) center/cover no-repeat; cursor: pointer; padding: 0; }
+.sf-thumb[aria-current="true"] { border-color: var(--color-primary); }
+.sf-thumb:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.sf-buy { display: grid; gap: var(--space-4); align-content: start; }
+.sf-buy h1 { margin: 0; font-size: var(--text-2xl); }
+.sf-qty { display: inline-flex; align-items: center; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.sf-qty button { appearance: none; border: 0; background: none; width: 40px; height: 40px; font-size: var(--text-lg); cursor: pointer; color: var(--color-text); }
+.sf-qty button:disabled { color: var(--color-text-muted); cursor: not-allowed; }
+.sf-qty button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.sf-qty span { min-width: 36px; text-align: center; font-weight: var(--weight-semibold); }
+.sf-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.sf-line { display: grid; grid-template-columns: 64px 1fr auto; gap: var(--space-3); align-items: center; }
+.sf-line__img { width: 64px; height: 64px; border-radius: var(--radius-md); background: var(--color-neutral-bg) center/cover no-repeat; }
+.sf-line__name { font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
+.sf-muted { color: var(--color-text-muted); font-size: var(--text-sm); margin: 0; }
+.sf-sum { display: grid; gap: var(--space-2); }
+.sf-sum div { display: flex; justify-content: space-between; gap: var(--space-3); }
+.sf-sum .sf-sum__total { font-weight: var(--weight-bold); font-size: var(--text-lg); border-top: 1px solid var(--color-border); padding-top: var(--space-2); }
+.sf-checkout { display: grid; gap: var(--space-5); grid-template-columns: 1fr; align-items: start; }
+@media (min-width: 900px) { .sf-checkout { grid-template-columns: 1.4fr 1fr; } }
+.sf-steps { display: flex; gap: var(--space-2); flex-wrap: wrap; list-style: none; margin: 0; padding: 0; }
+.sf-steps li { padding: var(--space-2) var(--space-4); border-radius: var(--radius-full); background: var(--color-neutral-bg); color: var(--color-neutral-text); font-size: var(--text-sm); }
+.sf-steps li[aria-current="step"] { background: var(--color-primary); color: var(--color-on-primary, #fff); font-weight: var(--weight-semibold); }
+.sf-form { display: grid; gap: var(--space-4); }
+.sf-row { display: grid; gap: var(--space-4); grid-template-columns: 1fr; }
+@media (min-width: 640px) { .sf-row { grid-template-columns: 1fr 1fr; } }
+.sf-choice { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; background: var(--color-surface); }
+.sf-choice:has(input:checked) { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+.sf-choice:has(input:focus-visible) { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.sf-order { display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: space-between; align-items: center; width: 100%; text-align: left; font: inherit; color: inherit; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-4); text-decoration: none; }
+.sf-order:hover { box-shadow: var(--shadow-md); }
+.sf-timeline { list-style: none; margin: 0; padding: 0 0 0 var(--space-4); border-left: 2px solid var(--color-border); display: grid; gap: var(--space-4); }
+.sf-timeline li { position: relative; display: grid; gap: 2px; }
+.sf-timeline li::before { content: ""; position: absolute; left: calc(-1 * var(--space-4) - 6px); top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--color-primary); }
+.sf-split { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.sf-more { display: flex; justify-content: center; }

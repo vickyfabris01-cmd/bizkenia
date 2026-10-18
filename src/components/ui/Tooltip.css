@@ -1,0 +1,39 @@
+/* src/components/ui/Tooltip.css — NEW FILE (replaces the misspelled Tootip.css; hidden bubble no longer widens the page on phones)
+   Styles for Tooltip.jsx. Tokens only: no hex values.
+   The bubble uses the page's text colour as its background and the page colour as its text,
+   so it is high-contrast and flips correctly in dark mode. */
+
+.ui-tooltip {
+  position: relative;
+  display: inline-flex;
+}
+
+.ui-tooltip__bubble {
+  position: absolute;
+  inset-inline-start: 50%;
+  z-index: var(--z-tooltip);
+  width: max-content;
+  max-width: min(260px, 80vw);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-text);
+  color: var(--color-bg);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-xs);
+  line-height: 1.35;
+  text-align: center;
+  pointer-events: none;
+  /* display:none while closed so an off-screen bubble can never widen the page on a phone.
+     (aria-describedby still reads the text of a hidden element.) */
+  display: none;
+  transform: translateX(-50%);
+}
+.ui-tooltip__bubble--top {
+  bottom: calc(100% + var(--space-2));
+}
+.ui-tooltip__bubble--bottom {
+  top: calc(100% + var(--space-2));
+}
+.ui-tooltip__bubble.is-open {
+  display: block;
+}

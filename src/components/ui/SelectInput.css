@@ -1,0 +1,19 @@
+/* src/components/ui/SelectInput.css — NEW FILE
+   Styles for SelectInput.jsx (on top of the shared .ui-control look in Field.css).
+   Tokens only: no hex values. */
+
+.ui-select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+.ui-select:disabled {
+  cursor: not-allowed;
+}
+
+/* The chevron is a separate element so it follows the text colour in both themes.
+   It must not catch taps, otherwise the dropdown would not open on the arrow. */
+.ui-select__chevron {
+  pointer-events: none;
+}

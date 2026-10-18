@@ -1,0 +1,27 @@
+/* src/components/ui/Divider.css — NEW FILE
+   Styles for Divider.jsx. Tokens only: no hex values. */
+
+.ui-divider {
+  height: 0;
+  margin: var(--space-3) 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.ui-divider-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+}
+.ui-divider-label__line {
+  flex: 1;
+  height: 0;
+  border-top: 1px solid var(--color-border);
+}
+.ui-divider-label__text {
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

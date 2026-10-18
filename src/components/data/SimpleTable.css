@@ -1,0 +1,18 @@
+/* src/components/data/SimpleTable.css — NEW FILE */
+.stable-skel { display: grid; gap: var(--space-2); }
+.stable-wrap { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+.stable { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.stable th { text-align: left; padding: var(--space-3) var(--space-4); background: var(--color-surface-2); color: var(--color-text-muted); font-weight: var(--weight-semibold); border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+.stable td { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border); color: var(--color-text); vertical-align: middle; }
+.stable tr:last-child td { border-bottom: 0; }
+.stable tr.is-clickable { cursor: pointer; }
+.stable tr.is-clickable:hover td { background: var(--color-surface-2); }
+.stable tr.is-clickable:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+@media (max-width: 767px) {
+  .stable thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .stable, .stable tbody, .stable tr, .stable td { display: block; width: 100%; }
+  .stable tr { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border); }
+  .stable tr:last-child { border-bottom: 0; }
+  .stable td { border: 0; padding: var(--space-1) 0; display: flex; justify-content: space-between; gap: var(--space-4); text-align: right !important; }
+  .stable td::before { content: attr(data-label); color: var(--color-text-muted); font-weight: var(--weight-medium); text-align: left; flex: none; }
+}

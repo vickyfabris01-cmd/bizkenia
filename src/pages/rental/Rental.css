@@ -1,0 +1,135 @@
+/* src/pages/rental/Rental.css — NEW FILE
+   Styles shared by every Phase 2 screen. Class prefix: rent-. Colours, spacing and type come from tokens only. */
+.rent { display: grid; gap: var(--space-5); max-width: 1180px; padding-bottom: var(--space-8); }
+.rent-head { display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: space-between; align-items: end; }
+.rent-head__title { margin: 0; font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-text); }
+.rent-head__lead { margin: var(--space-1) 0 0; color: var(--color-text-muted); font-size: var(--text-sm); }
+.rent-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+
+.rent-bar { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: end; }
+.rent-bar > * { flex: 1 1 180px; }
+.rent-bar > .rent-bar__fit { flex: 0 0 auto; }
+
+.rent-tabs { display: flex; gap: var(--space-1); overflow-x: auto; border-bottom: 1px solid var(--color-border); scrollbar-width: thin; }
+.rent-tab { appearance: none; background: none; border: 0; border-bottom: 3px solid transparent; padding: var(--space-3) var(--space-4); min-height: 44px; color: var(--color-text-muted); font: inherit; font-weight: var(--weight-medium); cursor: pointer; white-space: nowrap; }
+.rent-tab:hover { color: var(--color-text); }
+.rent-tab[aria-selected="true"] { color: var(--color-link); border-bottom-color: var(--color-primary); }
+.rent-tab:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.rent-tab__n { margin-left: var(--space-2); background: var(--color-neutral-bg); color: var(--color-neutral-text); border-radius: var(--radius-full); padding: 0 var(--space-2); font-size: var(--text-xs); }
+
+.rent-stats { display: grid; gap: var(--space-3); grid-template-columns: 1fr 1fr; }
+@media (min-width: 1024px) { .rent-stats { grid-template-columns: repeat(4, 1fr); } }
+.rent-stat { display: grid; gap: var(--space-1); text-decoration: none; color: inherit; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-4); box-shadow: var(--shadow-sm); }
+a.rent-stat:hover { box-shadow: var(--shadow-md); }
+.rent-stat__label { color: var(--color-text-muted); font-size: var(--text-sm); }
+.rent-stat__value { font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-text); overflow-wrap: anywhere; }
+.rent-stat__note { color: var(--color-text-muted); font-size: var(--text-xs); }
+.rent-stat--warn .rent-stat__value { color: var(--color-warning-text); }
+.rent-stat--bad .rent-stat__value { color: var(--color-error-text); }
+
+.rent-meter { height: 10px; border-radius: var(--radius-full); background: var(--color-neutral-bg); overflow: hidden; display: flex; }
+.rent-meter > span { display: block; height: 100%; }
+.rent-meter__occupied { background: var(--color-primary); }
+.rent-meter__reserved { background: var(--color-warning); }
+.rent-meter__maintenance { background: var(--color-text-subtle); }
+.rent-legend { display: flex; flex-wrap: wrap; gap: var(--space-4); margin: var(--space-2) 0 0; padding: 0; list-style: none; font-size: var(--text-sm); color: var(--color-text-muted); }
+.rent-legend i { display: inline-block; width: 10px; height: 10px; border-radius: var(--radius-full); margin-right: var(--space-2); background: var(--color-neutral-bg); border: 1px solid var(--color-border-strong); }
+.rent-legend i.occupied { background: var(--color-primary); border-color: var(--color-primary); }
+.rent-legend i.reserved { background: var(--color-warning); border-color: var(--color-warning); }
+.rent-legend i.maintenance { background: var(--color-text-subtle); border-color: var(--color-text-subtle); }
+
+.rent-grid2 { display: grid; gap: var(--space-4); grid-template-columns: 1fr; }
+@media (min-width: 900px) { .rent-grid2 { grid-template-columns: 1fr 1fr; } }
+.rent-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.rent-list > li { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--color-border); align-items: center; }
+.rent-list > li:last-child { border-bottom: 0; }
+.rent-list small { display: block; color: var(--color-text-muted); }
+.rent-muted { color: var(--color-text-muted); font-size: var(--text-sm); margin: 0; }
+.rent-money { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rent-strong { font-weight: var(--weight-semibold); }
+
+.rent-form { display: grid; gap: var(--space-4); }
+.rent-form__row { display: grid; gap: var(--space-4); }
+@media (min-width: 560px) { .rent-form__row { grid-template-columns: 1fr 1fr; } }
+.rent-dl { display: grid; gap: var(--space-3); margin: 0; }
+.rent-dl > div { display: grid; gap: 2px; }
+.rent-dl dt { color: var(--color-text-muted); font-size: var(--text-xs); text-transform: uppercase; letter-spacing: .04em; }
+.rent-dl dd { margin: 0; overflow-wrap: anywhere; }
+@media (min-width: 560px) { .rent-dl { grid-template-columns: 1fr 1fr; } }
+
+.rent-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.rent-chip { appearance: none; border: 1px solid var(--color-control-border); background: var(--color-surface); color: var(--color-text); border-radius: var(--radius-full); min-height: 44px; padding: 0 var(--space-4); font: inherit; cursor: pointer; }
+.rent-chip[aria-pressed="true"] { background: var(--color-primary-soft); color: var(--color-on-primary-soft); border-color: var(--color-primary); }
+
+.rent-buildings { display: grid; gap: var(--space-3); grid-template-columns: 1fr; }
+@media (min-width: 640px) { .rent-buildings { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1024px) { .rent-buildings { grid-template-columns: repeat(3, 1fr); } }
+.rent-building { display: grid; gap: var(--space-2); text-align: left; }
+.rent-building h3 { margin: 0; font-size: var(--text-lg); }
+
+.rent-photos { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.rent-photo { position: relative; width: 96px; height: 96px; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--color-border); background: var(--color-neutral-bg); }
+.rent-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rent-photo button { position: absolute; top: 4px; right: 4px; width: 32px; height: 32px; border-radius: var(--radius-full); border: 0; background: var(--color-overlay); color: var(--color-on-scrim); cursor: pointer; display: grid; place-items: center; }
+.rent-photo--add { display: grid; place-items: center; cursor: pointer; border-style: dashed; color: var(--color-text-muted); font-size: var(--text-sm); text-align: center; }
+.rent-photo--add:focus-within { outline: 2px solid var(--color-focus); }
+.rent-photo--add input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+.rent-copy { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+.rent-copy code { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-3); font-size: var(--text-sm); }
+
+.rent-rooms { display: grid; gap: var(--space-4); grid-template-columns: 1fr; }
+@media (min-width: 640px) { .rent-rooms { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1024px) { .rent-rooms { grid-template-columns: repeat(3, 1fr); } }
+.rent-roomcard { display: grid; gap: var(--space-2); align-content: start; }
+.rent-roomcard__img { aspect-ratio: 16 / 10; border-radius: var(--radius-md); background: var(--color-neutral-bg) center / cover no-repeat; display: grid; place-items: center; color: var(--color-text-subtle); font-size: var(--text-2xl); font-weight: var(--weight-bold); }
+.rent-roomcard h3 { margin: 0; font-size: var(--text-lg); }
+.rent-roomcard[aria-pressed="true"], .rent-roomcard.is-picked { outline: 3px solid var(--color-primary); }
+
+/* Public invoice (also printed) */
+.rent-invoice { max-width: 760px; margin: 0 auto; display: grid; gap: var(--space-5); }
+.rent-invoice__top { display: flex; flex-wrap: wrap; gap: var(--space-4); justify-content: space-between; }
+.rent-invoice__table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.rent-invoice__table td, .rent-invoice__table th { padding: var(--space-3) 0; border-bottom: 1px solid var(--color-border); text-align: left; }
+.rent-invoice__table td:last-child, .rent-invoice__table th:last-child { text-align: right; }
+.rent-invoice__total td { font-weight: var(--weight-bold); font-size: var(--text-lg); border-bottom: 0; }
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+  .rent-invoice { max-width: none; }
+}
+
+/* ---- Phase 3: people and communication ---- */
+.rent-receipt { display: grid; gap: var(--space-3); }
+@media print { body * { visibility: hidden; } #rent-receipt, #rent-receipt * { visibility: visible; } #rent-receipt { position: absolute; inset: 0 auto auto 0; width: 100%; padding: var(--space-6); } }
+.rent-notices { display: grid; gap: var(--space-3); }
+.rent-notice__sum { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; cursor: pointer; min-height: 32px; }
+details > .rent-notice__sum { list-style: none; }
+details > .rent-notice__sum::-webkit-details-marker { display: none; }
+.rent-notice__body { margin: var(--space-3) 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rent-dot { width: 10px; height: 10px; border-radius: var(--radius-full); background: var(--color-primary); flex: none; }
+.rent-split { display: grid; gap: var(--space-4); grid-template-columns: 1fr; }
+@media (min-width: 860px) { .rent-split { grid-template-columns: 300px minmax(0, 1fr); align-items: start; } }
+.rent-convs { list-style: none; margin: 0; padding: 0; display: grid; }
+.rent-conv { all: unset; box-sizing: border-box; display: flex; gap: var(--space-3); align-items: center; width: 100%; padding: var(--space-3); border-bottom: 1px solid var(--color-border); cursor: pointer; min-height: 56px; }
+.rent-conv:hover, .rent-conv[aria-current="true"] { background: var(--color-surface-2); }
+.rent-conv:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.rent-conv__main { display: grid; min-width: 0; flex: 1; }
+.rent-conv__main small { color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rent-checkin { display: grid; gap: var(--space-3); justify-items: start; }
+.rent-month { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.rent-month__h { text-align: center; font-size: var(--text-xs); color: var(--color-text-muted); }
+.rent-month__d { aspect-ratio: 1; display: grid; place-items: center; border-radius: var(--radius-md); font-size: var(--text-sm); border: 1px solid var(--color-border); background: var(--color-surface); }
+.rent-month__d.present { background: var(--color-success-bg); color: var(--color-success-text); }
+.rent-month__d.absent { background: var(--color-error-bg); color: var(--color-error-text); }
+.rent-month__d.half_day, .rent-month__d.leave { background: var(--color-warning-bg); color: var(--color-warning-text); }
+.rent-month__d.blank { border: 0; background: transparent; }
+.rent-sheet { overflow-x: auto; }
+.rent-sheet table { border-collapse: collapse; font-size: var(--text-sm); min-width: 100%; }
+.rent-sheet th, .rent-sheet td { padding: var(--space-2); border-bottom: 1px solid var(--color-border); text-align: center; white-space: nowrap; }
+.rent-sheet th:first-child, .rent-sheet td:first-child { text-align: left; position: sticky; left: 0; background: var(--color-surface); }
+.rent-cell { appearance: none; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); border-radius: var(--radius-sm); min-width: 40px; min-height: 36px; cursor: pointer; font: inherit; font-size: var(--text-xs); }
+.rent-cell.present { background: var(--color-success-bg); color: var(--color-success-text); }
+.rent-cell.absent { background: var(--color-error-bg); color: var(--color-error-text); }
+.rent-cell.half_day, .rent-cell.leave { background: var(--color-warning-bg); color: var(--color-warning-text); }
+.rent-cell:focus-visible { outline: 2px solid var(--color-focus); }

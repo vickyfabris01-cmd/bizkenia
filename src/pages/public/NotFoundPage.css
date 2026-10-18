@@ -1,0 +1,56 @@
+/* src/pages/public/NotFoundPage.css — NEW FILE
+   Styles for NotFoundPage.jsx. Tokens only: no hex values. */
+
+.nf {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: var(--space-6) var(--gutter);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.nf__theme {
+  position: absolute;
+  top: calc(var(--safe-top) + var(--space-4));
+  inset-inline-end: var(--gutter);
+}
+
+.nf__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 30rem;
+  padding: var(--space-8) var(--space-6);
+  text-align: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+}
+
+.nf__code {
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-hero);
+  line-height: var(--lh-hero);
+  font-weight: var(--weight-bold);
+  color: var(--color-primary);
+}
+
+.nf__title {
+  margin: 0;
+  font-size: var(--text-2xl);
+  line-height: var(--lh-2xl);
+  font-weight: var(--weight-bold);
+}
+
+.nf__text {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-md);
+  line-height: var(--lh-md);
+  color: var(--color-text-muted);
+}

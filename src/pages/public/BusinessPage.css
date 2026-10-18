@@ -1,0 +1,11 @@
+/* src/pages/public/BusinessPage.css — NEW FILE */
+.bpage__crumbs { color: var(--color-text-muted); font-size: var(--text-sm); margin-bottom: var(--space-3); }
+.bpage__crumbs a { color: var(--color-link); }
+.bpage__cover { height: 200px; border-radius: var(--radius-lg); background: var(--color-primary-soft) center / cover no-repeat; display: grid; place-items: center; color: var(--color-on-primary-soft); font-size: 72px; font-weight: var(--weight-bold); }
+.bpage__grid { display: grid; gap: var(--space-6); margin-top: var(--space-6); }
+.bpage__title-row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+.bpage__title-row .pg__title { margin: 0; }
+.bpage__place { display: flex; align-items: center; gap: var(--space-1); color: var(--color-text-muted); margin: var(--space-2) 0 0; }
+.bpage__side { display: grid; gap: var(--space-3); align-content: start; }
+.bpage__side-title { margin: 0 !important; font-size: var(--text-lg) !important; }
+@media (min-width: 768px) { .bpage__cover { height: 280px; } .bpage__grid { grid-template-columns: 1fr 320px; } }

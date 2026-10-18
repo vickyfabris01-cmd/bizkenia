@@ -1,0 +1,115 @@
+/* src/components/ui/Field.css — NEW FILE
+   Shared form look: the Field frame (label, helper, error) and the .ui-control class that
+   every text-like control (input, select, textarea) uses. Tokens only: no hex values. */
+
+.ui-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+}
+
+.ui-field__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+  line-height: 1.25;
+}
+.ui-field__req {
+  color: var(--color-error-text);
+}
+
+.ui-field__helper,
+.ui-field__error {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+.ui-field__helper {
+  color: var(--color-text-muted);
+}
+.ui-field__error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  color: var(--color-error-text);
+}
+.ui-field__error svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── The control itself ───────────────────────────────────────────────────── */
+.ui-control {
+  display: block;
+  width: 100%;
+  min-height: var(--control-h-md);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-md); /* 16px on phones stops iOS zooming into the field */
+  line-height: 1.4;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+}
+.ui-control::placeholder {
+  color: var(--color-text-subtle);
+  opacity: 1;
+}
+.ui-control:focus {
+  outline: none;
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+.ui-control[aria-invalid="true"] {
+  border-color: var(--color-error);
+}
+.ui-control[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px var(--color-error-bg);
+}
+.ui-control:disabled {
+  background: var(--color-disabled-bg);
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+textarea.ui-control {
+  resize: vertical;
+  min-height: 96px;
+}
+
+/* ── Control with something inside its edge (icon, button, prefix) ────────── */
+.ui-control-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.ui-control-wrap__left,
+.ui-control-wrap__right {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  color: var(--color-text-muted);
+}
+.ui-control-wrap__left {
+  inset-inline-start: var(--space-3);
+  pointer-events: none;
+}
+.ui-control-wrap__right {
+  inset-inline-end: var(--space-3);
+}
+.ui-control--pad-left {
+  padding-inline-start: var(--space-10);
+}
+.ui-control--pad-right {
+  padding-inline-end: var(--space-12);
+}
+.ui-control-wrap:focus-within .ui-control-wrap__left {
+  color: var(--color-link);
+}

@@ -1,0 +1,30 @@
+/* src/pages/account/Account.css — NEW FILE */
+.acct__head { display: flex; flex-wrap: wrap; gap: var(--space-4); justify-content: space-between; align-items: end; margin-bottom: var(--space-6); }
+.acct__head-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.acct__grid { display: grid; gap: var(--space-6); }
+.acct__list { display: grid; gap: var(--space-3); align-content: start; }
+.acct__biz { display: flex; flex-wrap: wrap; gap: var(--space-4); justify-content: space-between; align-items: center; }
+.acct__biz-main { display: grid; gap: var(--space-2); justify-items: start; }
+.acct__biz-name { margin: 0 !important; font-size: var(--text-lg) !important; }
+.acct__biz-meta { margin: 0; font-size: var(--text-sm); }
+.acct__stack { display: grid; gap: var(--space-4); }
+.acct__form { display: grid; gap: var(--space-4); }
+.acct__note-list { list-style: none; margin: 0; padding: 0; }
+.acct__note-list li { border-top: 1px solid var(--color-border); }
+.acct__note-list li.is-unread { background: var(--color-primary-soft); }
+.acct__note-list button { all: unset; box-sizing: border-box; display: grid; gap: 2px; padding: var(--space-3) var(--space-4); width: 100%; cursor: pointer; min-height: 44px; }
+.acct__note-list button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.acct__note-list strong { color: var(--color-text); font-size: var(--text-sm); }
+.acct__note-list span { color: var(--color-text-muted); font-size: var(--text-sm); }
+.acct__note-list small { color: var(--color-text-subtle); font-size: var(--text-xs); }
+.acct__note-empty { padding: var(--space-4); color: var(--color-text-muted); font-size: var(--text-sm); }
+@media (min-width: 1024px) { .acct__grid { grid-template-columns: 1fr 340px; align-items: start; } }
+
+/* Phase 3: profile picture and shortcuts */
+.acct__shortcuts { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-4); }
+.acct__pic { display: flex; align-items: center; gap: var(--space-4); }
+.acct__pic-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.acct__pic-btn { position: relative; display: inline-flex; align-items: center; min-height: 36px; padding: 0 var(--space-3); border: 1px solid var(--color-border-strong, var(--color-border)); border-radius: var(--radius-md); font-weight: var(--weight-medium); font-size: var(--text-sm); color: var(--color-text); cursor: pointer; }
+.acct__pic-btn:hover { background: var(--color-surface-2); }
+.acct__pic-btn:focus-within { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.acct__pic-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }

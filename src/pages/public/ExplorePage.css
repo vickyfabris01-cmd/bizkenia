@@ -1,0 +1,4 @@
+/* src/pages/public/ExplorePage.css — NEW FILE */
+.explore-filters { display: grid; gap: var(--space-3); margin-bottom: var(--space-6); align-items: end; }
+.explore-count { color: var(--color-text-muted); font-size: var(--text-sm); margin: 0 0 var(--space-3); }
+@media (min-width: 768px) { .explore-filters { grid-template-columns: 2fr 1fr 1fr auto; } }

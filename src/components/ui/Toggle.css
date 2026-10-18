@@ -1,0 +1,70 @@
+/* src/components/ui/Toggle.css — NEW FILE
+   Styles for Toggle.jsx. Tokens only: no hex values. */
+
+.ui-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--control-h-md);
+  cursor: pointer;
+}
+.ui-toggle.is-disabled {
+  cursor: not-allowed;
+}
+
+.ui-toggle__label {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+.ui-toggle.is-disabled .ui-toggle__label {
+  color: var(--color-text-disabled);
+}
+
+.ui-toggle__track {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-control-border);
+  cursor: inherit;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+.ui-toggle__track[aria-checked="true"] {
+  background: var(--color-action);
+}
+.ui-toggle__track:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.ui-toggle__track:disabled {
+  background: var(--color-disabled-bg);
+}
+
+.ui-toggle__thumb {
+  position: absolute;
+  top: 2px;
+  inset-inline-start: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+.ui-toggle__track[aria-checked="true"] .ui-toggle__thumb {
+  background: var(--color-on-action);
+  transform: translateX(20px);
+}
+[dir="rtl"] .ui-toggle__track[aria-checked="true"] .ui-toggle__thumb {
+  transform: translateX(-20px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-toggle__track,
+  .ui-toggle__thumb {
+    transition: none;
+  }
+}

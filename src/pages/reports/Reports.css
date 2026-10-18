@@ -1,0 +1,19 @@
+/* src/pages/reports/Reports.css — NEW FILE
+   Styles for the Reports screen. Class prefix: rep-. Colours, spacing and type come from tokens only. */
+.rep { display: grid; gap: var(--space-5); max-width: 1180px; padding-bottom: var(--space-8); }
+.rep-head { display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: space-between; align-items: end; }
+.rep-head__title { margin: 0; font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-text); }
+.rep-head__lead { margin: var(--space-1) 0 0; color: var(--color-text-muted); font-size: var(--text-sm); }
+.rep-tabs { display: flex; gap: var(--space-1); overflow-x: auto; border-bottom: 1px solid var(--color-border); scrollbar-width: thin; }
+.rep-tab { appearance: none; background: none; border: 0; border-bottom: 3px solid transparent; padding: var(--space-3) var(--space-4); min-height: 44px; color: var(--color-text-muted); font: inherit; font-weight: var(--weight-medium); cursor: pointer; white-space: nowrap; }
+.rep-tab:hover { color: var(--color-text); }
+.rep-tab[aria-selected="true"] { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+.rep-tab:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.rep-stats { display: grid; gap: var(--space-3); grid-template-columns: 1fr 1fr; }
+@media (min-width: 1024px) { .rep-stats { grid-template-columns: repeat(4, 1fr); } }
+.rep-stat { display: grid; gap: var(--space-1); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-4); box-shadow: var(--shadow-sm); }
+.rep-stat__label { color: var(--color-text-muted); font-size: var(--text-sm); }
+.rep-stat__value { font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-text); overflow-wrap: anywhere; }
+.rep-grid { display: grid; gap: var(--space-4); grid-template-columns: 1fr; }
+@media (min-width: 900px) { .rep-grid--2 { grid-template-columns: 1fr 1fr; } }
+.rep-section-head { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: space-between; }

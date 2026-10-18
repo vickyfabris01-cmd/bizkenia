@@ -1,0 +1,219 @@
+/* src/components/modals/Modal.css — NEW FILE
+   Styles for Modal.jsx (Modal, Drawer, ConfirmDialog). Tokens only: no hex values. */
+
+/* ── Backdrop layer ───────────────────────────────────────────────────────── */
+.ui-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  background: var(--color-overlay);
+  animation: ui-overlay-fade var(--duration-base) var(--ease-standard) both;
+}
+/* A confirmation opened on top of a modal sits above it */
+.ui-overlay--top {
+  z-index: calc(var(--z-modal) + 10);
+}
+
+/* Centred layer: a bottom sheet on phones, a centred dialog from 480px up */
+.ui-overlay--center {
+  align-items: flex-end;
+  justify-content: center;
+}
+@media (min-width: 480px) {
+  .ui-overlay--center {
+    align-items: center;
+    padding: var(--space-4);
+  }
+}
+
+.ui-overlay--right { justify-content: flex-end; }
+.ui-overlay--left  { justify-content: flex-start; }
+
+/* ── Panels ───────────────────────────────────────────────────────────────── */
+.ui-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: 92dvh;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  outline: none;
+  padding-bottom: var(--safe-bottom);
+  animation: ui-sheet-up var(--duration-slow) var(--ease-standard) both;
+}
+@media (min-width: 480px) {
+  .ui-modal {
+    max-height: 90dvh;
+    border-radius: var(--radius-xl);
+    padding-bottom: 0;
+    animation: ui-modal-pop var(--duration-base) var(--ease-standard) both;
+  }
+  .ui-modal--sm { max-width: 25rem; }
+  .ui-modal--md { max-width: 35rem; }
+  .ui-modal--lg { max-width: 45rem; }
+  .ui-modal--xl { max-width: 56.25rem; }
+  .ui-modal--full { max-width: 100%; height: 100%; max-height: 100%; }
+  .ui-modal--confirm { max-width: 26rem; }
+}
+
+.ui-drawer {
+  display: flex;
+  height: 100%;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-lg);
+  outline: none;
+}
+.ui-drawer__inner {
+  display: flex;
+  flex-direction: column;
+  width: min(var(--drawer-width, 400px), 100vw - var(--space-8));
+  height: 100%;
+  padding-bottom: var(--safe-bottom);
+}
+.ui-drawer--right { animation: ui-drawer-from-right var(--duration-slow) var(--ease-standard) both; }
+.ui-drawer--left  { animation: ui-drawer-from-left  var(--duration-slow) var(--ease-standard) both; }
+
+/* ── Header / body / footer ───────────────────────────────────────────────── */
+.ui-overlay__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-shrink: 0;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+.ui-overlay__title {
+  margin: 0;
+  font-size: var(--text-xl);
+  line-height: var(--lh-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+.ui-overlay__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+  margin-inline-start: auto;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .ui-overlay__close:hover {
+    background: var(--color-surface-2);
+    color: var(--color-text);
+  }
+}
+.ui-overlay__close:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.ui-overlay__body {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-5);
+}
+.ui-overlay__body.is-scrollable {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ui-overlay__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+/* On phones the footer buttons share the full width, so each is easy to hit */
+@media (max-width: 479px) {
+  .ui-overlay__footer > * {
+    flex: 1 1 8rem;
+  }
+}
+
+/* ── ConfirmDialog ────────────────────────────────────────────────────────── */
+.ui-confirm {
+  padding: var(--space-6) var(--space-5) var(--space-5);
+}
+.ui-confirm__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-full);
+}
+.ui-confirm__icon--danger  { background: var(--color-error-bg);   color: var(--color-error-text); }
+.ui-confirm__icon--warning { background: var(--color-warning-bg); color: var(--color-warning-text); }
+.ui-confirm__icon--info    { background: var(--color-info-bg);    color: var(--color-info-text); }
+
+.ui-confirm__title {
+  margin: 0;
+  font-size: var(--text-xl);
+  line-height: var(--lh-xl);
+  font-weight: var(--weight-semibold);
+}
+.ui-confirm__message {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  line-height: var(--lh-sm);
+  color: var(--color-text-muted);
+}
+.ui-confirm__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+}
+@media (max-width: 479px) {
+  .ui-confirm__actions > * {
+    flex: 1 1 8rem;
+  }
+}
+
+/* ── Motion ───────────────────────────────────────────────────────────────── */
+@keyframes ui-overlay-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes ui-sheet-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes ui-modal-pop {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes ui-drawer-from-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes ui-drawer-from-left {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-overlay,
+  .ui-modal,
+  .ui-drawer {
+    animation: none;
+  }
+}

@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /app/
+Disallow: /admin/
+Disallow: /login
+Disallow: /signup
+Disallow: /invoice/
+Disallow: /invite/
+Disallow: /cart
+Disallow: /checkout
+Disallow: /orders
+Disallow: /account
+
+# Replace with your real domain (see docs/GO-LIVE.md)
+Sitemap: https://YOUR-DOMAIN/sitemap.xml

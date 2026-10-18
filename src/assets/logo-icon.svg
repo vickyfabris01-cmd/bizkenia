@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="fabrentals icon">
+  <title>fabrentals</title>
+
+  <!-- Rounded square background -->
+  <rect x="0" y="0" width="32" height="32" rx="8" fill="#C5612C"/>
+
+  <!-- Roof triangle (white, semi-transparent) -->
+  <polygon points="16,4 26,14 6,14" fill="white" fill-opacity="0.20"/>
+
+  <!-- House walls -->
+  <rect x="6" y="14" width="20" height="14" rx="2.5" fill="white" fill-opacity="0.92"/>
+
+  <!-- Door -->
+  <rect x="11" y="19" width="10" height="9" rx="2" fill="#A84E22"/>
+
+  <!-- Chimney -->
+  <rect x="21.5" y="5" width="4" height="7" rx="1.5" fill="white" fill-opacity="0.50"/>
+</svg>

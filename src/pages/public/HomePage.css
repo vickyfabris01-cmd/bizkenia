@@ -1,0 +1,40 @@
+/* src/pages/public/HomePage.css — MODIFIED (adds the hero photo variant at the end) */
+.home-hero { background: var(--color-primary-soft); border-bottom: 1px solid var(--color-border); }
+.home-hero__inner { max-width: var(--container-max); margin: 0 auto; padding: var(--space-10) var(--gutter); display: grid; gap: var(--space-4); }
+.home-hero__title { margin: 0; font-size: var(--text-3xl); line-height: 1.15; font-weight: var(--weight-bold); color: var(--color-on-primary-soft); max-width: 20ch; }
+.home-hero__lead { margin: 0; max-width: 60ch; color: var(--color-text); font-size: var(--text-lg); line-height: 1.55; }
+.home-hero__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+.home-search { display: grid; gap: var(--space-2); max-width: 820px; }
+.home-search__input, .home-search__select { width: 100%; }
+.home-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.home-chip { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--space-4); border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); font-size: var(--text-sm); font-weight: var(--weight-medium); text-decoration: none; }
+.home-chip:hover { background: var(--color-surface-2); }
+.home-chip--all { color: var(--color-link); }
+@media (min-width: 768px) {
+  .home-hero__inner { padding: var(--space-16) var(--gutter); }
+  .home-hero__title { font-size: var(--text-hero); }
+  .home-search { grid-template-columns: 1fr 220px auto; align-items: center; }
+}
+
+.home-type h3 { margin: 0; font-size: var(--text-lg); color: var(--color-text); }
+.home-type p { margin: var(--space-2) 0 0; color: var(--color-text-muted); font-size: var(--text-sm); }
+.home-type__head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); }
+.home-type__link { display: inline-block; margin-top: var(--space-3); color: var(--color-link); font-weight: var(--weight-medium); }
+.home-list__head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-4); margin-bottom: var(--space-3); }
+.home-list__head a { color: var(--color-link); font-weight: var(--weight-medium); }
+
+/* Owners: one calm, separate band, not the main message. */
+.home-owner { background: var(--color-surface-2); display: grid; gap: var(--space-4); align-items: center; }
+.home-owner h2 { margin: 0 0 var(--space-1); font-size: var(--text-xl); }
+.home-owner p { margin: 0; max-width: 60ch; }
+.home-owner__steps { margin: var(--space-3) 0 0; padding-left: var(--space-5); display: grid; gap: var(--space-1); font-size: var(--text-sm); }
+.home-owner__actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+@media (min-width: 768px) { .home-owner { grid-template-columns: 1fr auto; } }
+
+/* Hero with a background photo. The plain .home-hero rules above stay as the fallback. */
+.home-hero--image { position: relative; background-size: cover; background-position: center; border-bottom-color: transparent; }
+.home-hero--image::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5, 46, 22, 0.78), rgba(5, 46, 22, 0.55)); }
+.home-hero--image .home-hero__inner { position: relative; }
+.home-hero--image .home-hero__title,
+.home-hero--image .home-hero__lead { color: #fff; }

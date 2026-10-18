@@ -1,0 +1,85 @@
+/* src/components/ui/Card.css — NEW FILE
+   Styles for Card.jsx. Tokens only: no hex values. */
+
+.ui-card {
+  min-width: 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.ui-card--pad-none { padding: 0; }
+.ui-card--pad-sm   { padding: var(--space-3); }
+.ui-card--pad-md   { padding: var(--space-4); }
+.ui-card--pad-lg   { padding: var(--space-6); }
+
+/* Roomier padding from tablet up */
+@media (min-width: 768px) {
+  .ui-card--pad-md { padding: var(--space-5); }
+}
+
+.ui-card--interactive {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    box-shadow var(--duration-base) var(--ease-standard),
+    border-color var(--duration-base) var(--ease-standard);
+}
+@media (hover: hover) {
+  .ui-card--interactive:hover {
+    border-color: var(--color-border-strong);
+    box-shadow: var(--shadow-md);
+  }
+}
+.ui-card--interactive:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.ui-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.ui-card--pad-none > .ui-card__header {
+  margin-bottom: 0;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+.ui-card__heading { min-width: 0; }
+.ui-card__title {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+.ui-card__subtitle {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.ui-card__action { flex-shrink: 0; }
+
+.ui-card__body { min-width: 0; }
+.ui-card--pad-none > .ui-card__body { padding: var(--space-4); }
+
+.ui-card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+.ui-card--pad-none > .ui-card__footer {
+  margin-top: 0;
+  padding: var(--space-4);
+}

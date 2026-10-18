@@ -1,0 +1,130 @@
+/* src/components/feedback/Toast.css — NEW FILE
+   Styles for Toast.jsx. Tokens only: no hex values.
+   Each type uses the tinted background token, its text token for the words, and the same text
+   token as the icon disc (with the background colour as the icon), so contrast is guaranteed. */
+
+.ui-toasts {
+  position: fixed;
+  z-index: var(--z-toast);
+  top: calc(var(--safe-top) + var(--space-3));
+  inset-inline: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  pointer-events: none; /* the gaps between toasts must not block clicks on the page */
+}
+
+@media (min-width: 768px) {
+  .ui-toasts {
+    top: var(--space-4);
+    inset-inline-start: auto;
+    inset-inline-end: var(--space-4);
+    width: 24rem;
+  }
+}
+
+.ui-toast {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--toast-accent);
+  border-radius: var(--radius-lg);
+  background: var(--toast-bg);
+  color: var(--toast-text);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  pointer-events: auto;
+  animation: ui-toast-in var(--duration-base) var(--ease-standard) both;
+}
+
+.ui-toast--success { --toast-bg: var(--color-success-bg); --toast-text: var(--color-success-text); --toast-accent: var(--color-success); }
+.ui-toast--error   { --toast-bg: var(--color-error-bg);   --toast-text: var(--color-error-text);   --toast-accent: var(--color-error); }
+.ui-toast--warning { --toast-bg: var(--color-warning-bg); --toast-text: var(--color-warning-text); --toast-accent: var(--color-warning); }
+.ui-toast--info    { --toast-bg: var(--color-info-bg);    --toast-text: var(--color-info-text);    --toast-accent: var(--color-info); }
+
+.ui-toast__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--toast-text);
+  color: var(--toast-bg);
+}
+
+.ui-toast__body {
+  flex: 1;
+  min-width: 0;
+  padding-top: 2px;
+  overflow-wrap: anywhere;
+}
+.ui-toast__title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: 1.3;
+}
+.ui-toast__message {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+.ui-toast__title + .ui-toast__message {
+  margin-top: var(--space-1);
+}
+
+.ui-toast__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+  margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) calc(var(--space-2) * -1) 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .ui-toast__close:hover {
+    background: color-mix(in srgb, currentColor 14%, transparent);
+  }
+}
+.ui-toast__close:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+/* Countdown line for toasts that disappear by themselves */
+.ui-toast__timer {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--toast-accent);
+  transform-origin: left center;
+  animation: ui-toast-timer linear forwards;
+}
+[dir="rtl"] .ui-toast__timer {
+  transform-origin: right center;
+}
+
+@keyframes ui-toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes ui-toast-timer {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-toast { animation: none; }
+  .ui-toast__timer { animation: none; display: none; }
+}

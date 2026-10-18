@@ -1,0 +1,396 @@
+/* src/styles/tokens.css — MODIFIED FILE (step 5: adds the --color-nav-* tokens and --sidebar-rail-w)
+
+   AIM
+   Single source of truth for every colour, size, spacing, radius, shadow and
+   motion value in the app. Nothing else in the codebase may contain a hex
+   colour or a hard-coded pixel size for these things.
+
+   RULES
+   1. Components and pages read tokens only: var(--...). No hex values.
+   2. Every colour token exists for light (":root") and dark
+      (":root[data-theme="dark"]" and, when data-theme="system", the OS setting).
+      If you add or change a colour, change it in all three places.
+   3. Colours come in pairs: a surface token and the text token that sits on it
+      (--color-action / --color-on-action). Never put text from one pair on the
+      surface of another.
+   4. Breakpoints are mobile-first (min-width): 480, 768, 1024, 1280 px.
+      CSS variables cannot be used inside @media, so the numbers live here.
+   5. Minimum text size is 12px (--text-xs). Minimum touch target is 44px.
+
+   THEME
+   <html data-theme="light | dark | system"> is set before first paint by the
+   script in index.html. Default is "light" while old pages are being migrated;
+   switch the default to "system" when the last old page is gone.
+
+   Colour values were read from the design-system sheet. Check them against the
+   source file in your image editor before the first release.
+*/
+
+/* ========================================================================== */
+/* 1. COLOURS — LIGHT (default)                                               */
+/* ========================================================================== */
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --color-bg: #F8FAFC;            /* page background */
+  --color-surface: #FFFFFF;       /* cards, modals, inputs */
+  --color-surface-2: #F1F5F9;     /* table headers, hover rows, subtle panels */
+  --color-border: #E2E8F0;
+  --color-border-strong: #CBD5E1; /* input borders, dividers that must be seen */
+  --color-control-border: #64748B; /* borders of inputs, selects, switches: 3:1 against surface */
+
+  /* Text (all pass 4.5:1 on --color-surface and --color-bg) */
+  --color-text: #0F172A;
+  --color-text-muted: #475569;
+  --color-text-subtle: #5B6B7E;
+  --color-text-disabled: #94A3B8; /* disabled only; not required to meet contrast */
+
+  /* Brand (icons, illustrations, large shapes — NOT small text) */
+  --color-primary: #16A34A;
+  --color-primary-hover: #15803D;
+  --color-primary-soft: #DCFCE7;       /* tinted backgrounds */
+  --color-on-primary-soft: #166534;    /* text on --color-primary-soft */
+  --color-accent: #10B981;
+
+  /* Filled primary button. Darker than --color-primary in light mode because
+     white text on #16A34A is only 3.3:1; this pair is 5.0:1. */
+  --color-action: #15803D;
+  --color-action-hover: #166534;
+  --color-action-active: #14532D;
+  --color-on-action: #FFFFFF;
+
+  /* Secondary button (tinted) */
+  --color-secondary-bg: #DCFCE7;
+  --color-secondary-bg-hover: #BBF7D0;
+  --color-secondary-bg-active: #86EFAC;
+  --color-on-secondary: #166534;
+
+  /* Outline and text buttons, links */
+  --color-link: #15803D;
+  --color-link-hover: #166534;
+
+  /* Disabled controls */
+  --color-disabled-bg: #E2E8F0;
+  --color-on-disabled: #94A3B8;
+
+  /* Destructive button */
+  --color-danger-action: #DC2626;
+  --color-danger-action-hover: #B91C1C;
+  --color-on-danger-action: #FFFFFF;
+
+  /* Status: icon/fill colour, tinted background, text on that background */
+  --color-success: #22C55E;
+  --color-success-bg: #DCFCE7;
+  --color-success-text: #166534;
+  --color-warning: #F59E0B;
+  --color-warning-bg: #FEF3C7;
+  --color-warning-text: #92400E;
+  --color-error: #EF4444;
+  --color-error-bg: #FEE2E2;
+  --color-error-text: #991B1B;
+  --color-info: #3B82F6;
+  --color-info-bg: #DBEAFE;
+  --color-info-text: #1E40AF;
+  --color-neutral-bg: #E2E8F0;
+  --color-neutral-text: #334155;
+
+  /* Navigation (sidebar). Deep green in both themes, as in the design sheets.
+     Pairs: --color-nav-text / --color-nav-text-muted on --color-nav-bg;
+     --color-nav-active-text on --color-nav-active-bg. */
+  --color-nav-bg: #14532D;
+  --color-nav-text: #DCFCE7;
+  --color-nav-text-muted: #86EFAC;
+  --color-nav-hover-bg: #166534;
+  --color-nav-active-bg: #15803D;
+  --color-nav-active-text: #FFFFFF;
+  --color-nav-border: #166534;
+
+  /* Focus, overlays, skeletons */
+  --color-focus: #2563EB;
+  --color-overlay: rgba(15, 23, 42, 0.5);
+  --color-skeleton: #E2E8F0;
+  --color-skeleton-shine: #F1F5F9;
+
+  /* Charts */
+  --chart-1: #16A34A;
+  --chart-2: #3B82F6;
+  --chart-3: #F59E0B;
+  --chart-4: #8B5CF6;
+  --chart-5: #EC4899;
+  --chart-grid: #E2E8F0;
+  --chart-axis: #64748B;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.14);
+}
+
+/* ========================================================================== */
+/* 2. COLOURS — DARK (explicit choice)                                        */
+/* ========================================================================== */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-bg: #0B1220;
+  --color-surface: #111827;
+  --color-surface-2: #1F2937;
+  --color-border: #374151;
+  --color-border-strong: #4B5563;
+  --color-control-border: #6B7280; /* borders of inputs, selects, switches: 3:1 against surface */
+
+  --color-text: #F1F5F9;
+  --color-text-muted: #CBD5E1;
+  --color-text-subtle: #94A3B8;
+  --color-text-disabled: #64748B;
+
+  --color-primary: #22C55E;
+  --color-primary-hover: #4ADE80;
+  --color-primary-soft: #052E16;
+  --color-on-primary-soft: #86EFAC;
+  --color-accent: #10B981;
+
+  /* Light green fill with dark text (white on #22C55E is only 2.3:1) */
+  --color-action: #22C55E;
+  --color-action-hover: #4ADE80;
+  --color-action-active: #86EFAC;
+  --color-on-action: #052E16;
+
+  --color-secondary-bg: #052E16;
+  --color-secondary-bg-hover: #14532D;
+  --color-secondary-bg-active: #166534;
+  --color-on-secondary: #86EFAC;
+
+  --color-link: #4ADE80;
+  --color-link-hover: #86EFAC;
+
+  --color-disabled-bg: #1F2937;
+  --color-on-disabled: #64748B;
+
+  --color-danger-action: #DC2626;
+  --color-danger-action-hover: #B91C1C;
+  --color-on-danger-action: #FFFFFF;
+
+  --color-success: #22C55E;
+  --color-success-bg: #052E16;
+  --color-success-text: #86EFAC;
+  --color-warning: #F59E0B;
+  --color-warning-bg: #451A03;
+  --color-warning-text: #FCD34D;
+  --color-error: #EF4444;
+  --color-error-bg: #450A0A;
+  --color-error-text: #FCA5A5;
+  --color-info: #3B82F6;
+  --color-info-bg: #172554;
+  --color-info-text: #93C5FD;
+  --color-neutral-bg: #1F2937;
+  --color-neutral-text: #CBD5E1;
+
+  /* Navigation (sidebar). Deep green in both themes, as in the design sheets.
+     Pairs: --color-nav-text / --color-nav-text-muted on --color-nav-bg;
+     --color-nav-active-text on --color-nav-active-bg. */
+  --color-nav-bg: #052E16;
+  --color-nav-text: #DCFCE7;
+  --color-nav-text-muted: #86EFAC;
+  --color-nav-hover-bg: #14532D;
+  --color-nav-active-bg: #166534;
+  --color-nav-active-text: #FFFFFF;
+  --color-nav-border: #14532D;
+
+  --color-focus: #60A5FA;
+  --color-overlay: rgba(0, 0, 0, 0.65);
+  --color-skeleton: #1F2937;
+  --color-skeleton-shine: #374151;
+
+  --chart-1: #22C55E;
+  --chart-2: #60A5FA;
+  --chart-3: #FBBF24;
+  --chart-4: #A78BFA;
+  --chart-5: #F472B6;
+  --chart-grid: #1F2937;
+  --chart-axis: #94A3B8;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+/* ========================================================================== */
+/* 3. COLOURS — DARK (follow the device, when data-theme="system")            */
+/*    Must stay identical to block 2. Change both together.                   */
+/* ========================================================================== */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    color-scheme: dark;
+
+    --color-bg: #0B1220;
+    --color-surface: #111827;
+    --color-surface-2: #1F2937;
+    --color-border: #374151;
+    --color-border-strong: #4B5563;
+    --color-control-border: #6B7280; /* borders of inputs, selects, switches: 3:1 against surface */
+
+    --color-text: #F1F5F9;
+    --color-text-muted: #CBD5E1;
+    --color-text-subtle: #94A3B8;
+    --color-text-disabled: #64748B;
+
+    --color-primary: #22C55E;
+    --color-primary-hover: #4ADE80;
+    --color-primary-soft: #052E16;
+    --color-on-primary-soft: #86EFAC;
+    --color-accent: #10B981;
+
+    --color-action: #22C55E;
+    --color-action-hover: #4ADE80;
+    --color-action-active: #86EFAC;
+    --color-on-action: #052E16;
+
+    --color-secondary-bg: #052E16;
+    --color-secondary-bg-hover: #14532D;
+    --color-secondary-bg-active: #166534;
+    --color-on-secondary: #86EFAC;
+
+    --color-link: #4ADE80;
+    --color-link-hover: #86EFAC;
+
+    --color-disabled-bg: #1F2937;
+    --color-on-disabled: #64748B;
+
+    --color-danger-action: #DC2626;
+    --color-danger-action-hover: #B91C1C;
+    --color-on-danger-action: #FFFFFF;
+
+    --color-success: #22C55E;
+    --color-success-bg: #052E16;
+    --color-success-text: #86EFAC;
+    --color-warning: #F59E0B;
+    --color-warning-bg: #451A03;
+    --color-warning-text: #FCD34D;
+    --color-error: #EF4444;
+    --color-error-bg: #450A0A;
+    --color-error-text: #FCA5A5;
+    --color-info: #3B82F6;
+    --color-info-bg: #172554;
+    --color-info-text: #93C5FD;
+    --color-neutral-bg: #1F2937;
+    --color-neutral-text: #CBD5E1;
+
+    /* Navigation (sidebar). Deep green in both themes, as in the design sheets.
+       Pairs: --color-nav-text / --color-nav-text-muted on --color-nav-bg;
+       --color-nav-active-text on --color-nav-active-bg. */
+    --color-nav-bg: #052E16;
+    --color-nav-text: #DCFCE7;
+    --color-nav-text-muted: #86EFAC;
+    --color-nav-hover-bg: #14532D;
+    --color-nav-active-bg: #166534;
+    --color-nav-active-text: #FFFFFF;
+    --color-nav-border: #14532D;
+
+    --color-focus: #60A5FA;
+    --color-overlay: rgba(0, 0, 0, 0.65);
+    --color-skeleton: #1F2937;
+    --color-skeleton-shine: #374151;
+
+    --chart-1: #22C55E;
+    --chart-2: #60A5FA;
+    --chart-3: #FBBF24;
+    --chart-4: #A78BFA;
+    --chart-5: #F472B6;
+    --chart-grid: #1F2937;
+    --chart-axis: #94A3B8;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+  }
+}
+
+/* ========================================================================== */
+/* 4. NON-COLOUR TOKENS (same in light and dark)                              */
+/* ========================================================================== */
+:root {
+  /* Typography */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Type scale: size / line-height pairs (from the design-system sheet) */
+  --text-xs: 0.75rem;     --lh-xs: 1rem;        /* 12 / 16  captions, helper text */
+  --text-sm: 0.875rem;    --lh-sm: 1.25rem;     /* 14 / 20  descriptions, table cells, H6 */
+  --text-md: 1rem;        --lh-md: 1.5rem;      /* 16 / 24  body, H5 */
+  --text-lg: 1.125rem;    --lh-lg: 1.625rem;    /* 18 / 26  H4 */
+  --text-xl: 1.25rem;     --lh-xl: 1.75rem;     /* 20 / 28  H3 */
+  --text-2xl: 1.5rem;     --lh-2xl: 2rem;       /* 24 / 32  H2 */
+  --text-3xl: 2rem;       --lh-3xl: 2.5rem;     /* 32 / 40  H1 */
+  --text-hero: clamp(2rem, 5vw + 0.5rem, 3.5rem); --lh-hero: 1.1;  /* hero headline only */
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Spacing: 4px base. Use these for padding, margin and gap. */
+  --space-0: 0;
+  --space-1: 0.25rem;   /*  4 */
+  --space-2: 0.5rem;    /*  8 */
+  --space-3: 0.75rem;   /* 12 */
+  --space-4: 1rem;      /* 16 */
+  --space-5: 1.25rem;   /* 20 */
+  --space-6: 1.5rem;    /* 24 */
+  --space-8: 2rem;      /* 32 */
+  --space-10: 2.5rem;   /* 40 */
+  --space-12: 3rem;     /* 48 */
+  --space-16: 4rem;     /* 64 */
+  --space-20: 5rem;     /* 80 */
+
+  /* Radii */
+  --radius-sm: 0.375rem;   /*  6 */
+  --radius-md: 0.5rem;     /*  8 buttons, inputs */
+  --radius-lg: 0.75rem;    /* 12 cards */
+  --radius-xl: 1rem;       /* 16 modals */
+  --radius-2xl: 1.5rem;    /* 24 hero panels */
+  --radius-full: 9999px;   /* pills, avatars */
+
+  /* Control heights (buttons, inputs, selects) */
+  --control-h-sm: 2rem;    /* 32 */
+  --control-h-md: 2.5rem;  /* 40 */
+  --control-h-lg: 3rem;    /* 48 */
+
+  /* Layout */
+  --container-max: 75rem;                         /* 1200 */
+  --gutter: clamp(1rem, 4vw, 2rem);               /* page side padding: never below 16 */
+  --sidebar-w: 16rem;
+  --sidebar-rail-w: 4.5rem;                        /* icon-only sidebar on tablets */
+  --topbar-h: 4rem;
+  --tabbar-h: 4rem;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Text over photos (same in both themes): always put --scrim-bottom between photo and text */
+  --scrim-bottom: linear-gradient(to top, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0));
+  --color-on-scrim: #FFFFFF;
+
+  /* Stacking order */
+  --z-base: 0;
+  --z-sticky: 100;
+  --z-nav: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Touch screens: every control is at least 44px tall */
+@media (pointer: coarse) {
+  :root {
+    --control-h-sm: 2.75rem;
+    --control-h-md: 2.75rem;
+  }
+}

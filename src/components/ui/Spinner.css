@@ -1,0 +1,33 @@
+/* src/components/ui/Spinner.css — NEW FILE
+   Styles for Spinner.jsx. Tokens only: no hex values. */
+
+.ui-spinner-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-block: var(--space-10);
+}
+.ui-spinner-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ui-spinner {
+  display: inline-block;
+  flex-shrink: 0;
+  border-style: solid;
+  border-color: var(--color-border-strong);
+  border-top-color: var(--color-primary);
+  border-radius: var(--radius-full);
+  animation: ui-spinner-spin 700ms linear infinite;
+}
+.ui-spinner--sm { width: 16px; height: 16px; border-width: 2px; }
+.ui-spinner--md { width: 28px; height: 28px; border-width: 3px; }
+.ui-spinner--lg { width: 44px; height: 44px; border-width: 4px; }
+
+@keyframes ui-spinner-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-spinner { animation-duration: 1800ms; }
+}

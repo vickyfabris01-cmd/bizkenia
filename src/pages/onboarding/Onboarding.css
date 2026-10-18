@@ -1,0 +1,44 @@
+/* src/pages/onboarding/Onboarding.css — NEW FILE */
+.onb__steps { list-style: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-2); margin: 0 0 var(--space-6); padding: 0; }
+.onb__step { display: grid; justify-items: center; gap: var(--space-1); position: relative; font-size: var(--text-xs); color: var(--color-text-subtle); }
+.onb__step-n { display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--radius-full); border: 2px solid var(--color-border-strong); font-weight: var(--weight-bold); background: var(--color-surface); }
+.onb__step.is-current { color: var(--color-text); font-weight: var(--weight-semibold); }
+.onb__step.is-current .onb__step-n { border-color: var(--color-primary); color: var(--color-primary); }
+.onb__step.is-done { color: var(--color-text-muted); }
+.onb__step.is-done .onb__step-n { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-on-action); }
+.onb__types { display: grid; gap: var(--space-3); }
+.onb__type { display: grid; grid-template-columns: auto 1fr; gap: var(--space-4); align-items: center; }
+.onb__type > button, .onb__type > a { grid-column: 1 / -1; }
+.onb__type.is-disabled { opacity: .75; }
+.onb__type-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: var(--radius-md); background: var(--color-primary-soft); color: var(--color-on-primary-soft); }
+.onb__type-text h2 { margin: 0 !important; font-size: var(--text-lg) !important; display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+.onb__type-text p { margin: 2px 0 0; font-size: var(--text-sm); }
+@media (min-width: 480px) { .onb__type { grid-template-columns: auto 1fr auto; } .onb__type > button, .onb__type > a { grid-column: auto; } }
+.onb__form { display: grid; gap: var(--space-4); }
+.onb__two { display: grid; gap: var(--space-4); }
+@media (min-width: 640px) { .onb__two { grid-template-columns: 1fr 1fr; } }
+.onb__actions { display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.onb__plans { display: grid; gap: var(--space-3); margin-bottom: var(--space-4); }
+.onb__plan { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); border: 2px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-4); cursor: pointer; background: var(--color-surface); min-height: 64px; }
+.onb__plan:has(input:checked) { border-color: var(--color-primary); background: var(--color-primary-soft); }
+.onb__plan:has(input:focus-visible) { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.onb__plan input { position: absolute; opacity: 0; pointer-events: none; }
+.onb__plan-name { font-weight: var(--weight-semibold); color: var(--color-text); display: block; }
+.onb__plan-desc { font-size: var(--text-sm); color: var(--color-text-muted); }
+.onb__plan-price { font-weight: var(--weight-bold); font-size: var(--text-lg); color: var(--color-text); text-align: right; white-space: nowrap; }
+.onb__plan-price small { display: block; font-weight: var(--weight-regular); font-size: var(--text-xs); color: var(--color-text-muted); }
+.onb__wait { display: grid; justify-items: center; gap: var(--space-3); text-align: center; padding: var(--space-6) 0; }
+.onb__status { display: grid; gap: var(--space-4); }
+.onb__timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.onb__timeline li { display: flex; gap: var(--space-3); align-items: start; color: var(--color-text-muted); font-size: var(--text-sm); }
+.onb__timeline .dot { flex: none; width: 24px; height: 24px; border-radius: var(--radius-full); display: grid; place-items: center; border: 2px solid var(--color-border-strong); font-size: 12px; }
+.onb__timeline .is-done .dot { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-on-action); }
+.onb__timeline .is-current .dot { border-color: var(--color-warning); }
+.onb__timeline strong { color: var(--color-text); display: block; }
+.onb__check { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.onb__check li { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+.onb__check .tick { flex: none; width: 24px; height: 24px; border-radius: var(--radius-full); display: grid; place-items: center; border: 2px solid var(--color-border-strong); color: var(--color-on-action); font-size: 12px; }
+.onb__check li.is-done .tick { background: var(--color-success); border-color: var(--color-success); }
+.onb__check li div { flex: 1; min-width: 0; }
+.onb__check li strong { display: block; color: var(--color-text); font-size: var(--text-md); }
+.onb__check li span { font-size: var(--text-sm); color: var(--color-text-muted); }

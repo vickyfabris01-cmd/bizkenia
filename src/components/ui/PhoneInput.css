@@ -1,0 +1,62 @@
+/* src/components/ui/PhoneInput.css — NEW FILE
+   Styles for PhoneInput.jsx. Tokens only: no hex values.
+   The border belongs to the whole row (prefix + input) so focus and error rings wrap both. */
+
+.ui-phone {
+  display: flex;
+  align-items: stretch;
+  min-height: var(--control-h-md);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow: hidden;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+}
+.ui-phone:focus-within {
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+.ui-phone.is-invalid {
+  border-color: var(--color-error);
+}
+.ui-phone.is-invalid:focus-within {
+  box-shadow: 0 0 0 3px var(--color-error-bg);
+}
+.ui-phone.is-disabled {
+  background: var(--color-disabled-bg);
+}
+
+.ui-phone__prefix {
+  display: flex;
+  align-items: center;
+  padding-inline: var(--space-3);
+  background: var(--color-surface-2);
+  border-inline-end: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+}
+
+.ui-phone__input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+}
+.ui-phone__input::placeholder {
+  color: var(--color-text-subtle);
+  opacity: 1;
+}
+.ui-phone__input:focus {
+  outline: none;
+}
+.ui-phone__input:disabled {
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}

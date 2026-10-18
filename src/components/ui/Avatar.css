@@ -1,0 +1,33 @@
+/* src/components/ui/Avatar.css — NEW FILE
+   Styles for Avatar.jsx. Tokens only: no hex values. */
+
+.ui-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  user-select: none;
+}
+
+.ui-avatar--initials {
+  background: var(--color-neutral-bg);
+  color: var(--color-neutral-text);
+}
+
+.ui-avatar-group {
+  display: inline-flex;
+  align-items: center;
+}
+/* Overlap, with a ring in the page colour so neighbours stay distinct */
+.ui-avatar-group__item {
+  box-shadow: 0 0 0 2px var(--color-surface);
+}
+.ui-avatar-group__item + .ui-avatar-group__item {
+  margin-inline-start: calc(var(--space-1) * -1.5);
+}

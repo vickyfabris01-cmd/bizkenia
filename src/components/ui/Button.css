@@ -1,0 +1,134 @@
+/* src/components/ui/Button.css — NEW FILE
+   Styles for Button.jsx. Tokens only: no hex values. */
+
+.ui-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-h-md);
+  padding-inline: var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+/* ── Sizes (all keep a 44px touch target on md and lg; sm is for dense desktop rows) ── */
+.ui-btn--sm {
+  min-height: var(--control-h-sm);
+  padding-inline: var(--space-3);
+}
+.ui-btn--lg {
+  min-height: var(--control-h-lg);
+  padding-inline: var(--space-6);
+  font-size: var(--text-md);
+}
+.ui-btn--full {
+  display: flex;
+  width: 100%;
+}
+
+/* ── Variants ─────────────────────────────────────────────────────────────── */
+.ui-btn--primary {
+  background: var(--color-action);
+  color: var(--color-on-action);
+}
+.ui-btn--secondary {
+  background: var(--color-secondary-bg);
+  color: var(--color-on-secondary);
+  border-color: var(--color-border);
+}
+.ui-btn--outline {
+  background: transparent;
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+.ui-btn--danger {
+  background: var(--color-danger-action);
+  color: var(--color-on-danger-action);
+}
+.ui-btn--ghost {
+  background: transparent;
+  color: var(--color-text);
+}
+
+/* ── Hover (only on devices that really hover, so touch screens do not get stuck states) ── */
+@media (hover: hover) {
+  .ui-btn--primary:hover { background: var(--color-action-hover); }
+  .ui-btn--secondary:hover { background: var(--color-secondary-bg-hover); }
+  .ui-btn--outline:hover { background: var(--color-surface-2); }
+  .ui-btn--danger:hover { background: var(--color-danger-action-hover); }
+  .ui-btn--ghost:hover { background: var(--color-surface-2); }
+}
+
+/* ── Pressed ──────────────────────────────────────────────────────────────── */
+.ui-btn--primary:active { background: var(--color-action-active); }
+.ui-btn--secondary:active { background: var(--color-secondary-bg-active); }
+.ui-btn--outline:active,
+.ui-btn--ghost:active { background: var(--color-secondary-bg-active); }
+.ui-btn--danger:active { background: var(--color-danger-action-hover); }
+
+/* ── Keyboard focus ───────────────────────────────────────────────────────── */
+.ui-btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ── Disabled and loading ─────────────────────────────────────────────────── */
+.ui-btn:disabled,
+.ui-btn[aria-disabled="true"] {
+  background: var(--color-disabled-bg);
+  color: var(--color-on-disabled);
+  border-color: transparent;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.ui-btn--outline:disabled,
+.ui-btn--outline[aria-disabled="true"],
+.ui-btn--ghost:disabled,
+.ui-btn--ghost[aria-disabled="true"] {
+  background: transparent;
+}
+.ui-btn.is-loading {
+  cursor: progress;
+}
+
+.ui-btn__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.ui-btn__label {
+  min-width: 0;
+}
+
+/* Spinner inside the button; follows the text colour */
+.ui-btn__spinner {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: var(--radius-full);
+  animation: ui-btn-spin 700ms linear infinite;
+}
+@keyframes ui-btn-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-btn__spinner { animation-duration: 1800ms; }
+}

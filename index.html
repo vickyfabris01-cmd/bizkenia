@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Primary meta -->
+    <title>BizKenia — Manage and grow your business</title>
+    <meta name="description" content="BizKenia — manage your rental, shop or farm business in one place, and be found by customers across Kenya." />
+    <meta name="theme-color" content="#16A34A" />
+
+    <!-- Favicon and home-screen icon: the BizKenia logo (served from public/) -->
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Theme boot: sets data-theme BEFORE first paint so there is no flash.
+         Values: "light" | "dark" | "system" (default: follow the device).
+         Must match DEFAULT_THEME in src/hooks/useTheme.js. -->
+    <script>
+      (function () {
+        var theme = "system";
+        try {
+          var saved = localStorage.getItem("app-theme");
+          if (saved === "light" || saved === "dark" || saved === "system") theme = saved;
+        } catch (e) {}
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
+
+    <!-- Inter, the UI font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Open Graph -->
+    <meta property="og:title"       content="BizKenia" />
+    <meta property="og:description" content="Manage and grow your business in Kenya." />
+    <meta property="og:type"        content="website" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- Vite injects the module script tag here -->
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

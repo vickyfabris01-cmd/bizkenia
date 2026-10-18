@@ -1,0 +1,43 @@
+/* src/components/ui/EmptyState.css — NEW FILE
+   Styles for EmptyState.jsx. Tokens only: no hex values. */
+
+.ui-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--space-10) var(--space-4);
+}
+.ui-empty--compact {
+  padding: var(--space-6) var(--space-4);
+}
+
+.ui-empty__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+}
+
+.ui-empty__title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+}
+
+.ui-empty__desc {
+  max-width: 42ch;
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.ui-empty__action {
+  margin-top: var(--space-4);
+}

@@ -1,0 +1,12 @@
+/* src/pages/shared/MaintenancePage.css — NEW FILE (Phase 5, step 3)
+   The maintenance page and the banner a super admin sees while it is on. Class prefix: maint-. Tokens only. */
+.maint { min-height: 100dvh; display: grid; place-items: center; padding: var(--space-6) var(--gutter); background: var(--color-bg); }
+.maint__card { width: 100%; max-width: 520px; text-align: center; display: grid; gap: var(--space-4); justify-items: center; }
+.maint__logo { height: 44px; width: auto; }
+.maint__icon { width: 56px; height: 56px; border-radius: var(--radius-full); display: grid; place-items: center; background: var(--color-warning-bg); color: var(--color-warning-text); }
+.maint__title { margin: 0; font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-text); }
+.maint__text { margin: 0; color: var(--color-text-muted); font-size: var(--text-md); overflow-wrap: anywhere; white-space: pre-line; }
+.maint__small { margin: 0; color: var(--color-text-subtle); font-size: var(--text-sm); }
+.maint__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: center; }
+.maint-banner { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; justify-content: center; padding: var(--space-2) var(--space-4); background: var(--color-warning-bg); color: var(--color-warning-text); border-bottom: 1px solid var(--color-border); font-size: var(--text-sm); }
+.maint-banner a { color: inherit; font-weight: var(--weight-semibold); text-decoration: underline; min-height: 24px; }

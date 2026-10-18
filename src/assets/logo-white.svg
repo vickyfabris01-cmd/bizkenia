@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 56" width="260" height="56" role="img" aria-label="fabrentals logo">
+  <title>fabrentals</title>
+
+  <!-- Icon badge — semi-transparent white bg for dark surfaces -->
+  <g transform="translate(0,14)">
+    <rect x="0" y="0" width="28" height="28" rx="7" fill="white" fill-opacity="0.20"/>
+
+    <!-- Roof -->
+    <polygon points="14,3 23.5,12.5 4.5,12.5" fill="white" fill-opacity="0.30"/>
+
+    <!-- Walls -->
+    <rect x="5.5" y="12.5" width="17" height="12" rx="2" fill="white" fill-opacity="0.80"/>
+
+    <!-- Door — terracotta so it pops on white walls -->
+    <rect x="9.5" y="17" width="9" height="7.5" rx="1.5" fill="#C5612C"/>
+
+    <!-- Chimney -->
+    <rect x="19" y="4" width="3.5" height="6" rx="1" fill="white" fill-opacity="0.40"/>
+  </g>
+
+  <!-- "fab" — pure white -->
+  <text
+    x="38"
+    y="38"
+    fill="white"
+    font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    font-weight="900"
+    font-size="28px"
+    letter-spacing="-0.5"
+  >fab</text>
+
+  <!-- "rentals" — light terracotta tint so it stays legible on dark -->
+  <text
+    x="93"
+    y="38"
+    fill="#FFAA80"
+    font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    font-weight="900"
+    font-size="28px"
+    letter-spacing="-0.5"
+  >rentals</text>
+</svg>
