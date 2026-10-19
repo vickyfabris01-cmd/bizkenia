@@ -33,6 +33,10 @@
 .site-footer h2 { margin: 0 0 var(--space-2); font-size: var(--text-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-subtle); }
 .site-footer a { color: var(--color-text-muted); text-decoration: none; font-size: var(--text-sm); min-height: 32px; display: inline-flex; align-items: center; }
 .site-footer a:hover { color: var(--color-link-hover); text-decoration: underline; }
+/* Footer sign out: a button that looks like the footer links */
+.site-footer__out { all: unset; box-sizing: border-box; color: var(--color-text-muted); font-size: var(--text-sm); min-height: 32px; display: inline-flex; align-items: center; cursor: pointer; }
+.site-footer__out:hover { color: var(--color-link-hover); text-decoration: underline; }
+.site-footer__out:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-md); }
 .site-footer__copy { max-width: var(--container-max); margin: 0 auto; padding: var(--space-4) var(--gutter) var(--space-8); color: var(--color-text-subtle); font-size: var(--text-xs); border-top: 1px solid var(--color-border); }
 @media (min-width: 768px) {
   .site-footer__inner { grid-template-columns: 2fr 1fr 1fr 1fr; }

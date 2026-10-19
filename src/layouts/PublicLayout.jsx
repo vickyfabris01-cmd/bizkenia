@@ -1,4 +1,4 @@
-// src/layouts/PublicLayout.jsx — MODIFIED (header links: Explore businesses, Shop and rent)
+// src/layouts/PublicLayout.jsx — MODIFIED (header links: Explore businesses, Shop and rent; footer Sign in / Sign out follows the session)
 //
 // AIM
 // The frame for every public page: header (logo, links, theme, sign in / account), the page,
@@ -122,6 +122,15 @@ export function SiteHeader() {
 
 export function SiteFooter() {
   const brand = useBrand();
+  const user = useSession((s) => s.user);
+  const navigate = useNavigate();
+
+  const signOut = async () => {
+    await useSession.getState().signOut();
+    useBusinessStore.getState().reset();
+    navigate("/");
+  };
+
   return (
     <footer className="site-footer">
       <div className="site-footer__inner">
@@ -148,7 +157,11 @@ export function SiteFooter() {
           <Link to="/shop-rent">Shop and rent</Link>
           <Link to="/explore?type=rental">Rentals</Link>
           <Link to="/start">List your business</Link>
-          <Link to="/login">Sign in</Link>
+          {user ? (
+            <button type="button" className="site-footer__out" onClick={signOut}>Sign out</button>
+          ) : (
+            <Link to="/login">Sign in</Link>
+          )}
         </nav>
       </div>
       <p className="site-footer__copy">© {new Date().getFullYear()} {brand.name}. All rights reserved.</p>
