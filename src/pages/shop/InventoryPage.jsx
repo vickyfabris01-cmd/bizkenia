@@ -1,10 +1,13 @@
-// src/pages/shop/InventoryPage.jsx — NEW FILE (Phase 5)
+// src/pages/shop/InventoryPage.jsx — MODIFIED (optional wording props so farms can reuse it for produce)
 //
 // AIM
 // /app/:slug/inventory — how many of each product you have. At or below a product's warning level
 // it shows "Low stock". Stock changes only by recording stock in (new stock arrived), stock out
 // (lost or used) or a recount; each is kept in the product's history, and stock can never go below
 // zero. Sales and cancelled orders change stock automatically and show in the history too.
+//
+// Props are optional and default to the shop's wording. The farm's Produce stock screen passes its
+// own title and nouns (see pages/farm/ProduceStockPage.jsx).
 
 import "./Shop.css";
 import { useState } from "react";
@@ -38,7 +41,7 @@ function History({ product, onClose }) {
   );
 }
 
-export default function InventoryPage() {
+export default function InventoryPage({ title = "Inventory", noun = "product", plural = "products" }) {
   const { bid } = useShop();
   const toast = useToast();
   const { data: rows, error, loading, reload } = useAsync(() => listProducts(bid, { limit: 500 }), [bid]);
@@ -70,13 +73,13 @@ export default function InventoryPage() {
 
   return (
     <div className="shop">
-      <PageHead title="Inventory" lead={items.length ? `${items.length} product${items.length === 1 ? "" : "s"}${low.length ? ` · ${low.length} low or out` : ""}` : "How many of each product you have."} />
-      {items.length > 0 && <Tabs label="Stock" value={tab} onChange={setTab} tabs={[{ value: "all", label: "All products", count: items.length }, { value: "low", label: "Low or out", count: low.length }]} />}
+      <PageHead title={title} lead={items.length ? `${items.length} ${items.length === 1 ? noun : plural}${low.length ? ` · ${low.length} low or out` : ""}` : `How many of each ${noun} you have.`} />
+      {items.length > 0 && <Tabs label="Stock" value={tab} onChange={setTab} tabs={[{ value: "all", label: `All ${plural}`, count: items.length }, { value: "low", label: "Low or out", count: low.length }]} />}
 
       {items.length === 0 ? (
-        <Card><EmptyState icon="file" title="No products yet" description="Add products first, then come here to keep their stock right." /></Card>
+        <Card><EmptyState icon="file" title={`No ${plural} yet`} description={`Add ${plural} first, then come here to keep their stock right.`} /></Card>
       ) : shown.length === 0 ? (
-        <Card><EmptyState icon="success" compact title="Nothing is low" description="Every product is above its warning level." /></Card>
+        <Card><EmptyState icon="success" compact title="Nothing is low" description={`Every ${noun} is above its warning level.`} /></Card>
       ) : (
         <div className="shop-cards">
           {shown.map((p) => {

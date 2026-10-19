@@ -1,12 +1,20 @@
-// src/pages/public/HomePage.jsx — MODIFIED (hero photo is ready before the page draws; skeleton until then)
+// src/pages/public/HomePage.jsx — MODIFIED (Latest businesses is grouped by type: 3 shops, 3 farms, 3 rentals)
 //
 // AIM
-// The front door, written for someone who just wants to FIND a business: search by name,
-// place and type, jump straight to a county, browse the latest businesses and the types.
+// The front door, written for someone who just wants to FIND a business: search by name
+// or place, see the latest products and rooms, browse the latest businesses and the types.
 // Owners get one short, clearly separate section near the bottom ("Own a business?"), not the
 // main message. Signed-in visitors see the same page with a greeting, and a signed-in owner
 // sees a link to their businesses instead of the sales pitch. Everything shown is real: the
-// list comes from the database (skeleton, then cards, or a friendly message).
+// lists come from the database (skeleton, then cards, or a friendly message).
+//
+// Latest products & rentals: up to 4 shop products, 4 farm produce items and 4 available rooms
+// (one database call, home_listings). Each type is its own row. The page always receives 4 of
+// each; CSS shows 4 per row from 1024px, 3 from 640px and 2 below that, so the rows stay full.
+//
+// Latest businesses: the 3 newest shops, 3 newest farms and 3 newest rentals, one row per type
+// (three database calls). The page always receives 3 of each; CSS shows 3 per row from 768px,
+// 2 from 480px and 1 below that, matching how many cards the screen fits.
 //
 // Hero background: the super admin uploads photos in Settings. The photo showing now comes from
 // current_hero_image(). It is fetched and downloaded by lib/heroPreload.js, which main.jsx starts
@@ -19,21 +27,48 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Badge, Button, Card, EmptyState, Icon, Skeleton } from "../../components/ui";
 import BusinessCard, { BusinessCardSkeleton } from "../../components/business/BusinessCard.jsx";
-import { BUSINESS_TYPES, COUNTIES } from "../../config/counties.js";
+import ListingCard, { ListingCardSkeleton } from "../../components/business/ListingCard.jsx";
+import { BUSINESS_TYPES } from "../../config/counties.js";
 import useAsync from "../../hooks/useAsync.js";
 import useBrand from "../../hooks/useBrand.js";
-import { listBusinesses } from "../../lib/api/directory.js";
+import { listBusinesses, listHomeListings } from "../../lib/api/directory.js";
+import { formatKsh } from "../../lib/format.js";
 import { useHeroPreload } from "../../lib/heroPreload.js";
 import { useSession } from "../../store/sessionStore.js";
 import { useBusinessStore } from "../../store/businessStore.js";
-
-const POPULAR_COUNTIES = ["Nairobi", "Mombasa", "Kisumu", "Nakuru", "Kiambu", "Uasin Gishu", "Machakos", "Kajiado"];
 
 const OWNER_STEPS = [
   "Create your account and choose your business type.",
   "Add your details and pay the subscription by M-Pesa.",
   "Get approved, go live and start managing.",
 ];
+
+// Latest businesses: one row per type, in this order, 3 of each.
+const BIZ_ROWS = [
+  { type: "shop", label: "Shops" },
+  { type: "agriculture", label: "Farms" },
+  { type: "rental", label: "Rentals" },
+];
+
+// Three calls, one per type, newest first. Only an error if every call failed.
+async function loadLatestBusinesses() {
+  const results = await Promise.all(BIZ_ROWS.map((r) => listBusinesses({ type: r.type, limit: 3 })));
+  if (results.every((r) => r.error)) return { data: null, error: results[0].error };
+  return { data: Object.fromEntries(BIZ_ROWS.map((r, i) => [r.type, results[i].data || []])), error: null };
+}
+
+// ---- turn database rows into card details ----------------------------------------------
+const perUnit = (u) => (u && u !== "item" ? ` / ${u}` : "");
+const where = (x) => [x.business_name, x.county].filter(Boolean).join(" · ");
+const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
+
+const shopCard = (p) => ({ key: p.id, to: `/b/${p.business_slug}/p/${p.id}`, image: p.images?.[0], title: p.name, price: `${formatKsh(p.price)}${perUnit(p.unit)}`, place: where(p) });
+const farmCard = (p) => ({ key: p.id, to: `/b/${p.business_slug}`, image: p.images?.[0], title: p.name, price: `${formatKsh(p.price)}${perUnit(p.unit)}`, place: where(p) });
+const roomCard = (r) => ({
+  key: r.id, to: `/b/${r.business_slug}`, image: r.images?.[0],
+  title: `Room ${r.room_number}${r.building_name ? ` · ${r.building_name}` : ""}`,
+  price: `${formatKsh(r.monthly_price)} / month`, place: where(r), badge: cap(r.room_type),
+});
 
 // Grey wireframe of the whole page, same layout as the real one, shown until the hero is ready.
 function HomeSkeleton() {
@@ -45,18 +80,19 @@ function HomeSkeleton() {
           <Skeleton height={18} width="min(460px, 80%)" />
           <div className="home-search">
             <Skeleton height={44} />
-            <Skeleton height={44} />
             <Skeleton height={48} width={120} />
-          </div>
-          <div className="home-chips">
-            {[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} height={44} width={96} style={{ borderRadius: "var(--radius-full)" }} />)}
           </div>
         </div>
       </section>
 
       <section className="pg" aria-hidden="true">
+        <div className="home-list__head"><Skeleton height={28} width={240} /></div>
+        <div className="home-listings__row">{[0, 1, 2, 3].map((i) => <ListingCardSkeleton key={i} />)}</div>
+      </section>
+
+      <section className="pg" aria-hidden="true">
         <div className="home-list__head"><Skeleton height={28} width={200} /></div>
-        <div className="pg-grid pg-grid--3">{[0, 1, 2].map((i) => <BusinessCardSkeleton key={i} />)}</div>
+        <div className="home-biz__row">{[0, 1, 2].map((i) => <BusinessCardSkeleton key={i} />)}</div>
       </section>
 
       <section className="pg" aria-hidden="true">
@@ -76,22 +112,30 @@ export default function HomePage() {
   const profile = useSession((s) => s.profile);
   const memberships = useBusinessStore((s) => s.memberships);
   const [term, setTerm] = useState("");
-  const [county, setCounty] = useState("");
-  const { data, error, loading } = useAsync(() => listBusinesses({ limit: 6 }), []);
+  const { data, error, loading } = useAsync(loadLatestBusinesses, []);
+  const { data: listings, error: listError, loading: listLoading } = useAsync(() => listHomeListings(4), []);
   const hero = useHeroPreload(); // { ready, url }; url is "" when the plain green hero is used
   const first = (profile?.full_name || "").split(" ")[0];
   const ownsBusiness = Boolean(user) && memberships.length > 0;
+
+  // One row per type; a type with nothing to show is left out.
+  const groups = [
+    { key: "shop", label: "Shop products", more: "/explore?type=shop", items: (listings?.shop || []).map(shopCard) },
+    { key: "farm", label: "Farm produce", more: "/explore?type=agriculture", items: (listings?.farm || []).map(farmCard) },
+    { key: "rooms", label: "Rooms to rent", more: "/explore?type=rental", items: (listings?.rooms || []).map(roomCard) },
+  ].filter((g) => g.items.length > 0);
+
+  const bizGroups = BIZ_ROWS.map((r) => ({ ...r, items: data?.[r.type] || [] })).filter((g) => g.items.length > 0);
 
   function search(e) {
     e.preventDefault();
     const q = new URLSearchParams();
     if (term.trim()) q.set("q", term.trim());
-    if (county) q.set("county", county);
     const s = q.toString();
     navigate(`/explore${s ? `?${s}` : ""}`);
   }
 
-  // The business list keeps loading in the background while the skeleton shows.
+  // The lists keep loading in the background while the skeleton shows.
   if (!hero.ready) return <HomeSkeleton />;
 
   return (
@@ -113,36 +157,63 @@ export default function HomePage() {
             <label htmlFor="home-q" className="home-hero__label">Search by name or place</label>
             <input id="home-q" className="ui-control home-search__input" value={term} onChange={(e) => setTerm(e.target.value)}
               placeholder="Name or place, for example Sunrise or Nakuru" />
-            <label htmlFor="home-county" className="home-hero__label">County</label>
-            <select id="home-county" className="ui-control home-search__select" value={county} onChange={(e) => setCounty(e.target.value)}>
-              <option value="">All counties</option>
-              {COUNTIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
             <Button type="submit" size="lg" leftIcon={<Icon name="search" size={18} />}>Search</Button>
           </form>
-
-          <ul className="home-chips" aria-label="Popular counties">
-            {POPULAR_COUNTIES.map((c) => (
-              <li key={c}><Link className="home-chip" to={`/explore?county=${encodeURIComponent(c)}`}>{c}</Link></li>
-            ))}
-            <li><Link className="home-chip home-chip--all" to="/explore">All businesses</Link></li>
-          </ul>
         </div>
       </section>
 
-      <section className="pg">
+      <section className="pg" aria-labelledby="home-listings-h">
         <div className="home-list__head">
-          <h2 className="pg__title">Latest businesses</h2>
+          <h2 id="home-listings-h" className="pg__title">Latest products &amp; rentals</h2>
+        </div>
+        {listLoading ? (
+          <div className="home-listings__row">{[0, 1, 2, 3].map((i) => <ListingCardSkeleton key={i} />)}</div>
+        ) : listError ? (
+          <Card><EmptyState icon="info" title="Products and rentals could not be loaded" description={listError} compact /></Card>
+        ) : groups.length === 0 ? (
+          <Card><EmptyState icon="building" title="Nothing listed yet" description="New products, produce and rooms will appear here. Check back soon." compact /></Card>
+        ) : (
+          <div className="home-listings">
+            {groups.map((g) => (
+              <div key={g.key} className="home-listings__group">
+                <div className="home-listings__label">
+                  <h3>{g.label}</h3>
+                  <Link to={g.more}>See all</Link>
+                </div>
+                <div className="home-listings__row">
+                  {g.items.map((it) => <ListingCard key={it.key} listing={it} />)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="pg" aria-labelledby="home-biz-h">
+        <div className="home-list__head">
+          <h2 id="home-biz-h" className="pg__title">Latest businesses</h2>
           <Link to="/explore">See all</Link>
         </div>
         {loading ? (
-          <div className="pg-grid pg-grid--3">{[0, 1, 2].map((i) => <BusinessCardSkeleton key={i} />)}</div>
+          <div className="home-biz__row">{[0, 1, 2].map((i) => <BusinessCardSkeleton key={i} />)}</div>
         ) : error ? (
           <Card><EmptyState icon="info" title="Businesses could not be loaded" description={error} compact /></Card>
-        ) : data.length === 0 ? (
+        ) : bizGroups.length === 0 ? (
           <Card><EmptyState icon="building" title="No businesses listed yet" description="Approved businesses will appear here. Check back soon." compact /></Card>
         ) : (
-          <div className="pg-grid pg-grid--3">{data.map((b) => <BusinessCard key={b.id} business={b} />)}</div>
+          <div className="home-listings">
+            {bizGroups.map((g) => (
+              <div key={g.type} className="home-listings__group">
+                <div className="home-listings__label">
+                  <h3>{g.label}</h3>
+                  <Link to={`/explore?type=${g.type}`}>See all</Link>
+                </div>
+                <div className="home-biz__row">
+                  {g.items.map((b) => <BusinessCard key={b.id} business={b} />)}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </section>
 

@@ -1,4 +1,4 @@
-// src/router/routes.js — REWRITTEN (release 1.0; the old role-based table for the first version is gone)
+// src/router/routes.js — MODIFIED (adds /shop-rent)
 //
 // AIM
 // The tab title and search description of every fixed page. AppRouter looks the current path up here
@@ -10,6 +10,7 @@
 export const ROUTE_META = {
   "/":               { title: "", desc: "Find rentals, shops and farms across Kenya, or run your own business in one place." },
   "/explore":        { title: "Explore businesses", desc: "Browse rentals, shops and farms in every county of Kenya." },
+  "/shop-rent":      { title: "Shop and rent", desc: "Shop products, buy fresh farm produce and find rooms to rent across Kenya." },
   "/pricing":        { title: "For business owners", desc: "Simple monthly plans for rental, shop and farm businesses." },
   "/about":          { title: "About", desc: "What the platform is and who it is for." },
   "/contact":        { title: "Contact", desc: "Get in touch with the support team." },

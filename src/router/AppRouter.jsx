@@ -1,10 +1,10 @@
-// src/router/AppRouter.jsx — MODIFIED FILE (Phase 3: help centre, my tickets, notification centre; Phase 5 step 3: maintenance gate and /maintenance)
+// src/router/AppRouter.jsx — MODIFIED FILE (adds /shop-rent; Phase 3: help centre, my tickets, notification centre; Phase 5 step 3: maintenance gate and /maintenance)
 //
 // AIM
 // Every route of the site. Unbuilt screens are NOT missing: they open the ComingSoon page
 // (inside /app/:slug and /admin they are driven by the module registry / admin menu).
 //
-//   public      /  /explore  /b/:slug (shop: /browse /p/:id /cart)  /pricing  /about  /contact  /terms  /privacy  /help  /maintenance
+//   public      /  /explore  /shop-rent  /b/:slug (shop: /browse /p/:id /cart)  /pricing  /about  /contact  /terms  /privacy  /help  /maintenance
 //               /invoice/:token (one shared invoice)  /invite/:token (manager invite)
 //   auth        /login  /signup  /confirm  /forgot-password  /reset-password  /auth/callback
 //   signed in   /b/:slug/checkout  /orders  /orders/:id  /wishlist  /account  /account/requests  /businesses  /b/:slug/request  /start  /start/details  /start/subscribe  /start/status
@@ -28,6 +28,7 @@ import { useBusinessStore } from "../store/businessStore.js";
 const page = (loader) => lazy(loader);
 const HomePage = page(() => import("../pages/public/HomePage.jsx"));
 const ExplorePage = page(() => import("../pages/public/ExplorePage.jsx"));
+const ShopRentPage = page(() => import("../pages/public/ShopRentPage.jsx"));
 const ShopBrowsePage = page(() => import("../pages/storefront/BrowsePage.jsx"));
 const ShopProductPage = page(() => import("../pages/storefront/ProductPage.jsx"));
 const ShopCartPage = page(() => import("../pages/storefront/CartPage.jsx"));
@@ -126,6 +127,7 @@ export default function AppRouter() {
           <Route element={<PublicLayout />}>
             <Route path="/" element={<Guarded><HomePage /></Guarded>} />
             <Route path="/explore" element={<Guarded><ExplorePage /></Guarded>} />
+            <Route path="/shop-rent" element={<Guarded><ShopRentPage /></Guarded>} />
             <Route path="/b/:slug" element={<Guarded><BusinessPage /></Guarded>} />
             <Route path="/b/:slug/browse" element={<Guarded><ShopBrowsePage /></Guarded>} />
             <Route path="/b/:slug/p/:productId" element={<Guarded><ShopProductPage /></Guarded>} />

@@ -10,7 +10,7 @@ Deno.serve(async () => {
   const site = (Deno.env.get("SITE_URL") ?? "").replace(/\/$/, "");
   if (!site) return new Response("SITE_URL is not set", { status: 500 });
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!);
-  const urls: { loc: string; lastmod?: string }[] = [{ loc: `${site}/` }, { loc: `${site}/explore` }];
+  const urls: { loc: string; lastmod?: string }[] = [{ loc: `${site}/` }, { loc: `${site}/explore` }, { loc: `${site}/shop-rent` }];
 
   const { data: biz } = await sb.from("businesses").select("id, slug, business_type, updated_at")
     .eq("status", "active").order("updated_at", { ascending: false }).limit(5000);

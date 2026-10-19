@@ -1,21 +1,25 @@
-// src/pages/public/BusinessPage.jsx — MODIFIED FILE (Phase 2 rooms; header logo becomes the business logo)
+// src/pages/public/BusinessPage.jsx — MODIFIED FILE (farms list their produce)
 //
 // AIM
 // The public page of one approved business at /b/:slug: name, type, description, location,
 // contact buttons (call, WhatsApp, email). Reviews and stars are left out on purpose.
 // Phase 2: for rentals it also lists the rooms available now (anyone can look, no sign-in), and
 // "Request a room" leads to /b/:slug/request, which asks the person to sign in first.
+// Farms list the produce they have for sale; buying is by calling or messaging the farm.
 // A business that is not active shows "not found".
 
 import "./BusinessPage.css";
 import "../rental/Rental.css";
 import { Link, useParams } from "react-router-dom";
 import { Badge, Button, Card, EmptyState, Icon, Skeleton, SkeletonText } from "../../components/ui";
+import ListingCard from "../../components/business/ListingCard.jsx";
 import { typeLabel } from "../../config/counties.js";
 import useAsync from "../../hooks/useAsync.js";
 import useBusinessBrand from "../../hooks/useBusinessBrand.js";
 import { getBusinessBySlug } from "../../lib/api/directory.js";
 import { listAvailableRooms } from "../../lib/api/rental.js";
+import { listShopProducts } from "../../lib/api/storefront.js";
+import { formatKsh } from "../../lib/format.js";
 import { RoomCard } from "../rental/RequestRoomPage.jsx";
 import { toE164 } from "../../lib/phone.js";
 import useSeo from "../../hooks/useSeo.js";
@@ -27,6 +31,8 @@ export default function BusinessPage() {
   const { data: b, error, loading } = useAsync(() => getBusinessBySlug(slug), [slug]);
   const { data: rooms, loading: roomsLoading } = useAsync(
     () => (b?.business_type === "rental" ? listAvailableRooms(b.id) : Promise.resolve({ data: [], error: null })), [b?.id]);
+  const { data: produce, loading: produceLoading } = useAsync(
+    () => (b?.business_type === "agriculture" ? listShopProducts(b.id, { limit: 24 }) : Promise.resolve({ data: [], error: null })), [b?.id]);
   useBusinessBrand(b, loading ? slug : ""); // header: this business logo, or its first letter
   // shops draw their own text (ShopHome); rentals and farms use this one
   useSeo(b && b.business_type !== "shop" ? {
@@ -93,6 +99,26 @@ export default function BusinessPage() {
                   ))}
                 </div>
               ) : <p className="rent-muted">No rooms are free right now. Call or message the business to ask when one will be.</p>}
+            </section>
+          )}
+
+          {b.business_type === "agriculture" && (
+            <section aria-labelledby="produce-h" style={{ marginTop: "var(--space-6)" }}>
+              <h2 id="produce-h">Produce for sale</h2>
+              {produceLoading ? <Skeleton height={180} /> : (produce || []).length ? (
+                <>
+                  <div className="listing-grid">
+                    {produce.map((p) => (
+                      <ListingCard key={p.id} listing={{
+                        key: p.id, image: p.images?.[0], title: p.name,
+                        price: `${formatKsh(p.price)}${p.unit && p.unit !== "item" ? ` / ${p.unit}` : ""}`,
+                        badge: p.stock <= 0 ? "Out of stock" : undefined,
+                      }} />
+                    ))}
+                  </div>
+                  <p className="rent-muted" style={{ marginTop: "var(--space-3)" }}>To buy, call or message the farm using the contact buttons.</p>
+                </>
+              ) : <p className="rent-muted">This farm has not listed any produce yet. Call or message to ask what is available.</p>}
             </section>
           )}
         </div>

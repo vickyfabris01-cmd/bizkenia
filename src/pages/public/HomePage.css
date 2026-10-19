@@ -1,4 +1,4 @@
-/* src/pages/public/HomePage.css — MODIFIED (adds the hero photo variant at the end) */
+/* src/pages/public/HomePage.css — MODIFIED (adds the per-type business rows) */
 .home-hero { background: var(--color-primary-soft); border-bottom: 1px solid var(--color-border); }
 .home-hero__inner { max-width: var(--container-max); margin: 0 auto; padding: var(--space-10) var(--gutter); display: grid; gap: var(--space-4); }
 .home-hero__title { margin: 0; font-size: var(--text-3xl); line-height: 1.15; font-weight: var(--weight-bold); color: var(--color-on-primary-soft); max-width: 20ch; }
@@ -6,15 +6,46 @@
 .home-hero__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
 .home-search { display: grid; gap: var(--space-2); max-width: 820px; }
-.home-search__input, .home-search__select { width: 100%; }
-.home-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.home-chip { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--space-4); border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); font-size: var(--text-sm); font-weight: var(--weight-medium); text-decoration: none; }
-.home-chip:hover { background: var(--color-surface-2); }
-.home-chip--all { color: var(--color-link); }
+.home-search__input { width: 100%; }
 @media (min-width: 768px) {
   .home-hero__inner { padding: var(--space-16) var(--gutter); }
   .home-hero__title { font-size: var(--text-hero); }
-  .home-search { grid-template-columns: 1fr 220px auto; align-items: center; }
+  .home-search { grid-template-columns: 1fr auto; align-items: center; }
+}
+
+/* Rows grouped by type (used by Latest products & rentals and by Latest businesses). */
+.home-listings { display: grid; gap: var(--space-6); }
+.home-listings__group { display: grid; gap: var(--space-3); }
+.home-listings__label { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-4); }
+.home-listings__label h3 { margin: 0; font-size: var(--text-lg); color: var(--color-text); }
+.home-listings__label a { color: var(--color-link); font-weight: var(--weight-medium); font-size: var(--text-sm); }
+
+/* Latest products & rentals: the page always gets 4 of each; the row shows 2 (phones),
+   3 (640px and up) or 4 (1024px and up) so every row is full. */
+.home-listings__row { display: grid; gap: var(--space-3); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.home-listings__row > .listing:nth-child(n + 3) { display: none; }
+@media (min-width: 640px) {
+  .home-listings__row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+  .home-listings__row > .listing:nth-child(3) { display: flex; }
+  .home-listings__row > .listing:nth-child(n + 4) { display: none; }
+}
+@media (min-width: 1024px) {
+  .home-listings__row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .home-listings__row > .listing:nth-child(4) { display: flex; }
+}
+
+/* Latest businesses: the page always gets 3 of each type; the row shows 1 (under 480px),
+   2 (480 to 767px) or 3 (768px and up), the same widths the rest of the site uses. */
+.home-biz__row { display: grid; gap: var(--space-4); grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 479px) {
+  .home-biz__row > :nth-child(n + 2) { display: none; }
+}
+@media (min-width: 480px) and (max-width: 767px) {
+  .home-biz__row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-biz__row > :nth-child(n + 3) { display: none; }
+}
+@media (min-width: 768px) {
+  .home-biz__row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 .home-type h3 { margin: 0; font-size: var(--text-lg); color: var(--color-text); }

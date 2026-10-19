@@ -1,10 +1,11 @@
-// src/modules/agriculture/index.js — NEW FILE (Phase 4)
+// src/modules/agriculture/index.js — MODIFIED (adds Produce and Produce stock)
 //
 // AIM
 // The agriculture module's navigation. An agriculture business (a farm) shows this menu to its
-// owner and managers: dashboard, crops, fields and land, inventory, livestock, income and
-// expenses, tasks, analytics, reports, and settings (owner only). Every screen is built, so none
-// opens the ComingSoon page. Screens live in src/pages/farm/ (Reports is shared with rental).
+// owner and managers: dashboard, crops, produce for sale, produce stock, fields and land,
+// inventory, livestock, income and expenses, tasks, analytics, reports, and settings (owner only).
+// Every screen is built, so none opens the ComingSoon page. Screens live in src/pages/farm/
+// (Reports is shared with rental; Produce reuses the shop's product screens).
 
 import { lazy } from "react";
 import { registerModule } from "../registry.js";
@@ -18,6 +19,8 @@ registerModule({
   nav: [
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "", end: true, phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/FarmDashboard.jsx")) },
     { id: "crops", label: "Crops", icon: "home", path: "crops", phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/CropsPage.jsx")) },
+    { id: "produce", label: "Produce for sale", icon: "megaphone", path: "produce", phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/ProducePage.jsx")) },
+    { id: "produce-stock", label: "Produce stock", icon: "file", path: "produce-stock", phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/ProduceStockPage.jsx")) },
     { id: "fields", label: "Fields and land", icon: "building", path: "fields", phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/FieldsPage.jsx")) },
     { id: "inventory", label: "Inventory", icon: "file", path: "inventory", phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/InventoryPage.jsx")) },
     { id: "livestock", label: "Livestock", icon: "users", path: "livestock", phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/LivestockPage.jsx")) },

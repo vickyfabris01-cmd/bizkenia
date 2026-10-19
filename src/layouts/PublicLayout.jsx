@@ -1,4 +1,4 @@
-// src/layouts/PublicLayout.jsx — MODIFIED (Phase 3 account menu; header logo follows the current business; full logo in the footer)
+// src/layouts/PublicLayout.jsx — MODIFIED (header links: Explore businesses, Shop and rent)
 //
 // AIM
 // The frame for every public page: header (logo, links, theme, sign in / account), the page,
@@ -20,7 +20,8 @@ import { useSession } from "../store/sessionStore.js";
 import { useBusinessStore } from "../store/businessStore.js";
 
 const LINKS = [
-  { to: "/explore", label: "Explore" },
+  { to: "/explore", label: "Explore businesses" },
+  { to: "/shop-rent", label: "Shop and rent" },
   { to: "/about", label: "About" },
   { to: "/help", label: "Help" },
   { to: "/pricing", label: "For business owners" },
@@ -144,6 +145,7 @@ export function SiteFooter() {
         <nav aria-label="Discover">
           <h2>Discover</h2>
           <Link to="/explore">Find a business</Link>
+          <Link to="/shop-rent">Shop and rent</Link>
           <Link to="/explore?type=rental">Rentals</Link>
           <Link to="/start">List your business</Link>
           <Link to="/login">Sign in</Link>

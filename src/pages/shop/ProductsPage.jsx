@@ -1,4 +1,4 @@
-// src/pages/shop/ProductsPage.jsx — NEW FILE (Phase 5)
+// src/pages/shop/ProductsPage.jsx — MODIFIED (optional wording props so farms can reuse it for produce)
 //
 // AIM
 // /app/:slug/products — the shop's catalogue. Search, filter by status and category, add a
@@ -6,6 +6,9 @@
 // A product is only visible to shoppers when it is "On sale". Opening stock is set when the
 // product is created; after that stock changes on the Inventory screen. A photo that is replaced
 // or removed, or uploaded and then abandoned, is deleted from storage.
+//
+// Props are all optional and default to the shop's wording. The farm's Produce screen passes its
+// own title, nouns and default unit (see pages/farm/ProducePage.jsx).
 
 import "./Shop.css";
 import { useEffect, useRef, useState } from "react";
@@ -139,7 +142,19 @@ function PhotoManager({ bid, images, set, onUploaded }) {
   );
 }
 
-export default function ProductsPage() {
+export default function ProductsPage({
+  title = "Products",
+  lead = "What you sell. Only products that are On sale are shown to shoppers.",
+  noun = "product",
+  plural = "products",
+  addLabel = "Add a product",
+  defaultUnit = "item",
+  namePlaceholder = "Fresh orange juice 1 L",
+  unitPlaceholder = "item, kg, litre, pack",
+  emptyHelp = "Add your first product with a photo and a price. Set it to On sale when it is ready.",
+  deleteMessage = "Past orders keep its name and price. Consider archiving instead to hide it. This cannot be undone.",
+}) {
+  const Noun = noun.charAt(0).toUpperCase() + noun.slice(1);
   const { bid } = useShop();
   const toast = useToast();
   const [search, setSearch] = useState("");
@@ -162,11 +177,11 @@ export default function ProductsPage() {
 
   const catOptions = [{ value: "", label: "No category" }, ...(categories || []).map((c) => ({ value: c.id, label: c.name }))];
   const fields = (isNew) => [
-    { key: "name", label: "Product name", required: true, placeholder: "Fresh orange juice 1 L" },
+    { key: "name", label: `${Noun} name`, required: true, placeholder: namePlaceholder },
     { key: "category_id", label: "Category", type: "select", options: catOptions },
     { key: "price", label: "Price (KSh)", type: "number", min: "0", step: "any", required: true },
     { key: "compare_at_price", label: "Old price (KSh, optional)", type: "number", min: "0", step: "any", helper: "Shown crossed out beside the price when higher" },
-    { key: "unit", label: "Sold by", placeholder: "item, kg, litre, pack" },
+    { key: "unit", label: "Sold by", placeholder: unitPlaceholder },
     { key: "sku", label: "SKU or code (optional)" },
     ...(isNew ? [{ key: "stock", label: "Stock you have now", type: "number", min: "0", step: "1" }] : []),
     { key: "low_stock_level", label: "Warn me when stock is at or below", type: "number", min: "0", step: "1" },
@@ -188,7 +203,7 @@ export default function ProductsPage() {
     const before = form?.product?.images || [];
     const after = v.images || [];
     [...before.filter((u) => !after.includes(u)), ...uploaded.current.filter((u) => !after.includes(u))].forEach((u) => removeProductPhoto(bid, u));
-    toast.success(form?.product ? "Product updated" : "Product added");
+    toast.success(form?.product ? `${Noun} updated` : `${Noun} added`);
     reload();
     return r;
   }
@@ -199,7 +214,7 @@ export default function ProductsPage() {
     setBusy(false);
     if (r.error) { setErr(r.error); setConfirm(null); return; }
     (confirm.images || []).forEach((u) => removeProductPhoto(bid, u));
-    setConfirm(null); toast.success("Product removed"); reload();
+    setConfirm(null); toast.success(`${Noun} removed`); reload();
   }
 
   if (loading && !rows) return <Loading />;
@@ -211,22 +226,22 @@ export default function ProductsPage() {
 
   return (
     <div className="shop">
-      <PageHead title="Products" lead="What you sell. Only products that are On sale are shown to shoppers.">
+      <PageHead title={title} lead={lead}>
         <Button variant="outline" onClick={() => setCats(true)}>Categories</Button>
-        <Button onClick={() => openForm({})}>Add a product</Button>
+        <Button onClick={() => openForm({})}>{addLabel}</Button>
       </PageHead>
       {err && <Alert type="error" message={err} />}
 
       <div className="shop-bar">
-        <Input label="Search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Product name" />
+        <Input label="Search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${Noun} name`} />
         <SelectInput label="Visibility" value={status} onChange={(v) => { setStatus(v); setLimit(24); }} options={[{ value: "", label: "All" }, ...STATUS_OPTIONS]} />
         <SelectInput label="Category" value={cat} onChange={(v) => { setCat(v); setLimit(24); }} options={[{ value: "", label: "All categories" }, ...(categories || []).map((c) => ({ value: c.id, label: c.name }))]} />
       </div>
 
       {items.length === 0 ? (
-        <Card><EmptyState icon="file" title={filtered ? "No products match" : "No products yet"}
-          description={filtered ? "Try a different search or clear the filters." : "Add your first product with a photo and a price. Set it to On sale when it is ready."}
-          action={filtered ? <Button variant="outline" onClick={() => { setSearch(""); setStatus(""); setCat(""); }}>Clear filters</Button> : <Button onClick={() => openForm({})}>Add a product</Button>} /></Card>
+        <Card><EmptyState icon="file" title={filtered ? `No ${plural} match` : `No ${plural} yet`}
+          description={filtered ? "Try a different search or clear the filters." : emptyHelp}
+          action={filtered ? <Button variant="outline" onClick={() => { setSearch(""); setStatus(""); setCat(""); }}>Clear filters</Button> : <Button onClick={() => openForm({})}>{addLabel}</Button>} /></Card>
       ) : (
         <>
           <div className="shop-cards">
@@ -248,14 +263,14 @@ export default function ProductsPage() {
         </>
       )}
 
-      <FormModal open={Boolean(form)} title={p ? "Edit product" : "Add a product"} fields={fields(!p)} onClose={closeForm} onSubmit={submit}
+      <FormModal open={Boolean(form)} title={p ? `Edit ${noun}` : addLabel} fields={fields(!p)} onClose={closeForm} onSubmit={submit}
         initial={p ? { ...p, compare_at_price: p.compare_at_price ?? "", sku: p.sku || "", description: p.description || "", category_id: p.category_id || "", images: p.images || [] }
-          : { name: "", category_id: "", price: "", compare_at_price: "", unit: "item", sku: "", stock: "", low_stock_level: 5, status: "draft", description: "", images: [] }}
+          : { name: "", category_id: "", price: "", compare_at_price: "", unit: defaultUnit, sku: "", stock: "", low_stock_level: 5, status: "draft", description: "", images: [] }}
         danger={p ? { label: "Delete", onClick: () => { setConfirm(p); closeForm(); } } : undefined}
         extra={(vals, set) => <PhotoManager bid={bid} images={vals.images} set={set} onUploaded={(u) => uploaded.current.push(u)} />} />
 
       {cats && <Categories bid={bid} onClose={() => setCats(false)} onChanged={reloadCats} />}
-      <ConfirmDialog isOpen={Boolean(confirm)} title="Delete this product?" message="Past orders keep its name and price. Consider archiving instead to hide it. This cannot be undone." confirmLabel="Delete product" loading={busy} onConfirm={remove} onCancel={() => setConfirm(null)} />
+      <ConfirmDialog isOpen={Boolean(confirm)} title={`Delete this ${noun}?`} message={deleteMessage} confirmLabel={`Delete ${noun}`} loading={busy} onConfirm={remove} onCancel={() => setConfirm(null)} />
     </div>
   );
 }

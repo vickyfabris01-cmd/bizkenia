@@ -1,4 +1,4 @@
-// src/lib/api/directory.js — NEW FILE
+// src/lib/api/directory.js — MODIFIED (adds listHomeListings for the home page)
 //
 // AIM
 // Public reads: the list of active businesses, one business by slug, subscription plans and
@@ -21,6 +21,14 @@ export async function listBusinesses({ search = "", type = "", county = "", limi
   if (term) q = q.or(`name.ilike.%${term}%,description.ilike.%${term}%,address.ilike.%${term}%`);
   const { data, error } = await q;
   return { data: data || [], error: error?.message || null };
+}
+
+/** Latest shop products, farm produce and available rooms for the home page: { shop, farm, rooms }. */
+export async function listHomeListings(perType = 4) {
+  if (!supabase) return NOT_CONNECTED;
+  const { data, error } = await supabase.rpc("home_listings", { p_per_type: perType });
+  const d = data || {};
+  return { data: { shop: d.shop || [], farm: d.farm || [], rooms: d.rooms || [] }, error: error?.message || null };
 }
 
 export async function getBusinessBySlug(slug) {

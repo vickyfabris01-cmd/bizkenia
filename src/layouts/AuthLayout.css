@@ -1,6 +1,9 @@
-/* src/layouts/AuthLayout.css — NEW FILE */
+/* src/layouts/AuthLayout.css — MODIFIED (adds .auth__back) */
 .auth { min-height: 100dvh; display: grid; place-items: center; padding: var(--space-6) var(--gutter); background: var(--color-bg); position: relative; }
 .auth__theme { position: absolute; top: var(--space-3); right: var(--space-3); }
+.auth__back { position: absolute; top: var(--space-3); left: var(--space-3); display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--control-h-md); padding: 0 var(--space-3); border-radius: var(--radius-full); color: var(--color-text-muted); font-size: var(--text-sm); font-weight: var(--weight-medium); text-decoration: none; }
+.auth__back:hover { color: var(--color-text); background: var(--color-surface); }
+.auth__back:focus-visible { outline: 2px solid var(--color-link); outline-offset: 2px; }
 .auth__card { width: 100%; max-width: 420px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); box-shadow: var(--shadow-md); padding: var(--space-6); display: grid; gap: var(--space-4); }
 .auth__logo { justify-self: center; color: inherit; text-decoration: none; }
 .auth__title { margin: 0; text-align: center; font-size: var(--text-2xl); font-weight: var(--weight-bold); }
