@@ -1,9 +1,9 @@
-// src/pages/farm/CropsPage.jsx — NEW FILE
+// src/pages/farm/CropsPage.jsx — MODIFIED (acres)
 //
 // AIM
 // /app/:slug/crops and /app/:slug/crops/:id — crop management. The list shows every crop with its
 // field and status (planned, planted, growing, harvested). A crop's own page records the work
-// done on it (planting, fertilising, spraying, watering), its harvests and its yield per hectare,
+// done on it (planting, fertilising, spraying, watering), its harvests and its yield per acre,
 // and moves it through its status. Planting a crop that was only planned marks it as planted.
 
 import "./Farm.css";
@@ -15,18 +15,28 @@ import useAsync from "../../hooks/useAsync.js";
 import { useToast } from "../../hooks/useNotifications.js";
 import { addActivity, addHarvest, deleteActivity, deleteCrop, deleteHarvest, getCrop, listActivities, listCrops, listFields, listHarvests, saveCrop, setCropStatus } from "../../lib/api/farm.js";
 import { formatDate } from "../../lib/format.js";
-import { formatHa } from "../../lib/geo.js";
+import { acresToHa, formatAcres, haToAcres } from "../../lib/geo.js";
 import { ACTIVITY_KINDS, CROP_STATUS, FormModal, Loading, LoadError, PageHead, StatusBadge, Tabs, cap, kg, opts, qty, today, useFarm } from "./shared.jsx";
+
+// Land is stored in hectares but the farmer types and reads acres. `original` is the saved crop (when editing):
+// if the acres shown were left alone, the stored hectares are kept exactly so rounding never drifts them.
+const acresText = (ha) => (ha == null || ha === "" ? "" : String(Number(haToAcres(ha).toFixed(2))));
+const withHectares = (v, original) => ({
+  ...v,
+  area_ha: v.area_acres === "" || v.area_acres == null ? ""
+    : original && original.area_ha != null && String(v.area_acres) === acresText(original.area_ha) ? original.area_ha
+    : acresToHa(v.area_acres),
+});
 
 const STATUS_OPTIONS = Object.entries(CROP_STATUS).map(([value, [, label]]) => ({ value, label }));
 
 function cropFields(fields) {
   return [
-    { key: "field_id", label: "Field", type: "select", required: true, options: fields.map((f) => ({ value: f.id, label: `${f.name} (${formatHa(f.area_ha)})` })), placeholder: "Choose a field" },
+    { key: "field_id", label: "Field", type: "select", required: true, options: fields.map((f) => ({ value: f.id, label: `${f.name} (${formatAcres(f.area_ha)})` })), placeholder: "Choose a field" },
     { key: "name", label: "Crop", required: true, placeholder: "Maize" },
     { key: "variety", label: "Variety", placeholder: "H614" },
     { key: "status", label: "Status", type: "select", options: STATUS_OPTIONS },
-    { key: "area_ha", label: "Area used (hectares)", type: "number", min: "0", step: "0.01", helper: "Leave empty to use the whole field" },
+    { key: "area_acres", label: "Area used (acres)", type: "number", min: "0", step: "0.01", helper: "Leave empty to use the whole field" },
     { key: "planned_date", label: "Planned planting date", type: "date" },
     { key: "planted_date", label: "Planted on", type: "date" },
     { key: "expected_harvest", label: "Expected harvest", type: "date" },
@@ -74,7 +84,7 @@ function CropList() {
           {shown.map((c) => (
             <Link key={c.id} to={`${base}/crops/${c.id}`} className="farm-card">
               <div className="farm-card__row"><h3 className="farm-card__title">{c.name}</h3><StatusBadge status={c.status} /></div>
-              <p className="farm-card__meta">{c.variety ? `${c.variety} · ` : ""}{c.field?.name || "No field"} · {formatHa(c.area_ha ?? c.field?.area_ha)}</p>
+              <p className="farm-card__meta">{c.variety ? `${c.variety} · ` : ""}{c.field?.name || "No field"} · {formatAcres(c.area_ha ?? c.field?.area_ha)}</p>
               <p className="farm-card__meta">{c.expected_harvest ? `Harvest about ${formatDate(c.expected_harvest)}` : c.planted_date ? `Planted ${formatDate(c.planted_date)}` : "Not planted yet"}</p>
             </Link>
           ))}
@@ -82,10 +92,10 @@ function CropList() {
       )}
 
       <FormModal open={adding} title="Add a crop" submitLabel="Add crop" fields={cropFields(fields)}
-        initial={{ field_id: presetField || "", name: "", variety: "", status: "planned", area_ha: "", planned_date: "", planted_date: "", expected_harvest: "", notes: "" }}
+        initial={{ field_id: presetField || "", name: "", variety: "", status: "planned", area_acres: "", planned_date: "", planted_date: "", expected_harvest: "", notes: "" }}
         onClose={() => { setAdding(false); if (presetField) setParams({}, { replace: true }); }}
         onSubmit={async (v) => {
-          const res = await saveCrop(bid, v);
+          const res = await saveCrop(bid, withHectares(v));
           if (!res.error) { toast.success("Crop added"); reload(); nav(`${base}/crops/${res.data.id}`); }
           return res;
         }} />
@@ -113,7 +123,8 @@ function CropDetail({ id }) {
   if (!data) return <Card style={{ margin: "var(--space-8) auto", maxWidth: 520 }}><EmptyState icon="search" title="Crop not found" description="It may have been removed." action={<Button as={Link} to={`${base}/crops`}>Back to crops</Button>} /></Card>;
   const { crop, activities, harvests, fields } = data;
   const total = harvests.reduce((a, h) => a + Number(h.quantity_kg), 0);
-  const area = Number(crop.area_ha ?? crop.field?.area_ha ?? 0);
+  const area = Number(crop.area_ha ?? crop.field?.area_ha ?? 0); // hectares, as stored
+  const areaAcres = haToAcres(area);
 
   async function changeStatus(s) {
     const { error: e } = await setCropStatus(id, s);
@@ -133,7 +144,7 @@ function CropDetail({ id }) {
 
   return (
     <div className="farm">
-      <PageHead title={`${crop.name}${crop.variety ? ` (${crop.variety})` : ""}`} lead={`${crop.field?.name || "No field"} · ${formatHa(area)}`}>
+      <PageHead title={`${crop.name}${crop.variety ? ` (${crop.variety})` : ""}`} lead={`${crop.field?.name || "No field"} · ${formatAcres(area)}`}>
         <Button as={Link} to={`${base}/crops`} variant="secondary">All crops</Button>
         <Button variant="outline" onClick={() => setModal("edit")}>Edit</Button>
         <Button variant="danger" onClick={() => setConfirm("crop")}>Delete</Button>
@@ -154,7 +165,7 @@ function CropDetail({ id }) {
 
       <div className="farm-stats">
         <div className="farm-stat"><span className="farm-stat__label">Harvested</span><span className="farm-stat__value">{kg(total)}</span><span className="farm-stat__note">{harvests.length} harvest{harvests.length === 1 ? "" : "s"}</span></div>
-        <div className="farm-stat"><span className="farm-stat__label">Yield per hectare</span><span className="farm-stat__value">{area > 0 && total > 0 ? kg(total / area) : "—"}</span></div>
+        <div className="farm-stat"><span className="farm-stat__label">Yield per acre</span><span className="farm-stat__value">{areaAcres > 0 && total > 0 ? kg(total / areaAcres) : "—"}</span></div>
         <div className="farm-stat"><span className="farm-stat__label">Work recorded</span><span className="farm-stat__value">{activities.length}</span></div>
       </div>
 
@@ -218,8 +229,8 @@ function CropDetail({ id }) {
           return r;
         }} />
       <FormModal open={modal === "edit"} title="Edit crop" onClose={() => setModal(null)} fields={cropFields(fields)}
-        initial={{ id: crop.id, field_id: crop.field_id, name: crop.name, variety: crop.variety || "", status: crop.status, area_ha: crop.area_ha ?? "", planned_date: crop.planned_date || "", planted_date: crop.planted_date || "", expected_harvest: crop.expected_harvest || "", notes: crop.notes || "" }}
-        onSubmit={async (v) => { const r = await saveCrop(bid, { ...v, id }); if (!r.error) { toast.success("Crop updated"); reload(); } return r; }} />
+        initial={{ id: crop.id, field_id: crop.field_id, name: crop.name, variety: crop.variety || "", status: crop.status, area_acres: acresText(crop.area_ha), planned_date: crop.planned_date || "", planted_date: crop.planted_date || "", expected_harvest: crop.expected_harvest || "", notes: crop.notes || "" }}
+        onSubmit={async (v) => { const r = await saveCrop(bid, { ...withHectares(v, crop), id }); if (!r.error) { toast.success("Crop updated"); reload(); } return r; }} />
       <ConfirmDialog isOpen={Boolean(confirm)} title={confirm === "crop" ? "Delete this crop?" : "Remove this record?"}
         message={confirm === "crop" ? "Its work and harvest records are deleted too. This cannot be undone." : "This cannot be undone."}
         confirmLabel="Delete" loading={busy} onConfirm={confirmed} onCancel={() => setConfirm(null)} />

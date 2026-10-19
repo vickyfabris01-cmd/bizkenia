@@ -7,6 +7,7 @@
 
 import { supabase } from "../../config/supabase.js";
 import { lastMonths } from "./farm.js";
+import { haToAcres } from "../geo.js";
 
 const NOT_CONNECTED = { data: null, error: "The app is not connected to the database yet." };
 const first = (rs) => rs.find((r) => r.error)?.error?.message || null;
@@ -56,8 +57,18 @@ export async function getFarmReport(businessId) {
     data: {
       monthly: months.map((m) => ({ ...rows[m], profit: rows[m].income - rows[m].cost })),
       costs: costs.data.map((c) => ({ category: c.category, cost: Number(c.cost), entries: +c.entries })),
-      yields: yields.data.map((y) => ({ crop: y.crop, field: y.field, area_ha: y.area_ha == null ? null : Number(y.area_ha), harvested_kg: Number(y.harvested_kg),
-        kg_per_ha: y.kg_per_ha == null ? null : Number(y.kg_per_ha), cost: Number(y.cost), income: Number(y.income) })),
+      // the views work in hectares; the Reports screen shows acres and kg per acre
+      yields: yields.data.map((y) => {
+        const ha = y.area_ha == null ? null : Number(y.area_ha);
+        const harvested = Number(y.harvested_kg);
+        return {
+          crop: y.crop, field: y.field,
+          area_acres: ha == null ? null : Math.round(haToAcres(ha) * 100) / 100,
+          harvested_kg: harvested,
+          kg_per_acre: ha > 0 ? Math.round((harvested / haToAcres(ha)) * 10) / 10 : null,
+          cost: Number(y.cost), income: Number(y.income),
+        };
+      }),
     },
     error: null,
   };

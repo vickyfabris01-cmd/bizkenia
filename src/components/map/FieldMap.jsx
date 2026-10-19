@@ -1,9 +1,9 @@
-// src/components/map/FieldMap.jsx — NEW FILE
+// src/components/map/FieldMap.jsx — MODIFIED (acres, fly-in animation)
 //
 // AIM
 // The map used on the farm screens (Phase 4), built on Leaflet. Street and satellite tiles, a
 // "my location" button, outlines of fields, and a simple way to DRAW a field boundary by tapping
-// the corners on the map. Drag a corner to move it. The area (hectares) is worked out as you draw.
+// the corners on the map. Drag a corner to move it. The area (in acres) is worked out as you draw.
 //
 // Load it only on the screens that need it, with React.lazy, so the map code is not downloaded
 // everywhere else:   const FieldMap = lazy(() => import("../../components/map/FieldMap.jsx"));
@@ -17,6 +17,11 @@
 //   onPointsChange(points)   called with the new list after every add, drag, undo or clear.
 //   height     CSS height of the map (default 360px; 55vh is a good phone choice)
 //
+// FLY-IN
+//   When a plot is selected (selectedId) and when the farmer taps "My location", the camera starts
+//   from a whole-world view and dives down to the spot, so you see it arrive from outside the
+//   continent. People who ask their device for reduced motion get a plain jump instead.
+//
 // TILES
 //   Street: OpenStreetMap (fine for development; read its tile usage policy before launch).
 //   Satellite: Esri World Imagery by default. Set VITE_SATELLITE_TILE_URL in .env to use another
@@ -26,7 +31,7 @@ import "leaflet/dist/leaflet.css";
 import "./FieldMap.css";
 import L from "leaflet";
 import { useEffect, useRef, useState } from "react";
-import { fromGeoJson, polygonAreaHa, formatHa } from "../../lib/geo.js";
+import { fromGeoJson, polygonAreaHa, formatAcres } from "../../lib/geo.js";
 
 const STREET = { url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", attribution: "© OpenStreetMap contributors", maxZoom: 19 };
 const SATELLITE = {
@@ -35,6 +40,10 @@ const SATELLITE = {
   maxZoom: 19,
 };
 const KENYA = [-0.5, 37.8];
+const WORLD_ZOOM = 2;        // the whole world in view: the camera starts outside the continent
+const FLIGHT_SECONDS = 5;    // how long the dive takes
+const PAD = [24, 24];
+const reducedMotion = () => typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
 // Leaflet needs real colour values, so read them from the design tokens at the moment they are used.
 const token = (name, fallback) => (typeof document === "undefined" ? fallback : getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback);
 
@@ -46,6 +55,9 @@ export default function FieldMap({ polygons = [], selectedId, onSelect, editable
   const tiles = useRef(null);
   const shapes = useRef(null);   // read-only outlines
   const draft = useRef(null);    // the shape being drawn
+  const me = useRef(null);       // the "you are here" dot
+  const flight = useRef(null);   // timer that starts the dive once the world tiles have painted
+  const lastFlown = useRef(null); // the selected plot the camera already flew to
   const [mode, setMode] = useState("satellite");
   const [note, setNote] = useState("");
   const live = useRef({});
@@ -57,6 +69,7 @@ export default function FieldMap({ polygons = [], selectedId, onSelect, editable
     map.current = m;
     shapes.current = L.layerGroup().addTo(m);
     draft.current = L.layerGroup().addTo(m);
+    me.current = L.layerGroup().addTo(m);
     m.on("click", (e) => {
       const c = live.current;
       if (!c.editable) return;
@@ -64,7 +77,7 @@ export default function FieldMap({ polygons = [], selectedId, onSelect, editable
     });
     const ro = new ResizeObserver(() => m.invalidateSize());
     ro.observe(box.current);
-    return () => { ro.disconnect(); m.remove(); map.current = null; };
+    return () => { clearTimeout(flight.current); lastFlown.current = null; ro.disconnect(); m.remove(); map.current = null; };
   }, []);
 
   // street or satellite
@@ -92,7 +105,17 @@ export default function FieldMap({ polygons = [], selectedId, onSelect, editable
       if (p.name) poly.bindTooltip(p.name, { sticky: true });
       poly.on("click", (e) => { if (!live.current.editable) { L.DomEvent.stopPropagation(e); live.current.onSelect?.(p.id); } });
     }
-    if (all.length && !(editable && points.length)) m.fitBounds(L.latLngBounds(all), { padding: [24, 24], maxZoom: 18 });
+    if (!(editable && points.length)) {
+      const sel = selectedId ? polygons.find((p) => p.id === selectedId) : null;
+      const selPts = sel ? fromGeoJson(sel.boundary) : [];
+      if (selPts.length >= 3) {
+        // a plot is selected: dive in from the world view (once per selected plot)
+        if (lastFlown.current !== selectedId) { lastFlown.current = selectedId; flyIn({ bounds: L.latLngBounds(selPts) }); }
+      } else {
+        lastFlown.current = null;
+        if (all.length) m.fitBounds(L.latLngBounds(all), { padding: PAD, maxZoom: 18 });
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [polygons, selectedId]);
 
@@ -121,16 +144,47 @@ export default function FieldMap({ polygons = [], selectedId, onSelect, editable
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editable]);
 
+  // Start from the whole world, centred on the target, then fly down to it. Give { bounds } or { centre, zoom }.
+  function flyIn({ bounds, centre, zoom }) {
+    const m = map.current;
+    if (!m) return;
+    clearTimeout(flight.current);
+    m.stop();
+    if (reducedMotion()) {
+      if (bounds) m.fitBounds(bounds, { padding: PAD, maxZoom: 18 });
+      else m.setView(centre, zoom, { animate: false });
+      return;
+    }
+    m.setView(bounds ? bounds.getCenter() : centre, WORLD_ZOOM, { animate: false });
+    flight.current = setTimeout(() => {
+      const mm = map.current;
+      if (!mm) return;
+      if (bounds) mm.flyToBounds(bounds, { padding: PAD, maxZoom: 18, duration: FLIGHT_SECONDS });
+      else mm.flyTo(centre, zoom, { duration: FLIGHT_SECONDS });
+    }, 400);
+  }
+
   function locate() {
     if (!navigator.geolocation) { setNote("Your browser cannot find your location."); return; }
     setNote("Finding you…");
     navigator.geolocation.getCurrentPosition(
-      (pos) => { map.current?.setView([pos.coords.latitude, pos.coords.longitude], 17); setNote(""); },
+      (pos) => {
+        const here = [pos.coords.latitude, pos.coords.longitude];
+        const colour = token("--color-info", "#2563eb");
+        me.current?.clearLayers();
+        if (me.current) {
+          L.circle(here, { radius: pos.coords.accuracy || 20, color: colour, weight: 1, fillOpacity: 0.12, interactive: false }).addTo(me.current);
+          L.circleMarker(here, { radius: 7, color: "#fff", weight: 2, fillColor: colour, fillOpacity: 1, interactive: false }).addTo(me.current);
+        }
+        flyIn({ centre: here, zoom: 17 });
+        setNote("");
+      },
       () => setNote("Could not get your location. Allow location access and try again."),
       { enableHighAccuracy: true, timeout: 10000 },
     );
   }
 
+  // polygonAreaHa gives hectares (what is saved); formatAcres takes hectares and shows acres
   const ha = points.length >= 3 ? polygonAreaHa(points) : 0;
 
   return (
@@ -153,7 +207,7 @@ export default function FieldMap({ polygons = [], selectedId, onSelect, editable
         <p className="fmap__hint" aria-live="polite">
           {points.length < 3
             ? `Tap each corner of the field on the map. ${3 - points.length} more corner${3 - points.length === 1 ? "" : "s"} needed.`
-            : `${points.length} corners · ${formatHa(ha)}. Drag a corner to adjust it.`}
+            : `${points.length} corners · ${formatAcres(ha)}. Drag a corner to adjust it.`}
         </p>
       )}
       {note && <p className="fmap__hint" role="status">{note}</p>}

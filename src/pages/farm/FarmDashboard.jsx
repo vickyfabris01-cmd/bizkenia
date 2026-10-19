@@ -1,7 +1,7 @@
-// src/pages/farm/FarmDashboard.jsx — NEW FILE
+// src/pages/farm/FarmDashboard.jsx — MODIFIED (land shown in acres)
 //
 // AIM
-// /app/:slug for an agriculture business (owner and manager). The farm at a glance: hectares,
+// /app/:slug for an agriculture business (owner and manager). The farm at a glance: acres of land,
 // active plots, yield, income against cost, low stock, tasks that are due and the latest work
 // done on crops and livestock. Every figure is worked out from the farm tables, so it changes
 // as soon as someone records a harvest, a sale or an expense.
@@ -13,7 +13,7 @@ import LineTrend from "../../components/charts/LineTrend.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { getFarmSummary, remindTasks } from "../../lib/api/farm.js";
 import { formatDate } from "../../lib/format.js";
-import { formatHa } from "../../lib/geo.js";
+import { formatAcres } from "../../lib/geo.js";
 import { Loading, LoadError, PageHead, Stat, kg, money, useFarm } from "./shared.jsx";
 
 const MONTH = (m) => new Date(`${m}-01T00:00:00`).toLocaleDateString("en-KE", { month: "short" });
@@ -45,7 +45,7 @@ export default function FarmDashboard() {
       )}
 
       <div className="farm-stats">
-        <Stat label="Land" value={formatHa(d.hectares)} note={`${d.fieldCount} field${d.fieldCount === 1 ? "" : "s"}`} to={`${base}/fields`} />
+        <Stat label="Land" value={formatAcres(d.hectares)} note={`${d.fieldCount} field${d.fieldCount === 1 ? "" : "s"}`} to={`${base}/fields`} />
         <Stat label="Active plots" value={d.activePlots} note={`${d.cropsCount} crop${d.cropsCount === 1 ? "" : "s"} in total`} to={`${base}/crops`} />
         <Stat label="Harvested this year" value={kg(d.yieldKgYear)} to={`${base}/analytics`} />
         <Stat label="Net this year" value={money(net)} tone={net < 0 ? "bad" : net > 0 ? "good" : undefined} note={`${money(d.incomeYear)} in · ${money(d.costYear)} out`} to={`${base}/money`} />

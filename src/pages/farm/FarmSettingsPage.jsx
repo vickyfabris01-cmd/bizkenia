@@ -14,7 +14,7 @@ import BusinessCoverCard from "../../components/business/BusinessCoverCard.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { getFarmSummary } from "../../lib/api/farm.js";
 import { formatDate } from "../../lib/format.js";
-import { formatHa } from "../../lib/geo.js";
+import { formatAcres } from "../../lib/geo.js";
 import { Loading, PageHead, useFarm } from "./shared.jsx";
 
 const STATUS = { active: ["success", "Active"], pending_review: ["warning", "In review"], draft: ["neutral", "Draft"], rejected: ["error", "Needs changes"], suspended: ["error", "Suspended"] };
@@ -51,7 +51,7 @@ export default function FarmSettingsPage() {
           <CardBody>
             {loading || !s ? <p className="farm-card__meta">Loading…</p> : (
               <ul className="farm-list">
-                {row("Land", `${formatHa(s.hectares)} in ${s.fieldCount} field${s.fieldCount === 1 ? "" : "s"}`)}
+                {row("Land", `${formatAcres(s.hectares)} in ${s.fieldCount} field${s.fieldCount === 1 ? "" : "s"}`)}
                 {row("Crops", `${s.cropsCount}`)}
                 {row("Livestock", `${s.livestockHeads} animal${s.livestockHeads === 1 ? "" : "s"} in ${s.groups.length} group${s.groups.length === 1 ? "" : "s"}`)}
                 {row("Open tasks", `${s.openTasks.length}`)}

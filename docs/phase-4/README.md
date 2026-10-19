@@ -26,7 +26,7 @@ Demo account (dev only): `farmer.demo@example.com` / `Demo#1234` — owner of "W
 
 ## How the pieces work
 
-- **Fields**: tap the corners of a field on the map. The area in hectares is worked out in `lib/geo.js` (spherical area on the mean earth radius; within 0.5% of a survey figure in Kenya, well inside the 1% target). The boundary is saved as GeoJSON in `farm_fields.boundary`.
+- **Fields**: tap the corners of a field on the map. The area is worked out in `lib/geo.js` (stored in hectares, shown to farmers in acres; `formatAcres` and `acresToHa` convert at the screen edges) (spherical area on the mean earth radius; within 0.5% of a survey figure in Kenya, well inside the 1% target). The boundary is saved as GeoJSON in `farm_fields.boundary`.
 - **Stock and head counts** change only through `record_stock_movement` and `record_livestock_event`. A guard trigger blocks hand edits, stock cannot go below zero, and a livestock sale with a price also records farm income.
 - **Same-business guard**: a trigger refuses a crop, activity, harvest, task, income or expense that points at another business's field or crop.
 - **Reports** read the `report_*` views (`security_invoker`, so row-level security still applies). Rental report tabs are owner-only, as in the plan.
@@ -54,7 +54,7 @@ All take plain arrays, take colours from the chart tokens, and show an empty mes
 ## Acceptance test script (browser)
 
 1. Sign up, open `/start`, choose **Agriculture**, fill the details, pay/approve (as the super admin). The business menu is the farm menu.
-2. Fields > Add a field: tap four corners on the satellite map. The area appears. Compare with a reference (a known 100 m × 50 m plot is 0.5 ha).
+2. Fields > Add a field: tap four corners on the satellite map. The area appears. Compare with a reference (a known 100 m × 50 m plot is 0.5 ha, about 1.24 acres).
 3. Crops > Add a crop to that field. Open it: Record work (planting, then fertilising) and Record harvest. Dashboard: "Harvested this year" and "Active plots" change.
 4. Inventory: add DAP with quantity 40 and reorder level 100 — it shows **Low stock**. Update stock: "Stock out" more than you have is refused.
 5. Livestock: add a group, record a vaccination — it appears in Recent events and on the dashboard.

@@ -1,44 +1,75 @@
-// src/pages/farm/FieldsPage.jsx — NEW FILE
+// src/pages/farm/FieldsPage.jsx — MODIFIED (acres, name from location)
 //
 // AIM
 // /app/:slug/fields and /app/:slug/fields/:id — land. The list shows every field on one map; tap
-// "Add a field", tap its corners on the map and the area in hectares is worked out for you
-// (or type the area if you do not want to draw). A field's own page shows its map, its crops and
-// lets you redraw or delete it. The map code loads only on these screens.
+// "Add a field", tap its corners on the map and the area in ACRES is worked out for you
+// (or type the area in acres if you do not want to draw). The field's name is suggested from
+// where it is on the map ("Kibos, Kisumu") and the farmer can change it. A field's own page
+// shows its map (the camera flies in to it), its crops and lets you redraw or delete it. The map
+// code loads only on these screens.
+//
+// Land is stored in hectares in the database (farm_fields.area_ha); this screen converts to and
+// from acres, so nothing else in the app has to change.
 
 import "./Farm.css";
-import { Suspense, lazy, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Alert, Button, Card, CardBody, CardHeader, EmptyState, Input, Skeleton, TextArea } from "../../components/ui";
 import { ConfirmDialog } from "../../components/modals/Modal.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { useToast } from "../../hooks/useNotifications.js";
 import { deleteField, getField, listCrops, listFields, saveField } from "../../lib/api/farm.js";
-import { formatHa, fromGeoJson, polygonAreaHa, toGeoJson } from "../../lib/geo.js";
+import { acresToHa, formatAcres, fromGeoJson, haToAcres, polygonAreaAcres, polygonAreaHa, polygonCentre, toGeoJson } from "../../lib/geo.js";
+import { suggestFieldName, uniqueName } from "../../lib/placeName.js";
 import { Loading, LoadError, PageHead, StatusBadge, useFarm } from "./shared.jsx";
 
 const FieldMap = lazy(() => import("../../components/map/FieldMap.jsx"));
 const MapFallback = () => <Skeleton height={360} />;
 
-function FieldEditor({ field, others, onSaved, onCancel }) {
+function FieldEditor({ field, others, takenNames = [], onSaved, onCancel }) {
   const { bid } = useFarm();
   const toast = useToast();
   const [name, setName] = useState(field?.name || "");
   const [notes, setNotes] = useState(field?.notes || "");
   const [points, setPoints] = useState(() => fromGeoJson(field?.boundary));
-  const [manual, setManual] = useState(field && !field.boundary ? String(field.area_ha || "") : "");
+  // typed area is in ACRES; a saved field with no boundary shows its stored hectares converted to acres
+  const startManual = field && !field.boundary && Number(field.area_ha) > 0 ? String(Number(haToAcres(field.area_ha).toFixed(2))) : "";
+  const [manual, setManual] = useState(startManual);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [looking, setLooking] = useState(false);   // asking for the place name
+  const [suggested, setSuggested] = useState(false); // the name on screen came from the location
+  const nameTouched = useRef(false);               // the farmer typed a name: stop suggesting
   const drawn = points.length >= 3;
-  const area = drawn ? polygonAreaHa(points) : Number(manual) || 0;
+  const areaAcres = drawn ? Number(polygonAreaAcres(points).toFixed(2)) : Number(manual) || 0;
+
+  // New field: name it after the place as the corners are tapped (waits a moment after the last tap).
+  // An existing field keeps its name, and so does anything the farmer has typed.
+  useEffect(() => {
+    if (field || nameTouched.current || points.length === 0) return undefined;
+    const centre = polygonCentre(points);
+    const ctrl = new AbortController();
+    const timer = setTimeout(async () => {
+      setLooking(true);
+      const place = await suggestFieldName(centre, { signal: ctrl.signal });
+      if (ctrl.signal.aborted) return;
+      setLooking(false);
+      if (place && !nameTouched.current) { setName(uniqueName(place, takenNames)); setSuggested(true); }
+    }, 900);
+    return () => { clearTimeout(timer); ctrl.abort(); setLooking(false); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [points, field]);
 
   async function submit(e) {
     e.preventDefault();
     if (!name.trim()) { setError("Enter a name for the field."); return; }
     if (points.length > 0 && points.length < 3) { setError("Add at least 3 corners, or clear the map to type the area instead."); return; }
-    if (!drawn && !(Number(manual) > 0)) { setError("Draw the field on the map, or type its area in hectares."); return; }
+    if (!drawn && !(Number(manual) > 0)) { setError("Draw the field on the map, or type its area in acres."); return; }
     setBusy(true); setError("");
-    const { data, error: err } = await saveField(bid, { id: field?.id, name, notes, area_ha: area, boundary: drawn ? toGeoJson(points) : null });
+    // the database keeps hectares: use the exact drawn area, keep the stored value if the typed
+    // acres were not changed (so rounding never drifts it), or convert what was typed
+    const areaHa = drawn ? polygonAreaHa(points) : field && manual === startManual ? Number(field.area_ha) : acresToHa(manual);
+    const { data, error: err } = await saveField(bid, { id: field?.id, name, notes, area_ha: areaHa, boundary: drawn ? toGeoJson(points) : null });
     setBusy(false);
     if (err) { setError(err); return; }
     toast.success(field ? "Field updated" : "Field added");
@@ -52,8 +83,10 @@ function FieldEditor({ field, others, onSaved, onCancel }) {
         <form className="farm-form" onSubmit={submit} noValidate>
           {error && <Alert type="error" message={error} />}
           <div className="farm-form__row">
-            <Input label="Field name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="North plot" />
-            <Input label="Area (hectares)" type="number" min="0" step="0.01" value={drawn ? area : manual} disabled={drawn} onChange={(e) => setManual(e.target.value)}
+            <Input label="Field name" required value={name} placeholder="North plot"
+              onChange={(e) => { nameTouched.current = true; setSuggested(false); setName(e.target.value); }}
+              helper={looking ? "Finding the place name…" : suggested ? "Named from the field's location. You can change it." : undefined} />
+            <Input label="Area (acres)" type="number" min="0" step="0.01" value={drawn ? areaAcres : manual} disabled={drawn} onChange={(e) => setManual(e.target.value)}
               helper={drawn ? "Worked out from the map" : "Type it here if you do not draw the field"} />
           </div>
           <Suspense fallback={<MapFallback />}>
@@ -83,16 +116,16 @@ function FieldList() {
   if (loading && !data) return <Loading />;
   if (error) return <LoadError error={error} onRetry={reload} />;
   const { fields, crops } = data;
-  const total = fields.reduce((a, f) => a + Number(f.area_ha || 0), 0);
+  const total = fields.reduce((a, f) => a + Number(f.area_ha || 0), 0); // hectares; formatAcres converts
   const polygons = fields.filter((f) => f.boundary).map((f) => ({ id: f.id, name: f.name, boundary: f.boundary }));
 
   return (
     <div className="farm">
-      <PageHead title="Fields and land" lead={fields.length ? `${fields.length} field${fields.length === 1 ? "" : "s"} · ${formatHa(total)}` : "Draw your fields on the map"}>
+      <PageHead title="Fields and land" lead={fields.length ? `${fields.length} field${fields.length === 1 ? "" : "s"} · ${formatAcres(total)}` : "Draw your fields on the map"}>
         {!adding && <Button onClick={() => setAdding(true)}>Add a field</Button>}
       </PageHead>
 
-      {adding && <FieldEditor others={polygons} onCancel={() => setAdding(false)} onSaved={(f) => { setAdding(false); reload(); if (f?.id) nav(`${base}/fields/${f.id}`); }} />}
+      {adding && <FieldEditor others={polygons} takenNames={fields.map((f) => f.name)} onCancel={() => setAdding(false)} onSaved={(f) => { setAdding(false); reload(); if (f?.id) nav(`${base}/fields/${f.id}`); }} />}
 
       {!adding && polygons.length > 0 && (
         <Suspense fallback={<MapFallback />}><FieldMap polygons={polygons} selectedId={selected} onSelect={(id) => { setSelected(id); nav(`${base}/fields/${id}`); }} height="min(55vh, 420px)" /></Suspense>
@@ -109,7 +142,7 @@ function FieldList() {
             return (
               <Link key={f.id} to={`${base}/fields/${f.id}`} className="farm-card">
                 <h3 className="farm-card__title">{f.name}</h3>
-                <p className="farm-card__meta">{formatHa(f.area_ha)}{f.boundary ? " · on the map" : " · not drawn yet"}</p>
+                <p className="farm-card__meta">{formatAcres(f.area_ha)}{f.boundary ? " · on the map" : " · not drawn yet"}</p>
                 <div className="farm-card__row"><span className="farm-card__meta">{mine.length} crop{mine.length === 1 ? "" : "s"}</span>{active > 0 && <span className="farm-card__meta">{active} active</span>}</div>
               </Link>
             );
@@ -152,7 +185,7 @@ function FieldDetail({ id }) {
 
   return (
     <div className="farm">
-      <PageHead title={field.name} lead={`${formatHa(field.area_ha)}${field.boundary ? "" : " · boundary not drawn"}`}>
+      <PageHead title={field.name} lead={`${formatAcres(field.area_ha)}${field.boundary ? "" : " · boundary not drawn"}`}>
         <Button as={Link} to={`${base}/fields`} variant="secondary">All fields</Button>
         {!editing && <Button variant="outline" onClick={() => setEditing(true)}>{field.boundary ? "Redraw / edit" : "Draw on map"}</Button>}
         <Button variant="danger" onClick={() => setConfirm(true)}>Delete</Button>

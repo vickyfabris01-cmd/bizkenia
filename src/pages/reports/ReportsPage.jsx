@@ -150,10 +150,10 @@ function FarmReports({ tab, d, file }) {
   }
   if (tab === "yield") {
     const rows = d.yields.map((y, i) => ({ ...y, profit: y.income - y.cost, _k: `${y.crop}-${y.field}-${i}` }));
-    const cols = [{ key: "crop", label: "Crop" }, { key: "field", label: "Field" }, { key: "area_ha", label: "Hectares", align: "right", render: (r) => (r.area_ha == null ? "—" : num(r.area_ha)) },
-      { key: "harvested_kg", label: "Harvested (kg)", align: "right", render: (r) => num(r.harvested_kg) }, { key: "kg_per_ha", label: "kg per hectare", align: "right", render: (r) => (r.kg_per_ha == null ? "—" : num(r.kg_per_ha)) },
+    const cols = [{ key: "crop", label: "Crop" }, { key: "field", label: "Field" }, { key: "area_acres", label: "Acres", align: "right", render: (r) => (r.area_acres == null ? "—" : num(r.area_acres)) },
+      { key: "harvested_kg", label: "Harvested (kg)", align: "right", render: (r) => num(r.harvested_kg) }, { key: "kg_per_acre", label: "kg per acre", align: "right", render: (r) => (r.kg_per_acre == null ? "—" : num(r.kg_per_acre)) },
       { key: "cost", label: "Cost", align: "right", render: (r) => money(r.cost) }, { key: "income", label: "Income", align: "right", render: (r) => money(r.income) }];
-    const csv = [{ key: "crop", label: "Crop" }, { key: "field", label: "Field" }, { key: "area_ha", label: "Hectares" }, { key: "harvested_kg", label: "Harvested (kg)" }, { key: "kg_per_ha", label: "kg per hectare" },
+    const csv = [{ key: "crop", label: "Crop" }, { key: "field", label: "Field" }, { key: "area_acres", label: "Acres" }, { key: "harvested_kg", label: "Harvested (kg)" }, { key: "kg_per_acre", label: "kg per acre" },
       { key: "cost", label: "Cost (KSh)" }, { key: "income", label: "Income (KSh)" }, { key: "profit", label: "Profit (KSh)" }];
     return (
       <>

@@ -1,4 +1,4 @@
-// src/pages/farm/AnalyticsPage.jsx — NEW FILE
+// src/pages/farm/AnalyticsPage.jsx — MODIFIED (land and yield per acre)
 //
 // AIM
 // /app/:slug/analytics — the farm's numbers as charts: income against cost by month, harvest by
@@ -14,7 +14,7 @@ import LineTrend from "../../components/charts/LineTrend.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { getFarmSummary } from "../../lib/api/farm.js";
 import { getFarmReport } from "../../lib/api/reports.js";
-import { formatHa } from "../../lib/geo.js";
+import { formatAcres, haToAcres } from "../../lib/geo.js";
 import { Loading, LoadError, PageHead, Stat, cap, kg, money, useFarm } from "./shared.jsx";
 
 const MONTH = (m) => new Date(`${m}-01T00:00:00`).toLocaleDateString("en-KE", { month: "short" });
@@ -30,7 +30,7 @@ export default function AnalyticsPage() {
   if (error) return <LoadError error={error} onRetry={reload} />;
   const { s, r } = data;
   const net = s.incomeYear - s.costYear;
-  const perHa = s.hectares > 0 ? s.yieldKgYear / s.hectares : 0;
+  const perAcre = s.hectares > 0 ? s.yieldKgYear / haToAcres(s.hectares) : 0; // s.hectares is the stored value; yield is shown per acre
 
   return (
     <div className="farm">
@@ -39,8 +39,8 @@ export default function AnalyticsPage() {
       </PageHead>
 
       <div className="farm-stats">
-        <Stat label="Land" value={formatHa(s.hectares)} note={`${s.activePlots} active plot${s.activePlots === 1 ? "" : "s"}`} />
-        <Stat label="Harvested this year" value={kg(s.yieldKgYear)} note={s.hectares > 0 && s.yieldKgYear > 0 ? `${kg(perHa)} per hectare of land` : undefined} />
+        <Stat label="Land" value={formatAcres(s.hectares)} note={`${s.activePlots} active plot${s.activePlots === 1 ? "" : "s"}`} />
+        <Stat label="Harvested this year" value={kg(s.yieldKgYear)} note={s.hectares > 0 && s.yieldKgYear > 0 ? `${kg(perAcre)} per acre of land` : undefined} />
         <Stat label="Income this year" value={money(s.incomeYear)} tone="good" />
         <Stat label="Net this year" value={money(net)} tone={net < 0 ? "bad" : net > 0 ? "good" : undefined} note={`${money(s.costYear)} spent`} />
       </div>
