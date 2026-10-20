@@ -1,12 +1,41 @@
-/* src/components/business/ListingCard.css — NEW FILE. Tokens only. */
-.listing { display: flex; flex-direction: column; min-width: 0; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; color: inherit; text-decoration: none; }
-a.listing:hover { box-shadow: var(--shadow-md); }
+/* src/components/business/ListingCard.css — MODIFIED (square 65/35 card). Tokens only.
+ *
+ * The card is a size container, so every size below is a share of the card's own width (cqw) with a
+ * floor and a ceiling. Text shrinks and grows with the card. Every text line is one line with an
+ * ellipsis. Under 140px wide (the narrowest phones) the seller line is dropped so the title and the
+ * price keep room. Text is in divs on purpose: ".pg p" would force a tall line height on a <p>. */
+.listing {
+  container-type: inline-size;
+  display: flex; flex-direction: column; aspect-ratio: 1 / 1; min-width: 0;
+  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  overflow: hidden; color: inherit; text-decoration: none;
+  transition: box-shadow var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
+}
 a.listing:focus-visible { outline: 2px solid var(--color-link); outline-offset: 2px; }
-.listing__img { aspect-ratio: 4 / 3; display: grid; place-items: center; background-color: var(--color-surface-2); background-size: cover; background-position: center; font-size: var(--text-3xl); font-weight: var(--weight-bold); color: var(--color-text-subtle); }
-.listing__body { display: grid; gap: var(--space-1); justify-items: start; padding: var(--space-3); }
-.listing__title { margin: 0; font-size: 1rem; font-weight: var(--weight-bold); color: var(--color-text); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.listing__price { margin: 0; font-weight: var(--weight-bold); color: var(--color-text); }
-.listing__place { margin: 0; font-size: var(--text-sm); color: var(--color-text-muted); overflow-wrap: anywhere; }
+/* the lift only where there is a pointer that can hover */
+@media (hover: hover) and (pointer: fine) {
+  a.listing:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+}
+@media (prefers-reduced-motion: reduce) { .listing { transition: none; } a.listing:hover { transform: none; } }
 
-/* A plain wrapping grid, used on a farm's own page. */
-.listing-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); }
+/* picture: the top 65% */
+.listing__media { position: relative; flex: 65 1 0; min-height: 0; background-color: var(--color-surface-2); }
+.listing__img { position: absolute; inset: 0; display: grid; place-items: center; background-color: var(--color-surface-2); background-size: cover; background-position: center; font-size: clamp(1.25rem, 22cqw, 2.5rem); font-weight: var(--weight-bold); color: var(--color-text-subtle); }
+.listing__badge { position: absolute; top: 3cqw; left: 3cqw; max-width: calc(100% - 6cqw); overflow: hidden; box-shadow: var(--shadow-sm); }
+
+/* text: the bottom 35% */
+.listing__body { flex: 35 1 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: 3cqw; padding: 0 4cqw; overflow: hidden; line-height: 1.2; }
+.listing__title, .listing__price, .listing__place { margin: 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.listing__title { font-size: clamp(0.6875rem, 8cqw, 1rem); font-weight: var(--weight-bold); color: var(--color-text); }
+.listing__price { font-size: clamp(0.6875rem, 8cqw, 1rem); font-weight: var(--weight-bold); color: var(--color-text); }
+.listing__place { font-size: clamp(0.625rem, 6.5cqw, 0.8125rem); color: var(--color-text-muted); }
+@container (max-width: 139px) { .listing__place { display: none; } }
+
+/* loading placeholder */
+.listing--skeleton .listing__body { gap: 4cqw; }
+.listing__fill { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 0; }
+
+/* A farm's own page: the produce, as a grid of square cards. 2 across on phones, then as many
+   as fit (never narrower than 170px). */
+.listing-grid { display: grid; gap: var(--space-3); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 640px) { .listing-grid { gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); } }

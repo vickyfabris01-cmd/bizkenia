@@ -1,4 +1,4 @@
-// src/pages/public/HomePage.jsx — MODIFIED (compact hero: phone paragraph runs to three lines, search box and button on one row, search also finds listings and counties)
+// src/pages/public/HomePage.jsx — MODIFIED (square cards in one-row .crow rows: 5 products and 4 businesses per type)
 //
 // AIM
 // The front door, written for someone who just wants to FIND a business: search by name
@@ -13,13 +13,14 @@
 // opens /explore?q=, which looks through businesses (name, description, address, county) and
 // through products, produce and rooms (name, description, business, building, county).
 //
-// Latest products & rentals: up to 4 shop products, 4 farm produce items and 4 available rooms
-// (one database call, home_listings). Each type is its own row. The page always receives 4 of
-// each; CSS shows 4 per row from 1024px, 3 from 640px and 2 below that, so the rows stay full.
+// Latest products & rentals: up to 5 shop products, 5 farm produce items and 5 available rooms
+// (one database call, home_listings). Each type is its own one-row .crow (see CardRows.css). The
+// page always receives 5 of each; from 640px CSS shows one full row (3, 4 or 5 cards) and under
+// 640px every card is in a sideways-scrolling row (about 2.3 cards in view).
 //
-// Latest businesses: the 3 newest shops, 3 newest farms and 3 newest rentals, one row per type
-// (three database calls). The page always receives 3 of each; CSS shows 3 per row from 768px,
-// 2 from 480px and 1 below that, matching how many cards the screen fits.
+// Latest businesses: the 4 newest shops, 4 newest farms and 4 newest rentals, one one-row .crow per
+// type (three database calls). The page always receives 4 of each; from 640px CSS shows one full
+// row (2, 3 or 4 cards) and under 640px every card is in a scrolling row (one card in view).
 //
 // Hero background: the super admin uploads photos in Settings. The photo showing now comes from
 // current_hero_image(). It is fetched and downloaded by lib/heroPreload.js, which main.jsx starts
@@ -48,7 +49,7 @@ const OWNER_STEPS = [
   "Get approved, go live and start managing.",
 ];
 
-// Latest businesses: one row per type, in this order, 3 of each.
+// Latest businesses: one row per type, in this order, 4 of each.
 const BIZ_ROWS = [
   { type: "shop", label: "Shops" },
   { type: "agriculture", label: "Farms" },
@@ -57,7 +58,7 @@ const BIZ_ROWS = [
 
 // Three calls, one per type, newest first. Only an error if every call failed.
 async function loadLatestBusinesses() {
-  const results = await Promise.all(BIZ_ROWS.map((r) => listBusinesses({ type: r.type, limit: 3 })));
+  const results = await Promise.all(BIZ_ROWS.map((r) => listBusinesses({ type: r.type, limit: 4 })));
   if (results.every((r) => r.error)) return { data: null, error: results[0].error };
   return { data: Object.fromEntries(BIZ_ROWS.map((r, i) => [r.type, results[i].data || []])), error: null };
 }
@@ -92,12 +93,12 @@ function HomeSkeleton() {
 
       <section className="pg" aria-hidden="true">
         <div className="home-list__head"><Skeleton height={28} width={240} /></div>
-        <div className="home-listings__row">{[0, 1, 2, 3].map((i) => <ListingCardSkeleton key={i} />)}</div>
+        <div className="crow crow--listing" data-rows="1">{[0, 1, 2, 3, 4].map((i) => <ListingCardSkeleton key={i} />)}</div>
       </section>
 
       <section className="pg" aria-hidden="true">
         <div className="home-list__head"><Skeleton height={28} width={200} /></div>
-        <div className="home-biz__row">{[0, 1, 2].map((i) => <BusinessCardSkeleton key={i} />)}</div>
+        <div className="crow crow--biz" data-rows="1">{[0, 1, 2, 3].map((i) => <BusinessCardSkeleton key={i} />)}</div>
       </section>
 
       <section className="pg" aria-hidden="true">
@@ -118,7 +119,7 @@ export default function HomePage() {
   const memberships = useBusinessStore((s) => s.memberships);
   const [term, setTerm] = useState("");
   const { data, error, loading } = useAsync(loadLatestBusinesses, []);
-  const { data: listings, error: listError, loading: listLoading } = useAsync(() => listHomeListings(4), []);
+  const { data: listings, error: listError, loading: listLoading } = useAsync(() => listHomeListings(5), []);
   const hero = useHeroPreload(); // { ready, url }; url is "" when the plain green hero is used
   const first = (profile?.full_name || "").split(" ")[0];
   const ownsBusiness = Boolean(user) && memberships.length > 0;
@@ -176,7 +177,7 @@ export default function HomePage() {
           <h2 id="home-listings-h" className="pg__title">Latest products &amp; rentals</h2>
         </div>
         {listLoading ? (
-          <div className="home-listings__row">{[0, 1, 2, 3].map((i) => <ListingCardSkeleton key={i} />)}</div>
+          <div className="crow crow--listing" data-rows="1">{[0, 1, 2, 3, 4].map((i) => <ListingCardSkeleton key={i} />)}</div>
         ) : listError ? (
           <Card><EmptyState icon="info" title="Products and rentals could not be loaded" description={listError} compact /></Card>
         ) : groups.length === 0 ? (
@@ -189,7 +190,7 @@ export default function HomePage() {
                   <h3>{g.label}</h3>
                   <Link to={g.more}>See all</Link>
                 </div>
-                <div className="home-listings__row">
+                <div className="crow crow--listing" data-rows="1">
                   {g.items.map((it) => <ListingCard key={it.key} listing={it} />)}
                 </div>
               </div>
@@ -204,7 +205,7 @@ export default function HomePage() {
           <Link to="/explore">See all</Link>
         </div>
         {loading ? (
-          <div className="home-biz__row">{[0, 1, 2].map((i) => <BusinessCardSkeleton key={i} />)}</div>
+          <div className="crow crow--biz" data-rows="1">{[0, 1, 2, 3].map((i) => <BusinessCardSkeleton key={i} />)}</div>
         ) : error ? (
           <Card><EmptyState icon="info" title="Businesses could not be loaded" description={error} compact /></Card>
         ) : bizGroups.length === 0 ? (
@@ -217,7 +218,7 @@ export default function HomePage() {
                   <h3>{g.label}</h3>
                   <Link to={`/explore?type=${g.type}`}>See all</Link>
                 </div>
-                <div className="home-biz__row">
+                <div className="crow crow--biz" data-rows="1">
                   {g.items.map((b) => <BusinessCard key={b.id} business={b} />)}
                 </div>
               </div>
