@@ -1,4 +1,4 @@
-/* src/pages/public/ExplorePage.css — MODIFIED (compact search bar). Tokens only. */
+/* src/pages/public/ExplorePage.css — MODIFIED (sections of cards like Shop and rent). Tokens only. */
 
 /* The intro sentence is dropped on phones to keep the controls near the top. */
 .explore__lead { display: none; }
@@ -31,7 +31,18 @@
   .explore-panel > * { width: 190px; }
 }
 
-.explore-count { color: var(--color-text-muted); font-size: var(--text-sm); margin: 0 0 var(--space-3); }
+.explore { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-8); }
+.explore.is-loading { opacity: 0.6; transition: opacity 0.15s; }
+/* minmax(0, 1fr) and min-width: 0 let a section shrink, so a sideways-scrolling .crow can never widen the page */
+.explore__section, .explore__group { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: var(--space-3); }
+.explore__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-3); }
+.pg .explore__head h2, .pg .explore__sub { margin: 0; font-size: var(--text-xl); color: var(--color-text); }
+.explore__head h3 { margin: 0; font-size: var(--text-lg); color: var(--color-text); }
+.explore__count { margin: 0; color: var(--color-text-muted); font-size: var(--text-sm); }
+.explore__more-link { margin-left: auto; color: var(--color-link); font-weight: var(--weight-medium); font-size: var(--text-sm); }
+.explore__more { display: flex; justify-content: center; }
+
+/* The cards sit in .crow (preview) and .cgrid (one type) from CardRows.css. */
 
 /* Nothing matched: what is applied, each removable on its own. */
 .explore__applied { display: grid; gap: var(--space-3); justify-items: center; }

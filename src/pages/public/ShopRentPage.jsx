@@ -1,4 +1,4 @@
-// src/pages/public/ShopRentPage.jsx — MODIFIED (compact search bar; filters tucked behind a button on phones)
+// src/pages/public/ShopRentPage.jsx — MODIFIED (square cards: 10 per type in two .crow rows, one type as a .cgrid)
 //
 // AIM
 // /shop-rent — shop products, farm produce and rooms to rent in one place. One search box looks
@@ -11,9 +11,12 @@
 // narrow a new search without the person knowing. Filters and sorting are used AFTER a search.
 // If nothing matches, the page lists what is applied (search, type, county) and each one can be
 // removed on its own.
-// With no type chosen the page shows three sections of at most 8 cards each (2 rows); choosing a
-// type shows only that type, 24 at a time with "Show more". Everything lives in the address
-// (?q=&type=&county=&sort=) so a search can be shared and the back button works.
+// With no type chosen the page shows three sections of at most 10 cards each, as a two-row .crow
+// (CardRows.css): from 640px the row shows only full rows (6, 8 or 10 cards), on phones every card
+// is in a sideways-scrolling row. "See all N" shows whenever some cards could be hidden.
+// Choosing a type shows only that type as a .cgrid, 20 at a time with "Show more" (20 fills whole
+// rows at 2, 4 and 5 columns). Everything lives in the address (?q=&type=&county=&sort=) so a
+// search can be shared and the back button works.
 
 import "./ShopRentPage.css";
 import { useEffect, useState } from "react";
@@ -21,11 +24,11 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Button, Card, EmptyState, Icon, Input, SelectInput } from "../../components/ui";
 import ListingCard, { ListingCardSkeleton } from "../../components/business/ListingCard.jsx";
 import useAsync from "../../hooks/useAsync.js";
-import { MARKET_KINDS, MARKET_SORTS, listMarket, listMarketCounties } from "../../lib/api/market.js";
-import { formatKsh } from "../../lib/format.js";
+import { MARKET_KINDS, MARKET_SORTS, listMarket, listMarketCounties, marketCard } from "../../lib/api/market.js";
 
-const PER_SECTION = 8;  // cards per section when no type is chosen
-const PAGE = 24;        // cards per step when one type is chosen
+const PER_SECTION = 10; // cards per section when no type is chosen (two rows of 5 on a wide screen)
+const PREVIEW_MIN = 6;  // fewest cards a preview shows from 640px (3 columns x 2 rows): more than this needs "See all"
+const PAGE = 20;        // cards per step when one type is chosen
 const MAX = 120;        // the database never returns more than this at once
 
 // Sort labels say "Sort:" themselves because the dropdowns have no visible label.
@@ -34,21 +37,6 @@ const SORT_OPTIONS = [
   { value: "low", label: "Sort: Price, low to high" },
   { value: "high", label: "Sort: Price, high to low" },
 ];
-
-const perUnit = (u) => (u && u !== "item" ? ` / ${u}` : "");
-const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
-
-function toCard(kind) {
-  return (x) => ({
-    key: x.id,
-    to: kind === "shop" ? `/b/${x.business_slug}/p/${x.id}` : `/b/${x.business_slug}`,
-    image: x.image,
-    title: kind === "rooms" && x.building_name ? `${x.title} · ${x.building_name}` : x.title,
-    price: kind === "rooms" ? `${formatKsh(x.price)} / month` : `${formatKsh(x.price)}${perUnit(x.unit)}`,
-    place: [x.business_name, x.county].filter(Boolean).join(" · "),
-    badge: kind === "rooms" ? cap(x.room_type) : undefined,
-  });
-}
 
 export default function ShopRentPage() {
   const [params, setParams] = useSearchParams();
@@ -100,7 +88,7 @@ export default function ShopRentPage() {
   const sections = kinds
     .map((k) => ({
       ...MARKET_KINDS.find((m) => m.value === k),
-      items: (data?.[k]?.items || []).map(toCard(k)),
+      items: (data?.[k]?.items || []).map(marketCard(k)),
       total: data?.[k]?.total || 0,
     }))
     .filter((s) => s.items.length > 0);
@@ -149,7 +137,7 @@ export default function ShopRentPage() {
 
       <div aria-live="polite" aria-busy={loading}>
         {loading && !data ? (
-          <div className="shoprent__grid shoprent__grid--preview">{[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <ListingCardSkeleton key={i} />)}</div>
+          <div className="crow crow--listing" data-rows="2">{[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => <ListingCardSkeleton key={i} />)}</div>
         ) : error ? (
           <Card><EmptyState icon="info" title="Listings could not be loaded" description={error} /></Card>
         ) : sections.length === 0 ? (
@@ -179,9 +167,9 @@ export default function ShopRentPage() {
                 <div className="shoprent__head">
                   <h2 id={`shoprent-${s.value}`}>{s.label}</h2>
                   <span className="shoprent__count">{s.total} {s.total === 1 ? "result" : "results"}</span>
-                  {!type && s.total > PER_SECTION && <Link className="shoprent__more-link" to={seeAll(s.value)}>See all {s.total}</Link>}
+                  {!type && s.total > PREVIEW_MIN && <Link className="shoprent__more-link" to={seeAll(s.value)}>See all {s.total}</Link>}
                 </div>
-                <div className={`shoprent__grid${type ? "" : " shoprent__grid--preview"}`}>
+                <div className={type ? "cgrid cgrid--listing" : "crow crow--listing"} data-rows={type ? undefined : "2"}>
                   {s.items.map((it) => <ListingCard key={it.key} listing={it} />)}
                 </div>
                 {type && s.items.length < s.total && limit < MAX && (

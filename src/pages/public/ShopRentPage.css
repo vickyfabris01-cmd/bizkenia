@@ -1,4 +1,4 @@
-/* src/pages/public/ShopRentPage.css — MODIFIED (compact search bar). Tokens only. */
+/* src/pages/public/ShopRentPage.css — MODIFIED (card rows moved to CardRows.css). Tokens only. */
 
 /* The intro sentence is dropped on phones to keep the controls near the top. */
 .shoprent__lead { display: none; }
@@ -33,9 +33,10 @@
   .shoprent-panel > :nth-child(3) { width: 220px; }
 }
 
-.shoprent { display: grid; gap: var(--space-8); }
+.shoprent { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-8); }
 .shoprent.is-loading { opacity: 0.6; transition: opacity 0.15s; }
-.shoprent__section { display: grid; gap: var(--space-3); }
+/* minmax(0, 1fr) and min-width: 0 let a section shrink, so a sideways-scrolling .crow can never widen the page */
+.shoprent__section { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: var(--space-3); }
 .shoprent__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-3); }
 .shoprent__head h2 { margin: 0; font-size: var(--text-xl); color: var(--color-text); }
 .shoprent__count { margin: 0; color: var(--color-text-muted); font-size: var(--text-sm); }
@@ -49,17 +50,4 @@
 .shoprent__chip:hover { background: var(--color-surface-2); }
 .shoprent__chip:focus-visible { outline: 2px solid var(--color-link); outline-offset: 2px; }
 
-/* Cards: 2 per row on phones, 3 from 640px, 4 from 1024px. */
-.shoprent__grid { display: grid; gap: var(--space-3); grid-template-columns: repeat(2, minmax(0, 1fr)); }
-@media (min-width: 640px) { .shoprent__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); } }
-@media (min-width: 1024px) { .shoprent__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-
-/* Preview (no type chosen): always two full rows, so 4 cards on phones, 6 from 640px, 8 from 1024px. */
-.shoprent__grid--preview > .listing:nth-child(n + 5) { display: none; }
-@media (min-width: 640px) {
-  .shoprent__grid--preview > .listing:nth-child(n + 5):nth-child(-n + 6) { display: flex; }
-  .shoprent__grid--preview > .listing:nth-child(n + 7) { display: none; }
-}
-@media (min-width: 1024px) {
-  .shoprent__grid--preview > .listing:nth-child(n + 7) { display: flex; }
-}
+/* The cards sit in .crow (preview) and .cgrid (one type) from CardRows.css. */
