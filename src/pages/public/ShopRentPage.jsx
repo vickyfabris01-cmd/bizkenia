@@ -1,9 +1,12 @@
-// src/pages/public/ShopRentPage.jsx — MODIFIED (search starts fresh; empty result lists what is applied)
+// src/pages/public/ShopRentPage.jsx — MODIFIED (compact search bar; filters tucked behind a button on phones)
 //
 // AIM
 // /shop-rent — shop products, farm produce and rooms to rent in one place. One search box looks
 // through all three types. Two filters, type first, then county (only counties that have items of
 // the chosen type), and a sort (newest, price low to high, price high to low).
+// The controls are kept small: on a phone a single row holds the search box, its button and a
+// "Filters" button (with a count of what is active) that opens type, county and sort; from 768px
+// everything sits on one row.
 // Search works on its own: every search clears the type, county and sort, so old settings never
 // narrow a new search without the person knowing. Filters and sorting are used AFTER a search.
 // If nothing matches, the page lists what is applied (search, type, county) and each one can be
@@ -24,6 +27,13 @@ import { formatKsh } from "../../lib/format.js";
 const PER_SECTION = 8;  // cards per section when no type is chosen
 const PAGE = 24;        // cards per step when one type is chosen
 const MAX = 120;        // the database never returns more than this at once
+
+// Sort labels say "Sort:" themselves because the dropdowns have no visible label.
+const SORT_OPTIONS = [
+  { value: "new", label: "Sort: Newest" },
+  { value: "low", label: "Sort: Price, low to high" },
+  { value: "high", label: "Sort: Price, high to low" },
+];
 
 const perUnit = (u) => (u && u !== "item" ? ` / ${u}` : "");
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
@@ -50,6 +60,7 @@ export default function ShopRentPage() {
   const sort = MARKET_SORTS.some((s) => s.value === rawSort) ? rawSort : "new";
   const [text, setText] = useState(q);
   const [limit, setLimit] = useState(PAGE);
+  const [open, setOpen] = useState(false); // filters panel (phones only; always shown from 768px)
 
   useEffect(() => setText(q), [q]);
 
@@ -101,6 +112,9 @@ export default function ShopRentPage() {
     county && { key: "county", label: `County: ${county}`, clear: { county: "" } },
   ].filter(Boolean);
 
+  // How many of the filters behind the button are on (shown as a number on it).
+  const activeCount = [type, county, sort !== "new"].filter(Boolean).length;
+
   function seeAll(kind) {
     const next = new URLSearchParams(params);
     next.set("type", kind);
@@ -110,16 +124,28 @@ export default function ShopRentPage() {
   return (
     <div className="pg">
       <h1 className="pg__title">Shop and rent</h1>
-      <p className="pg__lead">Products from shops, fresh produce from farms and rooms to rent, all in one place.</p>
+      <p className="pg__lead shoprent__lead">Products from shops, fresh produce from farms and rooms to rent, all in one place.</p>
 
-      <form className="shoprent-filters" onSubmit={submitSearch} role="search">
-        <Input label="Search" placeholder="Product, produce, room or place" value={text} onChange={(e) => setText(e.target.value)} />
-        <SelectInput label="Type" value={type} onChange={(v) => update({ type: v })}
-          options={[{ value: "", label: "All types" }, ...MARKET_KINDS]} />
-        <SelectInput label="County" value={county} onChange={(v) => update({ county: v })} options={countyOptions} />
-        <SelectInput label="Sort by" value={sort} onChange={(v) => update({ sort: v === "new" ? "" : v })} options={MARKET_SORTS} />
-        <Button type="submit" className="shoprent-filters__go">Search</Button>
-      </form>
+      <div className="shoprent-bar">
+        <form className="shoprent-search" onSubmit={submitSearch} role="search">
+          <Input className="shoprent-search__input" aria-label="Search products, produce and rooms"
+            placeholder="Search products, produce, rooms" value={text} onChange={(e) => setText(e.target.value)} />
+          <Button type="submit" aria-label="Search" className="shoprent-search__go"><Icon name="search" size={20} /></Button>
+        </form>
+
+        <button type="button" className="shoprent-toggle" aria-expanded={open} aria-controls="shoprent-panel" onClick={() => setOpen(!open)}>
+          <span>Filters</span>
+          {activeCount > 0 && <span className="shoprent-toggle__n" aria-label={`${activeCount} active`}>{activeCount}</span>}
+          <Icon name="chevron-down" size={16} />
+        </button>
+
+        <div id="shoprent-panel" className={`shoprent-panel${open ? " is-open" : ""}`}>
+          <SelectInput aria-label="Type" value={type} onChange={(v) => update({ type: v })}
+            options={[{ value: "", label: "All types" }, ...MARKET_KINDS]} />
+          <SelectInput aria-label="County" value={county} onChange={(v) => update({ county: v })} options={countyOptions} />
+          <SelectInput aria-label="Sort" value={sort} onChange={(v) => update({ sort: v === "new" ? "" : v })} options={SORT_OPTIONS} />
+        </div>
+      </div>
 
       <div aria-live="polite" aria-busy={loading}>
         {loading && !data ? (

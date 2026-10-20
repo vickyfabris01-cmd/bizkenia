@@ -1,4 +1,4 @@
-// src/components/map/FieldMap.jsx — MODIFIED (acres, fly-in animation)
+// src/components/map/FieldMap.jsx — MODIFIED (acres, fly-in animation, clearer "My location" errors)
 //
 // AIM
 // The map used on the farm screens (Phase 4), built on Leaflet. Street and satellite tiles, a
@@ -166,21 +166,36 @@ export default function FieldMap({ polygons = [], selectedId, onSelect, editable
 
   function locate() {
     if (!navigator.geolocation) { setNote("Your browser cannot find your location."); return; }
+    // phones only share their location with secure pages (https, or localhost while developing)
+    if (typeof window !== "undefined" && window.isSecureContext === false) {
+      setNote("Location only works on a secure page. Open the site with its https:// address and try again.");
+      return;
+    }
     setNote("Finding you…");
+    const found = (pos) => {
+      const here = [pos.coords.latitude, pos.coords.longitude];
+      const colour = token("--color-info", "#2563eb");
+      me.current?.clearLayers();
+      if (me.current) {
+        L.circle(here, { radius: pos.coords.accuracy || 20, color: colour, weight: 1, fillOpacity: 0.12, interactive: false }).addTo(me.current);
+        L.circleMarker(here, { radius: 7, color: "#fff", weight: 2, fillColor: colour, fillOpacity: 1, interactive: false }).addTo(me.current);
+      }
+      flyIn({ centre: here, zoom: 17 });
+      setNote("");
+    };
+    const failed = (err) => {
+      if (err?.code === 1) setNote("Location is blocked for this site. Allow it in your browser's site settings and make sure location is switched on for your phone, then try again.");
+      else if (err?.code === 2) setNote("Your phone could not work out where you are. Check that location is switched on, then try again, preferably outdoors.");
+      else setNote("Finding you took too long. Move to an open area or check your signal, then try again.");
+    };
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const here = [pos.coords.latitude, pos.coords.longitude];
-        const colour = token("--color-info", "#2563eb");
-        me.current?.clearLayers();
-        if (me.current) {
-          L.circle(here, { radius: pos.coords.accuracy || 20, color: colour, weight: 1, fillOpacity: 0.12, interactive: false }).addTo(me.current);
-          L.circleMarker(here, { radius: 7, color: "#fff", weight: 2, fillColor: colour, fillOpacity: 1, interactive: false }).addTo(me.current);
-        }
-        flyIn({ centre: here, zoom: 17 });
-        setNote("");
+      found,
+      (err) => {
+        // GPS can be slow or unavailable indoors: try again for a quicker, rougher fix (mobile network or Wi-Fi) before giving up
+        if (err?.code === 2 || err?.code === 3) navigator.geolocation.getCurrentPosition(found, failed, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
+        else failed(err);
       },
-      () => setNote("Could not get your location. Allow location access and try again."),
-      { enableHighAccuracy: true, timeout: 10000 },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
     );
   }
 

@@ -1,4 +1,14 @@
-/* src/pages/public/ExplorePage.css — NEW FILE */
+/* src/pages/public/ExplorePage.css — MODIFIED (listing results under the businesses) */
 .explore-filters { display: grid; gap: var(--space-3); margin-bottom: var(--space-6); align-items: end; }
 .explore-count { color: var(--color-text-muted); font-size: var(--text-sm); margin: 0 0 var(--space-3); }
 @media (min-width: 768px) { .explore-filters { grid-template-columns: 2fr 1fr 1fr auto; } }
+
+/* Matching products, produce and rooms under the businesses: 2 per row on phones, 4 from 768px. */
+.explore-listings { display: grid; gap: var(--space-6); margin-top: var(--space-8); }
+.explore-listings .explore-listings__title { margin: 0; font-size: var(--text-xl); color: var(--color-text); }
+.explore-listings__group { display: grid; gap: var(--space-3); }
+.explore-listings__head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-4); }
+.explore-listings__head h3 { margin: 0; font-size: var(--text-lg); color: var(--color-text); }
+.explore-listings__head a { color: var(--color-link); font-weight: var(--weight-medium); font-size: var(--text-sm); }
+.explore-listings__row { display: grid; gap: var(--space-3); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 768px) { .explore-listings__row { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); } }

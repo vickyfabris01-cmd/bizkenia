@@ -1,4 +1,4 @@
-// src/pages/public/HomePage.jsx — MODIFIED (Latest businesses is grouped by type: 3 shops, 3 farms, 3 rentals)
+// src/pages/public/HomePage.jsx — MODIFIED (compact hero: phone paragraph runs to three lines, search box and button on one row, search also finds listings and counties)
 //
 // AIM
 // The front door, written for someone who just wants to FIND a business: search by name
@@ -7,6 +7,11 @@
 // main message. Signed-in visitors see the same page with a greeting, and a signed-in owner
 // sees a link to their businesses instead of the sales pitch. Everything shown is real: the
 // lists come from the database (skeleton, then cards, or a friendly message).
+//
+// Hero: kept to about a quarter of a phone screen. The paragraph has three lengths (phone, tablet,
+// desktop) chosen by CSS, and the search box and button share one row on every screen. The search
+// opens /explore?q=, which looks through businesses (name, description, address, county) and
+// through products, produce and rooms (name, description, business, building, county).
 //
 // Latest products & rentals: up to 4 shop products, 4 farm produce items and 4 available rooms
 // (one database call, home_listings). Each type is its own row. The page always receives 4 of
@@ -79,8 +84,8 @@ function HomeSkeleton() {
           <Skeleton height={44} width="min(520px, 90%)" />
           <Skeleton height={18} width="min(460px, 80%)" />
           <div className="home-search">
-            <Skeleton height={44} />
-            <Skeleton height={48} width={120} />
+            <Skeleton height={44} style={{ flex: 1 }} />
+            <Skeleton height={44} width={48} />
           </div>
         </div>
       </section>
@@ -149,15 +154,19 @@ export default function HomePage() {
             {first ? `Hello, ${first}. What are you looking for?` : "Find rentals and local businesses across Kenya"}
           </h1>
           <p className="home-hero__lead">
-            Browse businesses approved on {brand.name}, see where they are and contact them directly.
-            You do not need an account to look around.
+            <span className="home-hero__lead--s">Shop products, farm produce, rooms to rent and local businesses across Kenya, all in one place. Search by name, item or county.</span>
+            <span className="home-hero__lead--m">Search shop products, fresh farm produce, rooms to rent and local businesses across Kenya. See where they are and contact them directly, no account needed.</span>
+            <span className="home-hero__lead--l">
+              Browse shop products, fresh farm produce, rooms to rent and businesses approved on {brand.name}.
+              See where they are, contact them directly and look around without an account.
+            </span>
           </p>
 
           <form className="home-search" onSubmit={search} role="search">
-            <label htmlFor="home-q" className="home-hero__label">Search by name or place</label>
+            <label htmlFor="home-q" className="home-hero__label">Search products, produce, rooms, businesses or counties</label>
             <input id="home-q" className="ui-control home-search__input" value={term} onChange={(e) => setTerm(e.target.value)}
-              placeholder="Name or place, for example Sunrise or Nakuru" />
-            <Button type="submit" size="lg" leftIcon={<Icon name="search" size={18} />}>Search</Button>
+              placeholder="Product, room, business or county" enterKeyHint="search" />
+            <Button type="submit" aria-label="Search" leftIcon={<Icon name="search" size={18} />}>Search</Button>
           </form>
         </div>
       </section>

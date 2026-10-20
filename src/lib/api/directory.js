@@ -1,4 +1,4 @@
-// src/lib/api/directory.js — MODIFIED (adds listHomeListings for the home page)
+// src/lib/api/directory.js — MODIFIED (business search also matches the county)
 //
 // AIM
 // Public reads: the list of active businesses, one business by slug, subscription plans and
@@ -18,7 +18,7 @@ export async function listBusinesses({ search = "", type = "", county = "", limi
   if (type) q = q.eq("business_type", type);
   if (county) q = q.eq("county", county);
   const term = search.trim().replace(/[%,()]/g, " ");
-  if (term) q = q.or(`name.ilike.%${term}%,description.ilike.%${term}%,address.ilike.%${term}%`);
+  if (term) q = q.or(`name.ilike.%${term}%,description.ilike.%${term}%,address.ilike.%${term}%,county.ilike.%${term}%`);
   const { data, error } = await q;
   return { data: data || [], error: error?.message || null };
 }

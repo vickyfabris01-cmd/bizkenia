@@ -1,6 +1,37 @@
-/* src/pages/public/ShopRentPage.css — MODIFIED (adds the applied-settings chips). Tokens only. */
-.shoprent-filters { display: grid; gap: var(--space-3); margin-bottom: var(--space-6); align-items: end; }
-@media (min-width: 768px) { .shoprent-filters { grid-template-columns: 2fr 1fr 1fr 1fr auto; } }
+/* src/pages/public/ShopRentPage.css — MODIFIED (compact search bar). Tokens only. */
+
+/* The intro sentence is dropped on phones to keep the controls near the top. */
+.shoprent__lead { display: none; }
+@media (min-width: 768px) { .shoprent__lead { display: block; } }
+
+/* Search bar. Phone: [search box][magnifier][Filters], with the filters panel below when open.
+   From 768px: everything on one row, no Filters button. */
+.shoprent-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4); }
+.shoprent-search { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: var(--space-2); }
+.shoprent-search__input { flex: 1; min-width: 0; }
+.shoprent-search__go { flex: none; min-width: var(--control-h-md); padding-left: var(--space-3); padding-right: var(--space-3); }
+
+.shoprent-toggle { flex: none; display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--control-h-md); padding: 0 var(--space-3); border: 1px solid var(--color-control-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font-family: inherit; font-size: var(--text-sm); font-weight: var(--weight-medium); cursor: pointer; }
+.shoprent-toggle:hover { background: var(--color-surface-2); }
+.shoprent-toggle:focus-visible { outline: 2px solid var(--color-link); outline-offset: 2px; }
+.shoprent-toggle svg { transition: transform var(--duration-fast) var(--ease-standard); }
+.shoprent-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+.shoprent-toggle__n { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 var(--space-1); border-radius: var(--radius-full); background: var(--color-link); color: var(--color-surface); font-size: var(--text-sm); line-height: 1; }
+
+/* Filters panel: hidden until opened on phones; type and county side by side, sort below. */
+.shoprent-panel { display: none; flex-basis: 100%; gap: var(--space-2); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.shoprent-panel.is-open { display: grid; }
+.shoprent-panel > :nth-child(3) { grid-column: 1 / -1; }
+
+@media (min-width: 768px) {
+  .shoprent-bar { flex-wrap: nowrap; }
+  .shoprent-search { flex: 1 1 260px; }
+  .shoprent-toggle { display: none; }
+  .shoprent-panel,
+  .shoprent-panel.is-open { display: flex; flex: none; flex-basis: auto; }
+  .shoprent-panel > * { width: 170px; }
+  .shoprent-panel > :nth-child(3) { width: 220px; }
+}
 
 .shoprent { display: grid; gap: var(--space-8); }
 .shoprent.is-loading { opacity: 0.6; transition: opacity 0.15s; }

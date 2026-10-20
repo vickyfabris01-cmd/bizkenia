@@ -8,7 +8,7 @@ export function corsFor(req: Request) {
   const allow = allowed.length === 0 ? "*" : allowed.includes(origin) ? origin : allowed[0];
   return {
     "Access-Control-Allow-Origin": allow,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-application-name",
     "Vary": "Origin",
   };
 }

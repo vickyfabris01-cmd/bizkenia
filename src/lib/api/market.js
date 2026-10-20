@@ -1,4 +1,4 @@
-// src/lib/api/market.js — NEW FILE
+// src/lib/api/market.js — MODIFIED (adds marketCard, used by Explore's listing results)
 //
 // AIM
 // What the "Shop and rent" page asks of the database: shop products, farm produce and available
@@ -7,6 +7,7 @@
 // so row-level security decides what is visible. Every function returns { data, error } and never throws.
 
 import { supabase } from "../../config/supabase.js";
+import { formatKsh } from "../format.js";
 
 const NOT_CONNECTED = { data: null, error: "The app is not connected to the database yet. See .env.example." };
 
@@ -36,4 +37,20 @@ export async function listMarketCounties(kind = "") {
   if (!supabase) return NOT_CONNECTED;
   const { data, error } = await supabase.rpc("market_counties", { p_kind: kind || null });
   return { data: data || [], error: error?.message || null };
+}
+
+const perUnit = (u) => (u && u !== "item" ? ` / ${u}` : "");
+const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
+
+/** Turns one market_listings row into the details a ListingCard needs. kind: "shop" | "farm" | "rooms". */
+export function marketCard(kind) {
+  return (x) => ({
+    key: x.id,
+    to: kind === "shop" ? `/b/${x.business_slug}/p/${x.id}` : `/b/${x.business_slug}`,
+    image: x.image,
+    title: kind === "rooms" && x.building_name ? `${x.title} · ${x.building_name}` : x.title,
+    price: kind === "rooms" ? `${formatKsh(x.price)} / month` : `${formatKsh(x.price)}${perUnit(x.unit)}`,
+    place: [x.business_name, x.county].filter(Boolean).join(" · "),
+    badge: kind === "rooms" ? cap(x.room_type) : undefined,
+  });
 }

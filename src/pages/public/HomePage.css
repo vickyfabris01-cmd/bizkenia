@@ -1,16 +1,39 @@
-/* src/pages/public/HomePage.css — MODIFIED (adds the per-type business rows) */
+/* src/pages/public/HomePage.css — MODIFIED (compact phone hero, three paragraph lengths, one-row search) */
 .home-hero { background: var(--color-primary-soft); border-bottom: 1px solid var(--color-border); }
-.home-hero__inner { max-width: var(--container-max); margin: 0 auto; padding: var(--space-10) var(--gutter); display: grid; gap: var(--space-4); }
-.home-hero__title { margin: 0; font-size: var(--text-3xl); line-height: 1.15; font-weight: var(--weight-bold); color: var(--color-on-primary-soft); max-width: 20ch; }
-.home-hero__lead { margin: 0; max-width: 60ch; color: var(--color-text); font-size: var(--text-lg); line-height: 1.55; }
+/* Phones: a compact hero (about a quarter of the screen): small padding and gaps, a 20px headline
+   that may use the full width, a one or two line paragraph and one 44px search row. */
+.home-hero__inner { max-width: var(--container-max); margin: 0 auto; padding: var(--space-3) var(--gutter); display: grid; gap: var(--space-2); }
+.home-hero__title { margin: 0; font-size: var(--text-xl); line-height: 1.2; font-weight: var(--weight-bold); color: var(--color-on-primary-soft); }
+.home-hero__lead { margin: 0; max-width: 60ch; color: var(--color-text); font-size: var(--text-sm); line-height: 1.35; }
 .home-hero__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
-.home-search { display: grid; gap: var(--space-2); max-width: 820px; }
-.home-search__input { width: 100%; }
+/* The paragraph has three lengths: phone (short), tablet (medium) and desktop (full). */
+.home-hero__lead--m, .home-hero__lead--l { display: none; }
+
+/* Search box and button always share one row. Under 480px the button shows only the magnifier. */
+.home-search { display: flex; gap: var(--space-2); align-items: stretch; max-width: 820px; }
+.home-search__input { flex: 1 1 auto; min-width: 0; width: auto; }
+.home-search .ui-btn { flex: 0 0 auto; }
+@media (max-width: 479px) {
+  .home-search .ui-btn__label { display: none; }
+  .home-search .ui-btn { padding-inline: var(--space-3); min-width: 2.75rem; }
+}
+
+/* Tablet */
 @media (min-width: 768px) {
-  .home-hero__inner { padding: var(--space-16) var(--gutter); }
-  .home-hero__title { font-size: var(--text-hero); }
-  .home-search { grid-template-columns: 1fr auto; align-items: center; }
+  .home-hero__inner { padding: var(--space-16) var(--gutter); gap: var(--space-4); }
+  .home-hero__title { font-size: var(--text-hero); max-width: 20ch; }
+  .home-hero__lead { font-size: var(--text-lg); line-height: 1.55; }
+  .home-hero__lead--s { display: none; }
+  .home-hero__lead--m { display: inline; }
+  .home-search__input, .home-search .ui-btn { min-height: var(--control-h-lg); }
+  .home-search .ui-btn { padding-inline: var(--space-6); }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .home-hero__lead--m { display: none; }
+  .home-hero__lead--l { display: inline; }
 }
 
 /* Rows grouped by type (used by Latest products & rentals and by Latest businesses). */
