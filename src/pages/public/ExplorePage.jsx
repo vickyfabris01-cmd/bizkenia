@@ -1,26 +1,23 @@
-// src/pages/public/ExplorePage.jsx — MODIFIED (a search also lists matching products, produce and rooms)
+// src/pages/public/ExplorePage.jsx — MODIFIED (compact search bar; filters tucked behind a button on phones)
 //
 // AIM
 // Browse every approved business with filters (search text, type, county). The filters live in
 // the URL (?q=&type=&county=) so a search can be shared or bookmarked, and the back button works.
-// The search text looks through business name, description, address and county. When there is
-// search text, matching products, produce and rooms (name, description, business, county) are
-// listed under the businesses, 4 of each, with a link to see all of them on /shop-rent.
+// The controls are kept small: on a phone a single row holds the search box, its button and a
+// "Filters" button (with a count of what is active) that opens type and county; from 768px
+// everything sits on one row.
+// Search works on its own: every search clears the type and county, so old settings never narrow
+// a new search without the person knowing. Filters are used AFTER a search.
+// If nothing matches, the page lists what is applied and each one can be removed on its own.
 
 import "./ExplorePage.css";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Button, Card, EmptyState, Input, SelectInput } from "../../components/ui";
+import { Button, Card, EmptyState, Icon, Input, SelectInput } from "../../components/ui";
 import BusinessCard, { BusinessCardSkeleton } from "../../components/business/BusinessCard.jsx";
-import { BUSINESS_TYPES, COUNTIES } from "../../config/counties.js";
+import { BUSINESS_TYPES, COUNTIES, typeLabel } from "../../config/counties.js";
 import useAsync from "../../hooks/useAsync.js";
-import ListingCard, { ListingCardSkeleton } from "../../components/business/ListingCard.jsx";
 import { listBusinesses } from "../../lib/api/directory.js";
-import { MARKET_KINDS, listMarket, marketCard } from "../../lib/api/market.js";
-
-// Explore filters by business type; listings are grouped by what is sold.
-const KIND_OF_TYPE = { shop: "shop", agriculture: "farm", rental: "rooms" };
-const PER_KIND = 4;
 
 export default function ExplorePage() {
   const [params, setParams] = useSearchParams();
@@ -28,52 +25,59 @@ export default function ExplorePage() {
   const type = params.get("type") || "";
   const county = params.get("county") || "";
   const [text, setText] = useState(q);
+  const [open, setOpen] = useState(false); // filters panel (phones only; always shown from 768px)
 
   useEffect(() => setText(q), [q]);
 
-  function update(key, value) {
+  function update(changes) {
     const next = new URLSearchParams(params);
-    if (value) next.set(key, value); else next.delete(key);
+    for (const [k, v] of Object.entries(changes)) { if (v) next.set(k, v); else next.delete(k); }
     setParams(next, { replace: true });
   }
 
-  const { data, error, loading } = useAsync(() => listBusinesses({ search: q, type, county }), [q, type, county]);
-  const hasFilter = Boolean(q || type || county);
-
-  // Products, produce and rooms that match the search text (only when something was typed).
-  const kinds = type ? [KIND_OF_TYPE[type]].filter(Boolean) : MARKET_KINDS.map((k) => k.value);
-  const { data: found, loading: foundLoading } = useAsync(async () => {
-    if (!q) return { data: {}, error: null };
-    const res = await Promise.all(kinds.map((kind) => listMarket({ kind, q, county, limit: PER_KIND })));
-    return { data: Object.fromEntries(kinds.map((k, i) => [k, res[i].data])), error: null };
-  }, [q, type, county]);
-  const listingGroups = kinds
-    .map((k) => ({
-      ...MARKET_KINDS.find((m) => m.value === k),
-      items: (found?.[k]?.items || []).map(marketCard(k)),
-      total: found?.[k]?.total || 0,
-    }))
-    .filter((g) => g.items.length > 0);
-
-  function seeAll(kind) {
-    const next = new URLSearchParams({ q, type: kind });
-    if (county) next.set("county", county);
-    return `/shop-rent?${next.toString()}`;
+  // A search always starts fresh: type and county are cleared. Filters come after it.
+  function submitSearch(e) {
+    e.preventDefault();
+    update({ q: text.trim(), type: "", county: "" });
   }
+
+  const { data, error, loading } = useAsync(() => listBusinesses({ search: q, type, county }), [q, type, county]);
+
+  // Everything that is narrowing the results, so an empty page can say why.
+  const applied = [
+    q && { key: "q", label: `Search: “${q}”`, clear: { q: "" } },
+    type && { key: "type", label: `Type: ${typeLabel(type)}`, clear: { type: "" } },
+    county && { key: "county", label: `County: ${county}`, clear: { county: "" } },
+  ].filter(Boolean);
+
+  // How many of the filters behind the button are on (shown as a number on it).
+  const activeCount = [type, county].filter(Boolean).length;
 
   return (
     <div className="pg">
       <h1 className="pg__title">Explore businesses</h1>
-      <p className="pg__lead">Find rentals and, soon, farms and shops across Kenya.</p>
+      <p className="pg__lead explore__lead">Find rentals, shops and farms across Kenya.</p>
 
-      <form className="explore-filters" onSubmit={(e) => { e.preventDefault(); update("q", text.trim()); }} role="search">
-        <Input label="Search" placeholder="Name or place" value={text} onChange={(e) => setText(e.target.value)} />
-        <SelectInput label="Type" value={type} onChange={(v) => update("type", v)} placeholder="All types"
-          options={[{ value: "", label: "All types" }, ...BUSINESS_TYPES.filter((t) => t.open).map((t) => ({ value: t.value, label: t.label }))]} />
-        <SelectInput label="County" value={county} onChange={(v) => update("county", v)}
-          options={[{ value: "", label: "All counties" }, ...COUNTIES]} />
-        <Button type="submit" className="explore-filters__go">Search</Button>
-      </form>
+      <div className="explore-bar">
+        <form className="explore-search" onSubmit={submitSearch} role="search">
+          <Input className="explore-search__input" aria-label="Search businesses by name or place"
+            placeholder="Search by name or place" value={text} onChange={(e) => setText(e.target.value)} />
+          <Button type="submit" aria-label="Search" className="explore-search__go"><Icon name="search" size={20} /></Button>
+        </form>
+
+        <button type="button" className="explore-toggle" aria-expanded={open} aria-controls="explore-panel" onClick={() => setOpen(!open)}>
+          <span>Filters</span>
+          {activeCount > 0 && <span className="explore-toggle__n" aria-label={`${activeCount} active`}>{activeCount}</span>}
+          <Icon name="chevron-down" size={16} />
+        </button>
+
+        <div id="explore-panel" className={`explore-panel${open ? " is-open" : ""}`}>
+          <SelectInput aria-label="Type" value={type} onChange={(v) => update({ type: v })}
+            options={[{ value: "", label: "All types" }, ...BUSINESS_TYPES.filter((t) => t.open).map((t) => ({ value: t.value, label: t.label }))]} />
+          <SelectInput aria-label="County" value={county} onChange={(v) => update({ county: v })}
+            options={[{ value: "", label: "All counties" }, ...COUNTIES]} />
+        </div>
+      </div>
 
       <div className="explore-results" aria-live="polite">
         {loading ? (
@@ -82,9 +86,23 @@ export default function ExplorePage() {
           <Card><EmptyState icon="info" title="Businesses could not be loaded" description={error} /></Card>
         ) : data.length === 0 ? (
           <Card>
-            <EmptyState icon="search" title={hasFilter ? "No business matches your search" : "No businesses yet"}
-              description={listingGroups.length ? "Some products, produce or rooms do match, see below." : hasFilter ? "Try a different name or place, or clear the filters." : "Approved businesses will appear here."}
-              action={hasFilter ? <Button variant="outline" onClick={() => setParams({}, { replace: true })}>Clear filters</Button> : <Button as={Link} to="/start" variant="outline">List your business</Button>} />
+            <EmptyState icon="search"
+              title={applied.length ? "No business matches these settings" : "No businesses yet"}
+              description={applied.length ? "This is what is applied right now. Remove one to see more." : "Approved businesses will appear here."}
+              action={applied.length ? (
+                <div className="explore__applied">
+                  <ul className="explore__chips" aria-label="Applied search and filters">
+                    {applied.map((a) => (
+                      <li key={a.key}>
+                        <button type="button" className="explore__chip" onClick={() => update(a.clear)} aria-label={`Remove ${a.label}`}>
+                          <span>{a.label}</span><Icon name="x" size={14} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button variant="outline" onClick={() => { setParams({}, { replace: true }); setText(""); }}>Clear everything</Button>
+                </div>
+              ) : <Button as={Link} to="/start" variant="outline">List your business</Button>} />
           </Card>
         ) : (
           <>
@@ -93,25 +111,6 @@ export default function ExplorePage() {
           </>
         )}
       </div>
-
-      {q && (foundLoading || listingGroups.length > 0) && (
-        <section className="explore-listings" aria-labelledby="explore-listings-h" aria-live="polite">
-          <h2 id="explore-listings-h" className="explore-listings__title">Products, produce and rooms</h2>
-          {foundLoading ? (
-            <div className="explore-listings__row">{[0, 1, 2, 3].map((i) => <ListingCardSkeleton key={i} />)}</div>
-          ) : listingGroups.map((g) => (
-            <div key={g.value} className="explore-listings__group">
-              <div className="explore-listings__head">
-                <h3>{g.label}</h3>
-                {g.total > g.items.length && <Link to={seeAll(g.value)}>See all {g.total}</Link>}
-              </div>
-              <div className="explore-listings__row">
-                {g.items.map((it) => <ListingCard key={it.key} listing={it} />)}
-              </div>
-            </div>
-          ))}
-        </section>
-      )}
     </div>
   );
 }
