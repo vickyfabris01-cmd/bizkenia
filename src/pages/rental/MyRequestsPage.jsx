@@ -1,8 +1,9 @@
-// src/pages/rental/MyRequestsPage.jsx — NEW FILE
+// src/pages/rental/MyRequestsPage.jsx — MODIFIED FILE (room types)
 //
 // AIM
-// /account/requests — the signed-in person's own room requests, from any business. An offer shows
-// the rent and move-in date with Accept and Decline; accepting creates the tenancy and the
+// /account/requests — the signed-in person's own room requests, from any business. A request names
+// the room type; the room appears once the business has chosen one in its offer. An offer shows
+// the room, rent and move-in date with Accept and Decline; accepting creates the tenancy and the
 // person becomes a resident of that business. Requests can be cancelled until answered.
 
 import "./Rental.css";
@@ -59,12 +60,16 @@ export default function MyRequestsPage() {
           {rows.map((r) => (
             <Card key={r.id} className="rent-form">
               <div className="rent-head">
-                <div><h2 className="rent-head__title" style={{ fontSize: "var(--text-lg)" }}>Room {r.room_number}{r.building_name ? ` · ${r.building_name}` : ""}</h2>
-                  <p className="rent-head__lead"><Link to={`/b/${r.business_slug}`}>{r.business_name}</Link> · asked on {formatDate(r.created_at)}</p></div>
+                <div><h2 className="rent-head__title" style={{ fontSize: "var(--text-lg)" }}>
+                    {r.type_name ? r.type_name : `Room ${r.room_number}`}{r.building_name ? ` · ${r.building_name}` : ""}</h2>
+                  <p className="rent-head__lead"><Link to={`/b/${r.business_slug}`}>{r.business_name}</Link> · asked on {formatDate(r.created_at)}</p>
+                  <p className="rent-muted" style={{ margin: 0 }}>
+                    {r.room_number ? `Room ${r.room_number}` : "Room not chosen yet. The business picks it when it approves your request."}
+                  </p></div>
                 <StatusBadge kind="request" status={r.status} />
               </div>
               {r.status === "offered" && (
-                <Alert type="info" title={`Offer: ${money(r.offer_price)} ${r.offer_billing_type === "semester" ? "per semester" : "a month"}`}
+                <Alert type="info" title={`Offer: room ${r.room_number || ""} at ${money(r.offer_price)} ${r.offer_billing_type === "semester" ? "per semester" : "a month"}`}
                   message={`Move in on ${formatDate(r.offer_move_in)}. Open until ${formatDateTime(r.offer_expires_at)}.${r.response_note ? ` “${r.response_note}”` : ""}`} />
               )}
               {r.status === "rejected" && r.response_note && <p className="rent-muted">Their reply: {r.response_note}</p>}

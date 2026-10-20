@@ -1,10 +1,11 @@
-// src/pages/public/BusinessPage.jsx — MODIFIED FILE (farms list their produce)
+// src/pages/public/BusinessPage.jsx — MODIFIED FILE (rentals list room types; farms list their produce)
 //
 // AIM
 // The public page of one approved business at /b/:slug: name, type, description, location,
 // contact buttons (call, WhatsApp, email). Reviews and stars are left out on purpose.
-// Phase 2: for rentals it also lists the rooms available now (anyone can look, no sign-in), and
-// "Request a room" leads to /b/:slug/request, which asks the person to sign in first.
+// For rentals it also lists the room types (one card per kind of room, with how many are still free;
+// anyone can look, no sign-in), and "Request" leads to /b/:slug/request, which asks the person to
+// sign in first.
 // Farms list the produce they have for sale; buying is by calling or messaging the farm.
 // A business that is not active shows "not found".
 
@@ -17,10 +18,10 @@ import { typeLabel } from "../../config/counties.js";
 import useAsync from "../../hooks/useAsync.js";
 import useBusinessBrand from "../../hooks/useBusinessBrand.js";
 import { getBusinessBySlug } from "../../lib/api/directory.js";
-import { listAvailableRooms } from "../../lib/api/rental.js";
+import { listRoomTypesPublic } from "../../lib/api/rental.js";
 import { listShopProducts } from "../../lib/api/storefront.js";
 import { formatKsh } from "../../lib/format.js";
-import { RoomCard } from "../rental/RequestRoomPage.jsx";
+import { TypeCard } from "../rental/RequestRoomPage.jsx";
 import { toE164 } from "../../lib/phone.js";
 import useSeo from "../../hooks/useSeo.js";
 import { siteUrl } from "../../lib/seo.js";
@@ -29,8 +30,8 @@ import ShopHome from "../storefront/ShopHome.jsx";
 export default function BusinessPage() {
   const { slug } = useParams();
   const { data: b, error, loading } = useAsync(() => getBusinessBySlug(slug), [slug]);
-  const { data: rooms, loading: roomsLoading } = useAsync(
-    () => (b?.business_type === "rental" ? listAvailableRooms(b.id) : Promise.resolve({ data: [], error: null })), [b?.id]);
+  const { data: types, loading: typesLoading } = useAsync(
+    () => (b?.business_type === "rental" ? listRoomTypesPublic(b.id) : Promise.resolve({ data: [], error: null })), [b?.id]);
   const { data: produce, loading: produceLoading } = useAsync(
     () => (b?.business_type === "agriculture" ? listShopProducts(b.id, { limit: 24 }) : Promise.resolve({ data: [], error: null })), [b?.id]);
   useBusinessBrand(b, loading ? slug : ""); // header: this business logo, or its first letter
@@ -88,17 +89,18 @@ export default function BusinessPage() {
 
           {b.business_type === "rental" && (
             <section aria-labelledby="rooms-h" style={{ marginTop: "var(--space-6)" }}>
-              <h2 id="rooms-h">Rooms available now</h2>
-              {roomsLoading ? <Skeleton height={180} /> : (rooms || []).length ? (
+              <h2 id="rooms-h">Rooms</h2>
+              {typesLoading ? <Skeleton height={180} /> : (types || []).length ? (
                 <div className="rent-rooms">
-                  {rooms.map((r) => (
-                    <div key={r.id} style={{ display: "grid", gap: "var(--space-2)" }}>
-                      <RoomCard room={r} />
-                      <Button as={Link} to={`/b/${b.slug}/request?room=${r.id}`} variant="outline">Request room {r.room_number}</Button>
-                    </div>
+                  {types.map((t) => (
+                    <TypeCard key={t.id} type={t}>
+                      {Number(t.available) > 0
+                        ? <Button as={Link} to={`/b/${b.slug}/request?type=${t.id}`} variant="outline">Request {t.name}</Button>
+                        : <p className="rent-muted" style={{ margin: 0 }}>Call or message the business to ask when one will be free.</p>}
+                    </TypeCard>
                   ))}
                 </div>
-              ) : <p className="rent-muted">No rooms are free right now. Call or message the business to ask when one will be.</p>}
+              ) : <p className="rent-muted">No rooms are listed yet. Call or message the business to ask what is available.</p>}
             </section>
           )}
 

@@ -90,11 +90,11 @@ export default function PricingPage() {
       </p>
 
       {loading ? (
-        <div className="pg-grid pg-grid--3">{TYPES.map((t) => <Card key={t}><Skeleton width="40%" height={20} /><Skeleton width="50%" height={36} style={{ marginTop: 12 }} /><Skeleton height={120} style={{ marginTop: 12 }} /></Card>)}</div>
+        <div className="tier-grid">{TYPES.map((t) => <Card key={t}><Skeleton width="40%" height={20} /><Skeleton width="50%" height={36} style={{ marginTop: 12 }} /><Skeleton height={120} style={{ marginTop: 12 }} /></Card>)}</div>
       ) : error ? (
         <Card><EmptyState icon="info" title="Prices could not be loaded" description={error} /></Card>
       ) : (
-        <div className="pg-grid pg-grid--3">
+        <div className="tier-grid">
           {TYPES.map((t) => <TypeCard key={t} type={t} rows={(data || []).filter((r) => r.business_type === t)} />)}
         </div>
       )}

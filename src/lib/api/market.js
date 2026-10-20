@@ -40,7 +40,6 @@ export async function listMarketCounties(kind = "") {
 }
 
 const perUnit = (u) => (u && u !== "item" ? ` / ${u}` : "");
-const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
 
 /** Turns one market_listings row into the details a ListingCard needs. kind: "shop" | "farm" | "rooms". */
 export function marketCard(kind) {
@@ -48,9 +47,9 @@ export function marketCard(kind) {
     key: x.id,
     to: kind === "shop" ? `/b/${x.business_slug}/p/${x.id}` : `/b/${x.business_slug}`,
     image: x.image,
-    title: kind === "rooms" && x.building_name ? `${x.title} · ${x.building_name}` : x.title,
+    title: kind === "rooms" && x.building_name ? `${x.title} · ${x.building_name}` : x.title,   // rooms: x.title is the room type name
     price: kind === "rooms" ? `${formatKsh(x.price)} / month` : `${formatKsh(x.price)}${perUnit(x.unit)}`,
     place: [x.business_name, x.county].filter(Boolean).join(" · "),
-    badge: kind === "rooms" ? cap(x.room_type) : undefined,
+    badge: kind === "rooms" ? `${x.available} available` : undefined,   // one card per room type
   });
 }

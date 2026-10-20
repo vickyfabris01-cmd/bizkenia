@@ -1,19 +1,20 @@
-// src/pages/rental/SettingsPage.jsx — MODIFIED (adds the logo and cover photo cards)
+// src/pages/rental/SettingsPage.jsx — MODIFIED (room assignment card; logo and cover photo cards)
 //
 // AIM
 // /app/:slug/settings (owner only). Billing rules (day rent is due, grace days, late fee) and the
 // business's own M-Pesa paybill or till so residents' STK prompts pay into it. The M-Pesa
 // passkey is write-only: it is saved but never shown again. The business profile is edited on
-// its own page (shared with sign-up). The logo and cover photo are uploaded here
+// its own page (shared with sign-up). Room assignment: whether the system gives an approved renter a
+// free room automatically, or a manager chooses it. The logo and cover photo are uploaded here
 // (BusinessLogoCard, BusinessCoverCard). The platform commission is set by the platform, not here.
 
 import "./Rental.css";
 import { useEffect, useState } from "react";
-import { Alert, Button, Card, CardBody, CardHeader, Input, Skeleton } from "../../components/ui";
+import { Alert, Button, Card, CardBody, CardHeader, Input, Skeleton, Toggle } from "../../components/ui";
 import useAsync from "../../hooks/useAsync.js";
 import { useToast } from "../../hooks/useNotifications.js";
 import { useBusinessContext } from "../../router/BusinessContext.jsx";
-import { getMpesaStatus, getSettings, saveMpesa, saveSettings } from "../../lib/api/rental.js";
+import { getMpesaStatus, getSettings, saveMpesa, saveRoomAssignment, saveSettings } from "../../lib/api/rental.js";
 import { Link } from "react-router-dom";
 import { PageHead } from "./shared.jsx";
 import BusinessLogoCard from "../../components/business/BusinessLogoCard.jsx";
@@ -32,6 +33,7 @@ export default function SettingsPage() {
   const [f, setF] = useState(DEFAULTS);
   const [short, setShort] = useState("");
   const [pass, setPass] = useState("");
+  const [auto, setAuto] = useState(false);
   const [busy, setBusy] = useState("");
   const [errs, setErrs] = useState({});
 
@@ -39,6 +41,7 @@ export default function SettingsPage() {
     if (!data) return;
     setF({ ...DEFAULTS, ...Object.fromEntries(Object.keys(DEFAULTS).map((k) => [k, data.settings?.[k] ?? DEFAULTS[k]])) });
     setShort(data.mpesa?.shortcode || "");
+    setAuto(data.settings?.room_assignment === "auto");
   }, [data]);
 
   async function saveRules(e) {
@@ -54,6 +57,12 @@ export default function SettingsPage() {
     const { error: err } = await saveSettings(bid, f);
     setBusy("");
     if (err) toast.error(err); else { toast.success("Billing rules saved"); reload(); }
+  }
+  async function saveAssignment() {
+    setBusy("assign");
+    const { error: err } = await saveRoomAssignment(bid, auto ? "auto" : "manual");
+    setBusy("");
+    if (err) toast.error(err); else { toast.success("Room assignment saved"); reload(); }
   }
   async function saveTill(e) {
     e.preventDefault();
@@ -88,6 +97,22 @@ export default function SettingsPage() {
                 <p className="rent-muted">The late fee is added once, when an invoice becomes overdue.</p>
                 <Button type="submit" loading={busy === "rules"}>Save billing rules</Button>
               </form>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader title="Room assignment" subtitle="Who chooses the room once you approve a request" />
+            <CardBody>
+              <div className="rent-form">
+                <Toggle label="Assign rooms automatically" checked={auto} onChange={setAuto} />
+                <p className="rent-muted">
+                  {auto
+                    ? "When you approve a request, the system gives the renter the room they picked, or the free room with the lowest number if they picked none (or theirs was taken). You can still override it in the offer."
+                    : "When you approve a request, you choose the room yourself in the offer. Renters who picked a room are offered that room when it is still free."}
+                </p>
+                <p className="rent-muted">You approve every request either way. A renter gets a resident dashboard only after you send an offer with a room and they accept it. Whether renters may pick their own room is set on each room type under Properties.</p>
+                <Button onClick={saveAssignment} loading={busy === "assign"}>Save room assignment</Button>
+              </div>
             </CardBody>
           </Card>
 

@@ -1,12 +1,16 @@
 /* src/pages/public/PricingPage.css — NEW FILE: the three business-type plan cards */
+/* One card per row on phones and tablets; three across only when each card has room for its plan rows. */
+.tier-grid { display: grid; gap: var(--space-4); grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1000px) { .tier-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.tier-card { min-width: 0; }
 .tier-card__about { margin: 0; color: var(--color-text-muted); font-size: var(--text-sm); }
 .tier-card__soon { margin: 0; font-size: var(--text-lg); font-weight: var(--weight-semibold); color: var(--color-text-muted); }
 .tier-card__sub { margin: var(--space-2) 0 0; font-size: var(--text-xs); font-weight: var(--weight-semibold); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
 
 .plan-rows { list-style: none; margin: 0 0 var(--space-3); padding: 0; display: grid; gap: var(--space-2); }
-.plan-row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-3); background: var(--color-surface); }
+.plan-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-3); background: var(--color-surface); }
 .plan-row--off { background: transparent; border-style: dashed; }
-.plan-row__main { display: grid; gap: 2px; min-width: 0; }
+.plan-row__main { display: grid; gap: 2px; min-width: 0; flex: 1 1 auto; }
 .plan-row__name { font-weight: var(--weight-semibold); color: var(--color-text); }
 .plan-row__note { font-size: var(--text-xs); color: var(--color-text-muted); }
 .plan-row--off .plan-row__name { color: var(--color-text-muted); }

@@ -66,14 +66,14 @@ async function loadLatestBusinesses() {
 // ---- turn database rows into card details ----------------------------------------------
 const perUnit = (u) => (u && u !== "item" ? ` / ${u}` : "");
 const where = (x) => [x.business_name, x.county].filter(Boolean).join(" · ");
-const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
 
 const shopCard = (p) => ({ key: p.id, to: `/b/${p.business_slug}/p/${p.id}`, image: p.images?.[0], title: p.name, price: `${formatKsh(p.price)}${perUnit(p.unit)}`, place: where(p) });
 const farmCard = (p) => ({ key: p.id, to: `/b/${p.business_slug}`, image: p.images?.[0], title: p.name, price: `${formatKsh(p.price)}${perUnit(p.unit)}`, place: where(p) });
+// one card per room type (a block of identical rooms is one card), with how many are still free
 const roomCard = (r) => ({
   key: r.id, to: `/b/${r.business_slug}`, image: r.images?.[0],
-  title: `Room ${r.room_number}${r.building_name ? ` · ${r.building_name}` : ""}`,
-  price: `${formatKsh(r.monthly_price)} / month`, place: where(r), badge: cap(r.room_type),
+  title: `${r.name}${r.building_name ? ` · ${r.building_name}` : ""}`,
+  price: `${formatKsh(r.monthly_price)} / month`, place: where(r), badge: `${r.available} available`,
 });
 
 // Grey wireframe of the whole page, same layout as the real one, shown until the hero is ready.
