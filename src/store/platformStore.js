@@ -9,7 +9,7 @@
 import { create } from "zustand";
 import { supabase } from "../config/supabase.js";
 
-export const DEFAULT_MODULES = { rental: true, agriculture: false, shop: false };
+export const DEFAULT_MODULES = { rental: true, agriculture: true, shop: true };
 export const DEFAULT_MAINTENANCE = { enabled: false, message: "" };
 
 export const usePlatformStore = create((set, get) => ({

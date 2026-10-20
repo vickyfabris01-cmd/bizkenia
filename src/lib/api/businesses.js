@@ -39,10 +39,12 @@ export async function resubmitBusiness(id) {
   return wrap(await supabase.rpc("resubmit_business", { p_business: id }));
 }
 
+// Plans an owner can buy for this business type: only slots that are on sale (the database also re-checks at payment).
 export async function plansForType(type) {
   if (!supabase) return NOT_CONNECTED;
-  const { data, error } = await supabase.from("subscription_plans").select("*").eq("business_type", type).eq("is_active", true).order("sort");
-  return { data: data || [], error: error?.message || null };
+  const { data, error } = await supabase.rpc("plan_catalog");
+  const rows = (data || []).filter((p) => p.business_type === type && p.available);
+  return { data: rows, error: error?.message || null };
 }
 
 // ── Super admin ────────────────────────────────────────────────────────────
@@ -138,10 +140,21 @@ export async function adminListPlans() {
   return { data: data || [], error: error?.message || null };
 }
 
+// Standard plans are fixed slots: only the price, the on/off switch and an optional description change.
+// The database fills in code, name, period and order. An offer also has its own name, duration and dates.
 export async function adminSavePlan(plan) {
   if (!supabase) return NOT_CONNECTED;
-  const row = { business_type: plan.business_type, code: plan.code, name: plan.name, description: plan.description || null,
-    price_kes: Number(plan.price_kes), period_days: Number(plan.period_days), is_active: !!plan.is_active, sort: Number(plan.sort || 0) };
-  const q = plan.id ? supabase.from("subscription_plans").update(row).eq("id", plan.id) : supabase.from("subscription_plans").insert(row);
-  return wrap(await q.select().maybeSingle());
+  const price = Number(plan.price_kes);
+  const active = !!plan.is_active;
+  if (plan.kind === "offer") {
+    const row = { name: (plan.name || "").trim(), duration_code: plan.duration_code, price_kes: price, is_active: active,
+      description: plan.description || null, offer_starts_on: plan.offer_starts_on || null, offer_ends_on: plan.offer_ends_on || null };
+    const q = plan.id
+      ? supabase.from("subscription_plans").update(row).eq("id", plan.id)
+      : supabase.from("subscription_plans").insert({ ...row, business_type: plan.business_type, kind: "offer" });
+    return wrap(await q.select().maybeSingle());
+  }
+  const row = { price_kes: price, is_active: active };
+  if (plan.description !== undefined) row.description = plan.description || null;
+  return wrap(await supabase.from("subscription_plans").update(row).eq("id", plan.id).select().maybeSingle());
 }

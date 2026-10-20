@@ -30,6 +30,7 @@ const FIELD_LABEL = {
   is_active: "Switched on", business_type: "Business type", amount_kes: "Amount", commission_percent: "Commission (%)",
   enabled: "Enabled", message: "Message", mode: "Mode", env: "Mode", shortcode: "Shortcode", receipt: "M-Pesa receipt",
   reason: "Reason", status: "Status", role: "Role", rental: "Rental", agriculture: "Agriculture", shop: "Shop",
+  duration_code: "Duration", kind: "Kind", offer_starts_on: "Offer starts", offer_ends_on: "Offer ends",
 };
 
 export const AUDIT_ACTIONS = [

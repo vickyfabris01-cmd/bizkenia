@@ -27,6 +27,9 @@
 .onb__plan-desc { font-size: var(--text-sm); color: var(--color-text-muted); }
 .onb__plan-price { font-weight: var(--weight-bold); font-size: var(--text-lg); color: var(--color-text); text-align: right; white-space: nowrap; }
 .onb__plan-price small { display: block; font-weight: var(--weight-regular); font-size: var(--text-xs); color: var(--color-text-muted); }
+.onb__plan-save { display: block; margin-top: var(--space-1); font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-success-text); }
+.onb__plan-name .ui-badge { vertical-align: middle; }
+.onb__plan-desc { display: block; }
 .onb__wait { display: grid; justify-items: center; gap: var(--space-3); text-align: center; padding: var(--space-6) 0; }
 .onb__status { display: grid; gap: var(--space-4); }
 .onb__timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }

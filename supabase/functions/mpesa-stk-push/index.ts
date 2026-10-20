@@ -58,9 +58,12 @@ Deno.serve(async (req) => {
     const { data: biz } = await admin.from("businesses").select("id, name, status, business_type").eq("id", businessId).maybeSingle();
     if (!biz || member?.role !== "owner") return json({ error: "You cannot pay for this business." }, 403);
     if (!["pending_payment", "draft"].includes(biz.status)) return json({ error: "This business is already paid for." }, 400);
-    const { data: plan } = await admin.from("subscription_plans").select("id, name, price_kes, business_type, is_active")
+    const { data: plan } = await admin.from("subscription_plans").select("id, name, price_kes, business_type")
       .eq("id", planId).maybeSingle();
-    if (!plan || !plan.is_active || plan.business_type !== biz.business_type) return json({ error: "This plan is not available." }, 400);
+    if (!plan || plan.business_type !== biz.business_type) return json({ error: "This plan is not available." }, 400);
+    // The database decides what is on sale: switched on, priced and (for an offer) inside its dates.
+    const { data: onSale } = await admin.rpc("plan_is_available", { p_plan: plan.id });
+    if (onSale !== true || !(Number(plan.price_kes) > 0)) return json({ error: "This plan is not available." }, 400);
     bizId = biz.id; bizName = biz.name; amount = plan.price_kes; planRef = plan.id; desc = `Subscription ${plan.name}`;
   } else if (purpose === "order") {
     // Only the customer who placed the order, and only while it is unpaid. The amount is the order total.

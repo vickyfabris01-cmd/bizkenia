@@ -1,0 +1,11 @@
+/* src/pages/admin/PlanPricesCard.css — NEW FILE: the super admin price grid */
+.plan-grid { display: grid; gap: var(--space-4); grid-template-columns: 1fr; padding: 0 var(--space-4) var(--space-4); }
+@media (min-width: 900px) { .plan-grid { grid-template-columns: repeat(3, 1fr); } }
+.plan-grid__type { display: grid; gap: var(--space-3); align-content: start; border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-4); background: var(--color-surface); }
+.plan-grid__title { margin: 0; font-size: var(--text-lg); color: var(--color-text); }
+.plan-grid__row { display: grid; gap: var(--space-2); padding-bottom: var(--space-3); border-bottom: 1px solid var(--color-border); }
+.plan-grid__row-top { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); }
+.plan-grid__offer { display: grid; gap: var(--space-2); border-top: 2px dashed var(--color-border); padding-top: var(--space-3); }
+.plan-grid__offer-head { display: flex; align-items: center; gap: var(--space-2); }
+.plan-grid__hint { margin: 0; font-size: var(--text-sm); color: var(--color-text-muted); }
+.plan-grid__error { margin: 0 var(--space-4) var(--space-3); color: var(--color-error-text); }

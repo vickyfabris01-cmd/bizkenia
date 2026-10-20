@@ -1,4 +1,4 @@
-// src/pages/onboarding/SubscribePage.jsx — NEW FILE
+// src/pages/onboarding/SubscribePage.jsx — MODIFIED (fixed plan durations: durations, savings and the open offer are shown)
 //
 // AIM
 // Step 3: pick a plan and pay by M-Pesa. The screen sends an STK prompt to the phone, waits for
@@ -10,11 +10,11 @@
 import "./Onboarding.css";
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
-import { Alert, Button, Card, EmptyState, PhoneInput, Skeleton, Spinner } from "../../components/ui";
+import { Alert, Badge, Button, Card, EmptyState, PhoneInput, Skeleton, Spinner } from "../../components/ui";
 import Stepper from "./Stepper.jsx";
 import { adminRecordPayment, getMyBusiness, plansForType } from "../../lib/api/businesses.js";
 import { startStk, watchPayment } from "../../lib/mpesa.js";
-import { formatKsh, periodLabel } from "../../lib/format.js";
+import { billingBlurb, formatDate, formatKsh } from "../../lib/format.js";
 import { cleanKenyanPhone } from "../../components/ui/PhoneInput.jsx";
 import { toE164 } from "../../lib/phone.js";
 import { phone as vPhone } from "../../lib/validate.js";
@@ -44,7 +44,7 @@ export default function SubscribePage() {
   const stop = useRef(null);
 
   useEffect(() => { setPhone((p) => p || cleanKenyanPhone(profile?.phone || "")); }, [profile?.phone]);
-  useEffect(() => { if (plans?.length && !planId) setPlanId(plans[0].id); }, [plans, planId]);
+  useEffect(() => { if (plans?.length && !planId) setPlanId((plans.find((p) => p.kind === "standard") || plans[0]).id); }, [plans, planId]);
   useEffect(() => () => stop.current?.(), []);
 
   async function finish() {
@@ -117,8 +117,22 @@ export default function SubscribePage() {
               {plans.map((p) => (
                 <label key={p.id} className="onb__plan">
                   <input type="radio" name="plan" value={p.id} checked={planId === p.id} onChange={() => setPlanId(p.id)} />
-                  <span><span className="onb__plan-name">{p.name}</span><span className="onb__plan-desc">{p.description}</span></span>
-                  <span className="onb__plan-price">{formatKsh(p.price_kes)}<small>{periodLabel(p.period_days)}</small></span>
+                  <span>
+                    <span className="onb__plan-name">
+                      {p.kind === "offer" ? p.name : p.duration_label}
+                      {p.kind === "offer" && <> <Badge variant="warning" size="sm">Offer</Badge></>}
+                    </span>
+                    <span className="onb__plan-desc">
+                      {p.kind === "offer" ? `${p.duration_label}. ` : ""}{billingBlurb(p.months)}
+                      {p.kind === "offer" && p.offer_ends_on ? `. Ends ${formatDate(p.offer_ends_on)}` : ""}
+                    </span>
+                    {p.description && <span className="onb__plan-desc">{p.description}</span>}
+                  </span>
+                  <span className="onb__plan-price">
+                    {formatKsh(p.price_kes)}
+                    <small>{p.months === 1 ? "per month" : `for ${p.months} months`}</small>
+                    {p.months > 1 && p.saving_kes > 0 && <span className="onb__plan-save">Save {formatKsh(p.saving_kes)} ({p.saving_percent}%)</span>}
+                  </span>
                 </label>
               ))}
             </div>

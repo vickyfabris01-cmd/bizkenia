@@ -9,4 +9,4 @@
 | phase-2 | Rental module |
 | phase-3 | People, workforce, support and help |
 | phase-4 | Farm module |
-| phase-5 | Shop, storefront, platform finance, hardening and launch (STEP-2, STEP-3, STEP-4) |
+| phase-5 | Shop, storefront, platform finance, hardening and launch (STEP-2, STEP-3, STEP-4, STEP-5) |

@@ -1,11 +1,11 @@
-// src/pages/admin/AdminSettings.jsx — MODIFIED (step 2: the "Business types" switch is removed; only a single business can be locked. Phase 5 step 3: adds the Maintenance mode and Default commission cards)
+// src/pages/admin/AdminSettings.jsx — MODIFIED (step 2: the "Business types" switch is removed; only a single business can be locked. Phase 5 step 3: adds the Maintenance mode and Default commission cards. Step 5: the free-form price table is replaced by the fixed plan grid)
 //
 // AIM
 // Platform settings, one card per topic, each saved on its own:
 //   Brand           product name, tagline, support email, website (shown across the whole site)
 //   Home page hero  background photos for the home page and how often they change (HeroImagesCard)
 //   Approval        manual (default) or automatic approval after payment
-//   Prices          subscription plans: add, edit, switch off
+//   Prices          fixed plan grid per business type: amount and on/off only, plus an optional offer (PlanPricesCard.jsx)
 //   M-Pesa          sandbox or live and the shortcode (secret keys live in Edge Function secrets)
 //   Maintenance     switch the site to the maintenance page (PlatformControls.jsx)
 //   Commission      default commission percent, stored only (PlatformControls.jsx)
@@ -13,33 +13,25 @@
 
 import "./Admin.css";
 import { useEffect, useState } from "react";
-import { Alert, Badge, Button, Card, CardBody, CardHeader, EmptyState, Input, SelectInput, Skeleton, Toggle } from "../../components/ui";
-import { Modal } from "../../components/modals/Modal.jsx";
-import SimpleTable from "../../components/data/SimpleTable.jsx";
+import { Alert, Button, Card, CardBody, CardHeader, Input, SelectInput, Skeleton, Toggle } from "../../components/ui";
 import HeroImagesCard from "./HeroImagesCard.jsx";
+import PlanPricesCard from "./PlanPricesCard.jsx";
 import { CommissionCard, MaintenanceCard } from "./PlatformControls.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { useToast } from "../../hooks/useNotifications.js";
-import { adminGetSettings, adminListPlans, adminSavePlan, adminSaveSetting } from "../../lib/api/businesses.js";
+import { adminGetSettings, adminSaveSetting } from "../../lib/api/businesses.js";
 import { usePlatformStore } from "../../store/platformStore.js";
 import { collect, email as vEmail, required } from "../../lib/validate.js";
-import { formatKsh, periodLabel } from "../../lib/format.js";
-import { typeLabel } from "../../config/counties.js";
-
-const EMPTY_PLAN = { business_type: "rental", code: "", name: "", description: "", price_kes: 1500, period_days: 30, is_active: true, sort: 0 };
 
 export default function AdminSettings() {
   const toast = useToast();
   const { data: s, loading, error, reload } = useAsync(() => adminGetSettings(), []);
-  const { data: plans, reload: reloadPlans } = useAsync(() => adminListPlans(), []);
 
   const [brand, setBrand] = useState({ name: "", tagline: "", support_email: "", website: "" });
   const [brandErr, setBrandErr] = useState({});
   const [mode, setMode] = useState("manual");
   const [mpesa, setMpesa] = useState({ env: "sandbox", shortcode: "" });
   const [busy, setBusy] = useState("");
-  const [plan, setPlan] = useState(null);
-  const [planErr, setPlanErr] = useState({});
 
   useEffect(() => {
     if (!s) return;
@@ -64,22 +56,6 @@ export default function AdminSettings() {
     setBrandErr(errs);
     if (Object.keys(errs).length) return;
     save("brand", { name: brand.name.trim(), tagline: brand.tagline.trim(), support_email: brand.support_email.trim(), website: brand.website.trim() }, "Brand");
-  }
-
-  async function savePlan() {
-    const errs = collect({
-      name: required(plan.name, "Plan name"), code: /^[a-z0-9_]{3,}$/.test(plan.code) ? "" : "Use lowercase letters, numbers and underscores.",
-      price_kes: Number(plan.price_kes) >= 0 ? "" : "Enter the price.", period_days: Number(plan.period_days) > 0 ? "" : "Enter the number of days.",
-    });
-    setPlanErr(errs);
-    if (Object.keys(errs).length) return;
-    setBusy("plan");
-    const { error: e } = await adminSavePlan(plan);
-    setBusy("");
-    if (e) return toast.error(/duplicate/i.test(e) ? "A plan with this code already exists." : e);
-    toast.success("Plan saved.");
-    setPlan(null);
-    reloadPlans();
   }
 
   if (loading) return <div className="adm"><Skeleton height={32} width="30%" /><Skeleton height={180} /><Skeleton height={180} /></div>;
@@ -119,17 +95,7 @@ export default function AdminSettings() {
         </CardBody>
       </Card>
 
-      <Card padding="none">
-        <CardHeader title="Subscription prices" action={<Button size="sm" onClick={() => { setPlanErr({}); setPlan({ ...EMPTY_PLAN }); }}>Add plan</Button>} />
-        <SimpleTable rows={plans || []} empty={<EmptyState icon="card" title="No plans" compact />}
-          onRowClick={(p) => { setPlanErr({}); setPlan({ ...p }); }}
-          columns={[
-            { key: "name", label: "Plan", render: (p) => <strong>{p.name}</strong> },
-            { key: "type", label: "Type", render: (p) => typeLabel(p.business_type) },
-            { key: "price", label: "Price", render: (p) => `${formatKsh(p.price_kes)} ${periodLabel(p.period_days)}` },
-            { key: "is_active", label: "Status", render: (p) => <Badge variant={p.is_active ? "success" : "neutral"}>{p.is_active ? "On" : "Off"}</Badge> },
-          ]} />
-      </Card>
+      <PlanPricesCard />
 
       <Card>
         <CardHeader title="M-Pesa" subtitle="Secret keys are never stored here. Set them as Edge Function secrets (see docs/phase-1/SETUP.md)." />
@@ -147,24 +113,6 @@ export default function AdminSettings() {
 
       <MaintenanceCard />
       <CommissionCard />
-
-      <Modal isOpen={!!plan} onClose={() => setPlan(null)} title={plan?.id ? "Edit plan" : "Add plan"}
-        footer={<><Button variant="ghost" onClick={() => setPlan(null)}>Cancel</Button><Button loading={busy === "plan"} onClick={savePlan}>Save plan</Button></>}>
-        {plan && (
-          <div className="adm-form">
-            <Input label="Name" required value={plan.name} onChange={(e) => setPlan({ ...plan, name: e.target.value })} error={planErr.name} />
-            <Input label="Code" required value={plan.code} disabled={!!plan.id} onChange={(e) => setPlan({ ...plan, code: e.target.value })} error={planErr.code} helper="Unique, for example rental_yearly" />
-            <SelectInput label="Business type" value={plan.business_type} onChange={(v) => setPlan({ ...plan, business_type: v })}
-              options={[{ value: "rental", label: "Rental" }, { value: "agriculture", label: "Agriculture" }, { value: "shop", label: "Shop" }]} />
-            <div className="adm-form__row">
-              <Input label="Price (KSh)" type="number" min="0" value={plan.price_kes} onChange={(e) => setPlan({ ...plan, price_kes: e.target.value })} error={planErr.price_kes} />
-              <Input label="Period (days)" type="number" min="1" value={plan.period_days} onChange={(e) => setPlan({ ...plan, period_days: e.target.value })} error={planErr.period_days} />
-            </div>
-            <Input label="Description" value={plan.description || ""} onChange={(e) => setPlan({ ...plan, description: e.target.value })} />
-            <Toggle label="Plan is on sale" checked={!!plan.is_active} onChange={(v) => setPlan({ ...plan, is_active: v })} />
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }

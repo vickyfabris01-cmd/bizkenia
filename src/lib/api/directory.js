@@ -41,9 +41,11 @@ export async function getBusinessBySlug(slug) {
   return { data, error: error?.message || null };
 }
 
-export async function listPlans() {
+// The plan grid for the public pages: every slot (3 business types x 4 durations) plus any open offer.
+// Slots that are not on sale come back with available = false and no price. Savings come from the database.
+export async function planCatalog() {
   if (!supabase) return NOT_CONNECTED;
-  const { data, error } = await supabase.from("subscription_plans").select("*").eq("is_active", true).order("sort");
+  const { data, error } = await supabase.rpc("plan_catalog");
   return { data: data || [], error: error?.message || null };
 }
 
