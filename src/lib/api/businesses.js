@@ -1,4 +1,4 @@
-// src/lib/api/businesses.js — NEW FILE (Phase 5 step 3: adminStats counts subscription payments only)
+// src/lib/api/businesses.js — MODIFIED (Phase 6: a business also carries closed_at / closed_from / closed_by_admin)
 //
 // AIM
 // Everything the browser does with businesses (onboarding, owner edits, super-admin review).
@@ -7,7 +7,7 @@
 
 import { supabase } from "../../config/supabase.js";
 
-const FULL = "id, name, slug, status, business_type, description, county, address, phone, email, whatsapp, logo_url, cover_url, rejection_reason, submitted_at, approved_at, created_at, owner_user_id";
+const FULL = "id, name, slug, status, business_type, description, county, address, phone, email, whatsapp, logo_url, cover_url, rejection_reason, submitted_at, approved_at, created_at, owner_user_id, closed_at, closed_from, closed_by_admin";
 const wrap = ({ data, error }) => ({ data: data ?? null, error: error?.message || null });
 const NOT_CONNECTED = { data: null, error: "The app is not connected to the database yet." };
 

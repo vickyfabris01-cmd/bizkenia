@@ -1,8 +1,8 @@
-// src/pages/account/AccountPage.jsx — MODIFIED (Phase 3: profile picture upload, shortcuts)
+// src/pages/account/AccountPage.jsx — MODIFIED (Phase 6: Delete my account in a Danger zone card)
 //
 // AIM
 // My account: name and phone number (the phone is what allows phone + password sign-in),
-// read-only email, change password, theme, sign out.
+// read-only email, change password, theme, sign out, and delete my account (needs the password).
 
 import "./Account.css";
 import { useEffect, useState } from "react";
@@ -14,6 +14,7 @@ import { useSession } from "../../store/sessionStore.js";
 import { useBusinessStore } from "../../store/businessStore.js";
 import { cleanKenyanPhone } from "../../components/ui/PhoneInput.jsx";
 import { collect, password as vPassword, phone as vPhone, required } from "../../lib/validate.js";
+import DeleteAccountCard from "../../components/lifecycle/DeleteAccountCard.jsx";
 
 export default function AccountPage() {
   const navigate = useNavigate();
@@ -143,6 +144,8 @@ export default function AccountPage() {
         </Card>
 
         <div><Button variant="outline" onClick={signOut}>Sign out</Button></div>
+
+        <DeleteAccountCard />
       </div>
     </div>
   );

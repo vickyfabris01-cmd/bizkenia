@@ -1,0 +1,23 @@
+/* src/components/lifecycle/Lifecycle.css — NEW FILE (Phase 6 step 1): danger zone cards and their dialogs */
+.life { display: grid; gap: var(--space-4); }
+.life__card { border: 1px solid var(--color-error); border-radius: var(--radius-lg); background: var(--color-surface); overflow: hidden; }
+.life__head { padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--color-border); }
+.life .life__head h2 { margin: 0; font-size: var(--text-lg); font-weight: var(--weight-semibold); color: var(--color-error-text); }
+.life .life__head p { margin: var(--space-1) 0 0; font-size: var(--text-sm); color: var(--color-text-muted); }
+.life__part { display: grid; gap: var(--space-3); padding: var(--space-5); }
+.life__part + .life__part { border-top: 1px solid var(--color-border); }
+.life .life__part h3 { margin: 0; font-size: var(--text-base); font-weight: var(--weight-semibold); color: var(--color-text); }
+.life .life__part p, .life-dialog p { margin: 0; font-size: var(--text-sm); line-height: 1.55; color: var(--color-text-muted); }
+.life__row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); }
+.life__row > * { min-width: 0; }
+.life__grow { flex: 1 1 14rem; }
+.life__list { display: grid; gap: var(--space-2); margin: 0; padding-left: 1.25rem; font-size: var(--text-sm); line-height: 1.5; color: var(--color-text); }
+.life__copy { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.life__copy code { min-width: 0; word-break: break-all; font-size: var(--text-xs); }
+.life__invites { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.life__invites li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: var(--text-sm); color: var(--color-text); }
+.life-dialog { display: grid; gap: var(--space-4); }
+.life-dialog strong { color: var(--color-text); }
+.life__offers { display: grid; gap: var(--space-3); margin-bottom: var(--space-4); }
+.life__offer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.life__offer p { margin: 0; font-size: var(--text-sm); color: var(--color-text); flex: 1 1 16rem; }

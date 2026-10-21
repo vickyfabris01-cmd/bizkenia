@@ -1,4 +1,4 @@
-// src/pages/admin/AdminBusinesses.jsx — NEW FILE
+// src/pages/admin/AdminBusinesses.jsx — MODIFIED (Phase 6: Close business / Restore business for support)
 //
 // AIM
 // /admin/businesses (list with status filter and search) and /admin/businesses/:id (one business
@@ -14,6 +14,7 @@ import SimpleTable from "../../components/data/SimpleTable.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { useToast } from "../../hooks/useNotifications.js";
 import { adminGetBusiness, adminListBusinesses, adminRecordPayment, adminReview, plansForType } from "../../lib/api/businesses.js";
+import { adminCloseBusiness, adminRestoreBusiness } from "../../lib/api/lifecycle.js";
 import { STATUS_BADGE, formatDate, formatDateTime, formatKsh } from "../../lib/format.js";
 import { typeLabel } from "../../config/counties.js";
 
@@ -24,6 +25,7 @@ const STATUS_OPTIONS = [
   { value: "rejected", label: "Needs changes" },
   { value: "suspended", label: "Suspended" },
   { value: "pending_payment", label: "Awaiting payment" },
+  { value: "closed", label: "Deleted (60 days)" },
 ];
 
 function StatusBadge({ status }) {
@@ -92,13 +94,15 @@ function Detail({ id }) {
     setBusy(true);
     let res;
     if (dialog === "pay") res = await adminRecordPayment(b.id, planId, receipt, "Recorded by super admin");
+    else if (dialog === "close") res = await adminCloseBusiness(b.id);
+    else if (dialog === "restore") res = await adminRestoreBusiness(b.id);
     else {
       if ((dialog === "reject") && reason.trim().length < 3) { setReasonError("Give a reason the owner can act on."); setBusy(false); return; }
       res = await adminReview(b.id, dialog, reason.trim() || null);
     }
     setBusy(false);
     if (res.error) { toast.error(res.error); return; }
-    toast.success({ approve: "Business approved.", reject: "Business sent back to the owner.", suspend: "Business suspended.", reinstate: "Business reinstated.", pay: "Payment recorded." }[dialog]);
+    toast.success({ approve: "Business approved.", reject: "Business sent back to the owner.", suspend: "Business suspended.", reinstate: "Business reinstated.", pay: "Payment recorded.", close: "Business closed. It is deleted for good after 60 days.", restore: "Business restored." }[dialog]);
     setDialog(null);
     reload();
   }
@@ -122,6 +126,8 @@ function Detail({ id }) {
         {b.status === "rejected" && <Button onClick={() => open("approve")}>Approve anyway</Button>}
         {b.status === "active" && <Button variant="danger" onClick={() => open("suspend")}>Suspend</Button>}
         {b.status === "suspended" && <Button onClick={() => open("reinstate")}>Reinstate</Button>}
+        {b.status === "closed" && <Button onClick={() => open("restore")}>Restore business</Button>}
+        {b.status !== "closed" && <Button variant="outline" onClick={() => open("close")}>Close business</Button>}
         {(b.status === "pending_payment" || b.status === "draft") && <Button variant="secondary" onClick={openPay}>Record payment</Button>}
         {b.status === "active" && <Button as={Link} to={`/b/${b.slug}`} variant="ghost">Public page</Button>}
       </div>
@@ -181,6 +187,13 @@ function Detail({ id }) {
         title={dialog === "reinstate" ? "Reinstate this business?" : "Approve this business?"}
         message={dialog === "reinstate" ? "The business becomes active again." : "It becomes visible to the public and the owner is notified."}
         confirmLabel={dialog === "reinstate" ? "Reinstate" : "Approve"} onConfirm={run} onCancel={() => setDialog(null)} />
+
+      <ConfirmDialog isOpen={dialog === "close" || dialog === "restore"} variant={dialog === "close" ? "danger" : "info"} loading={busy}
+        title={dialog === "close" ? "Close this business?" : "Restore this business?"}
+        message={dialog === "close"
+          ? "It is hidden from everyone and kept for 60 days, then deleted for good. The owner cannot restore a business that support closed. It is refused while there are unfinished orders or active tenancies."
+          : "It goes back to the status it had before it was closed. If its paid period has run out, the owner subscribes again."}
+        confirmLabel={dialog === "close" ? "Close business" : "Restore"} onConfirm={run} onCancel={() => setDialog(null)} />
 
       <Modal isOpen={dialog === "reject" || dialog === "suspend"} onClose={() => setDialog(null)}
         title={dialog === "suspend" ? "Suspend business" : "Reject business"}

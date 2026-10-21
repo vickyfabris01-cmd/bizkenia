@@ -1,4 +1,4 @@
-// src/store/businessStore.js — MODIFIED (Phase 3: links worker invitations made by email before loading)
+// src/store/businessStore.js — MODIFIED (Phase 6: also loads closed_at / closed_from / closed_by_admin for deleted businesses)
 //
 // AIM
 // The businesses the signed-in person belongs to (as owner or manager) and the role in each.
@@ -12,7 +12,7 @@ import { create } from "zustand";
 import { supabase } from "../config/supabase.js";
 
 const BUSINESS_FIELDS =
-  "id, name, slug, status, business_type, description, county, address, phone, email, whatsapp, logo_url, cover_url, rejection_reason, submitted_at, approved_at, created_at";
+  "id, name, slug, status, business_type, description, county, address, phone, email, whatsapp, logo_url, cover_url, rejection_reason, submitted_at, approved_at, created_at, closed_at, closed_from, closed_by_admin";
 
 export const useBusinessStore = create((set, get) => ({
   memberships: [],

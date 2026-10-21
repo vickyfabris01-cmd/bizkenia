@@ -10,3 +10,4 @@
 | phase-3 | People, workforce, support and help |
 | phase-4 | Farm module |
 | phase-5 | Shop, storefront, platform finance, hardening and launch (STEP-2, STEP-3, STEP-4, STEP-5) |
+| phase-6 | Delete a business (60-day freeze), hand over ownership, delete an account (STEP-1) |

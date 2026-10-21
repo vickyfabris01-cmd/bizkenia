@@ -1,9 +1,10 @@
-// src/pages/account/MyBusinessesPage.jsx — MODIFIED FILE (Phase 2: shows the Resident role and links My requests)
+// src/pages/account/MyBusinessesPage.jsx — MODIFIED (Phase 6: ownership offers on top; a deleted business shows "Restore" and its last day)
 //
 // AIM
 // The signed-in landing page: every business the person belongs to, with its status and the
 // right next action (open, finish payment, see approval status, fix and resubmit), a button to
-// start another business, and the latest notifications. A visitor with no business sees
+// start another business, and the latest notifications. Offers to take over a business (from an owner)
+// appear above the list; a deleted business can be restored for 60 days. A visitor with no business sees
 // "explore" first; starting a business is the secondary choice.
 
 import "./Account.css";
@@ -12,7 +13,8 @@ import { Badge, Button, Card, CardHeader, EmptyState, Icon, Skeleton } from "../
 import useAsync from "../../hooks/useAsync.js";
 import { ROLE_LABEL } from "../../lib/permissions.js";
 import { listMyNotifications, markAllRead } from "../../lib/api/notifications.js";
-import { STATUS_BADGE, formatDateTime } from "../../lib/format.js";
+import { STATUS_BADGE, formatDate, formatDateTime } from "../../lib/format.js";
+import OwnershipOffers from "../../components/lifecycle/OwnershipOffers.jsx";
 import { typeLabel } from "../../config/counties.js";
 import { useBusinessStore } from "../../store/businessStore.js";
 import { useSession } from "../../store/sessionStore.js";
@@ -23,6 +25,7 @@ function nextAction(b) {
     case "pending_payment":
     case "draft": return { to: `/start/subscribe?business=${b.slug}`, label: "Finish payment" };
     case "rejected": return { to: `/start/status?business=${b.slug}`, label: "Fix and resubmit" };
+    case "closed": return { to: `/start/status?business=${b.slug}`, label: b.closed_by_admin ? "See status" : "Restore" };
     default: return { to: `/start/status?business=${b.slug}`, label: "See status" };
   }
 }
@@ -50,6 +53,8 @@ export default function MyBusinessesPage() {
         </div>
       </div>
 
+      <OwnershipOffers />
+
       <div className="acct__grid">
         <div className="acct__list">
           {loading || !loadedFor ? (
@@ -73,6 +78,9 @@ export default function MyBusinessesPage() {
                     <h2 className="acct__biz-name">{b.name}</h2>
                     <p className="acct__biz-meta">{typeLabel(b.business_type)} · {ROLE_LABEL[role] || role}{b.county ? ` · ${b.county}` : ""}</p>
                     <Badge variant={variant}>{text}</Badge>
+                    {b.status === "closed" && b.closed_at && !b.closed_by_admin && (
+                      <p className="acct__biz-meta">Restore it by {formatDate(new Date(new Date(b.closed_at).getTime() + 60 * 86_400_000).toISOString())}, then it is deleted for good.</p>
+                    )}
                   </div>
                   <Button as={Link} to={action.to} variant={b.status === "active" ? "primary" : "outline"}>{action.label}</Button>
                 </Card>

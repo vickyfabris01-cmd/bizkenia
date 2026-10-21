@@ -1,4 +1,4 @@
-// src/pages/public/StaticPages.jsx — NEW FILE
+// src/pages/public/StaticPages.jsx — MODIFIED (Phase 6: the privacy page says how to delete your account and what stays)
 //
 // AIM
 // The text pages: About, Contact, Terms, Privacy, Help. They are plain content on purpose;
@@ -70,7 +70,9 @@ export function PrivacyPage() {
       <h2>How it is used</h2>
       <p>To run your account, process subscriptions, show approved businesses to the public and contact you about your account.</p>
       <h2>Your choices</h2>
-      <p>You can edit your details in My account. To delete your account, write to {supportEmail}. {name} does not sell your personal data.</p>
+      <p>You can edit your details in My account, and you can delete your account yourself there, under Delete my account. It needs your password and takes effect at once: your profile, sign-in, messages and notifications are removed and cannot be recovered.</p>
+      <p>Records you were part of, such as orders, rent and payment records, stay as history for the business that holds them, without your name. Delivery details you gave on past orders stay with the shop so it can finish and account for them. The platform keeps its own payment and subscription records for accounting.</p>
+      <p>If you own a business, hand it over to a manager or delete the business before you delete your account. A deleted business is hidden at once and kept for 60 days so its owner can restore it, then it is deleted for good with its data. Questions? Write to {supportEmail}. {name} does not sell your personal data.</p>
     </Page>
   );
 }

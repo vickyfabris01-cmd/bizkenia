@@ -1,4 +1,4 @@
-// src/pages/shop/ShopSettingsPage.jsx — NEW FILE (Phase 5)
+// src/pages/shop/ShopSettingsPage.jsx — MODIFIED (Phase 6: Danger zone — hand over or delete the business)
 //
 // AIM
 // /app/:slug/settings (owner only) — how the shop delivers and takes payment: delivery on or off
@@ -13,6 +13,7 @@ import { Link } from "react-router-dom";
 import { Alert, Button, Card, CardBody, CardHeader, Input, TextArea, Toggle } from "../../components/ui";
 import BusinessLogoCard from "../../components/business/BusinessLogoCard.jsx";
 import BusinessCoverCard from "../../components/business/BusinessCoverCard.jsx";
+import BusinessDangerZone from "../../components/lifecycle/BusinessDangerZone.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { useToast } from "../../hooks/useNotifications.js";
 import { getShopMpesa, getShopSettings, saveShopMpesa, saveShopSettings } from "../../lib/api/shop.js";
@@ -115,6 +116,8 @@ export default function ShopSettingsPage() {
         <BusinessLogoCard business={business} />
         <BusinessCoverCard business={business} />
       </div>
+
+      <BusinessDangerZone business={business} />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-// src/pages/farm/FarmSettingsPage.jsx — MODIFIED (adds the logo and cover photo cards)
+// src/pages/farm/FarmSettingsPage.jsx — MODIFIED (Phase 6: Danger zone — hand over or delete the business)
 //
 // AIM
 // /app/:slug/settings (owner only) — the farm's profile and a summary of how it is set up: name,
@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 import { Badge, Button, Card, CardBody, CardHeader } from "../../components/ui";
 import BusinessLogoCard from "../../components/business/BusinessLogoCard.jsx";
 import BusinessCoverCard from "../../components/business/BusinessCoverCard.jsx";
+import BusinessDangerZone from "../../components/lifecycle/BusinessDangerZone.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { getFarmSummary } from "../../lib/api/farm.js";
 import { formatDate } from "../../lib/format.js";
@@ -65,6 +66,8 @@ export default function FarmSettingsPage() {
         <BusinessLogoCard business={business} />
         <BusinessCoverCard business={business} />
       </div>
+
+      <BusinessDangerZone business={business} />
     </div>
   );
 }

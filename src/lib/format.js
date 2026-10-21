@@ -1,4 +1,4 @@
-// src/lib/format.js — MODIFIED (fixed plan durations: 6-month label, DURATIONS, saving helpers)
+// src/lib/format.js — MODIFIED (fixed plan durations: 6-month label, DURATIONS, saving helpers; Phase 6: "closed" status badge)
 // Small display helpers shared by Phase 1 pages.
 
 export const formatKsh = (n) => `KSh ${Number(n || 0).toLocaleString("en-KE")}`;
@@ -50,4 +50,5 @@ export const STATUS_BADGE = {
   active: ["success", "Active"],
   rejected: ["error", "Needs changes"],
   suspended: ["error", "Suspended"],
+  closed: ["neutral", "Deleted"],
 };

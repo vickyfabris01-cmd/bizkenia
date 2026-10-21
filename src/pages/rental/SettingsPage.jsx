@@ -1,4 +1,4 @@
-// src/pages/rental/SettingsPage.jsx — MODIFIED (room assignment card; logo and cover photo cards)
+// src/pages/rental/SettingsPage.jsx — MODIFIED (Phase 6: Danger zone — hand over or delete the business)
 //
 // AIM
 // /app/:slug/settings (owner only). Billing rules (day rent is due, grace days, late fee) and the
@@ -19,6 +19,7 @@ import { Link } from "react-router-dom";
 import { PageHead } from "./shared.jsx";
 import BusinessLogoCard from "../../components/business/BusinessLogoCard.jsx";
 import BusinessCoverCard from "../../components/business/BusinessCoverCard.jsx";
+import BusinessDangerZone from "../../components/lifecycle/BusinessDangerZone.jsx";
 
 const DEFAULTS = { billing_due_day: 5, grace_period_days: 3, late_fee_amount: 500, late_fee_percent: 0 };
 
@@ -139,6 +140,8 @@ export default function SettingsPage() {
           <BusinessLogoCard business={business} />
 
           <BusinessCoverCard business={business} />
+
+          <BusinessDangerZone business={business} />
         </div>
       )}
     </div>
