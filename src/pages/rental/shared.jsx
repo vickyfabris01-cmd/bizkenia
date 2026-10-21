@@ -1,9 +1,10 @@
-// src/pages/rental/shared.jsx — MODIFIED (Phase 6: a person who deleted their account shows as "Deleted user")
+// src/pages/rental/shared.jsx — MODIFIED (room kinds and hostel helpers restored; Phase 6 "Deleted user" kept)
 //
 // AIM
 // Small pieces every Phase 2 screen uses: the page heading, tabs, status badges with their
 // plain-English labels, stat tiles, and a "copy to clipboard" helper. Keeping them here means a
-// status reads the same on every screen.
+// status reads the same on every screen. Also the kinds of room, and how a room's rent is shown
+// (monthly, or per semester for a hostel). A person who deleted their account shows as "Deleted user".
 
 import "./Rental.css";
 import { Link } from "react-router-dom";
@@ -20,7 +21,17 @@ const MAPS = {
   tenancy: { active: ["success", "Living here"], completed: ["neutral", "Moved out"], terminated: ["error", "Ended early"], pending: ["warning", "Pending"] },
 };
 export const METHOD = { mpesa: "M-Pesa", cash: "Cash", bank_transfer: "Bank transfer", other: "Other" };
-export const ROOM_TYPES = ["bedsitter", "single", "double", "studio", "suite", "dormitory"].map((v) => ({ value: v, label: v.charAt(0).toUpperCase() + v.slice(1) }));
+// The kinds of room, in this order. A hostel can be any of the first four (not a canteen or a kiosk).
+export const KINDS = [
+  { value: "single", label: "Single room" }, { value: "bedseater", label: "Bed seater" },
+  { value: "one_bedroom", label: "One bedroom" }, { value: "two_bedroom", label: "Two bedroom" },
+  { value: "canteen", label: "Canteen" }, { value: "kiosk", label: "Kiosk" },
+];
+export const HOSTEL_KINDS = KINDS.slice(0, 4);
+export const kindLabel = (k) => KINDS.find((x) => x.value === k)?.label || (k ? k.charAt(0).toUpperCase() + k.slice(1) : "");
+// A hostel room is billed per semester and has no monthly rent (monthly_price is 0); every other room is monthly.
+export const isHostelRoom = (r) => !(Number(r?.monthly_price) > 0);
+export const rentLabel = (r) => (!r ? "—" : isHostelRoom(r) ? `${money(r.semester_price)} / semester` : `${money(r.monthly_price)} / month`);
 export const BILLING = [{ value: "monthly", label: "Monthly" }, { value: "semester", label: "Per semester (6 months)" }];
 
 export function StatusBadge({ kind, status }) {

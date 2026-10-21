@@ -1,4 +1,4 @@
-// src/pages/preview/PreviewPage.jsx — NEW FILE (TEMPORARY, a developer testing page)
+// src/pages/preview/PreviewPage.jsx — MODIFIED (adds /preview/errors, the three error screens on demand)
 //
 // AIM
 // One place to see and try every shared piece built so far, inside the real app shell:
@@ -11,6 +11,7 @@
 //   /preview/components       buttons, badges, cards, avatars, tooltip
 //   /preview/forms            every form field, with a small validation demo
 //   /preview/feedback         alerts, toasts, modal, drawer, confirm dialog
+//   /preview/errors           the three error screens (page, small inline, full screen), on demand
 //   /preview/loading          spinner, skeletons, empty state
 //   /preview/tokens           colour tokens
 //   /preview/icons            the icon set
@@ -19,6 +20,7 @@
 
 import "./PreviewPage.css";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useParams } from "react-router-dom";
 import AppShell from "../../components/shell/AppShell.jsx";
 import {
@@ -48,6 +50,7 @@ import {
 } from "../../components/ui/index.js";
 import Icon, { ICON_NAMES } from "../../components/ui/Icon.jsx";
 import { ConfirmDialog, Drawer, Modal } from "../../components/modals/Modal.jsx";
+import { PageErrorBoundary, RootErrorBoundary, WidgetErrorBoundary } from "../../components/feedback/ErrorBoundary.jsx";
 import { useToast } from "../../hooks/useNotifications.js";
 
 // ── Dummy shell data ──────────────────────────────────────────────────────────
@@ -55,6 +58,7 @@ const NAV = [
   { to: "/preview/components", label: "Basics", icon: "dashboard" },
   { to: "/preview/forms", label: "Forms", icon: "file" },
   { to: "/preview/feedback", label: "Feedback", icon: "bell" },
+  { to: "/preview/errors", label: "Error screens", icon: "warning" },
   { to: "/preview/loading", label: "Loading", icon: "chart" },
   { to: "/preview/tokens", label: "Tokens", icon: "settings", section: "Foundations" },
   { to: "/preview/icons", label: "Icons", icon: "building" },
@@ -355,6 +359,65 @@ function FeedbackSection() {
   );
 }
 
+/** Crashes on purpose, so the error screens can be looked at. */
+function Thrower({ message }) {
+  throw new Error(message);
+}
+
+const LOAD_MESSAGE = "The requested module './shared.jsx' does not provide an export named 'kindLabel'";
+
+function ErrorsSection() {
+  const [pageOn, setPageOn] = useState(false);
+  const [pageRun, setPageRun] = useState(0);     // a new number makes a fresh boundary, which clears the error
+  const [widgetOn, setWidgetOn] = useState(false);
+  const [widgetRun, setWidgetRun] = useState(0);
+  const [full, setFull] = useState(null);        // null, or the message the full-screen crash shows
+
+  const resetPage = () => { setPageOn(false); setPageRun((n) => n + 1); };
+  const resetWidget = () => { setWidgetOn(false); setWidgetRun((n) => n + 1); };
+
+  return (
+    <>
+      <Block title="Page error" note="What a page shows when it crashes. The header and footer stay. Try again will crash again here, on purpose">
+        <div className="pv-row">
+          <Button onClick={() => setPageOn(true)}>Crash this page</Button>
+          <Button variant="outline" onClick={resetPage}>Reset</Button>
+        </div>
+        <PageErrorBoundary key={`page-${pageRun}`}>
+          {pageOn ? <Thrower message="Cannot read properties of undefined (preview test)" /> : <p className="pv-muted">The page is fine. Press the button to crash it.</p>}
+        </PageErrorBoundary>
+      </Block>
+
+      <Block title="Small inline error" note="For one chart, card or table. The rest of the page keeps working">
+        <div className="pv-row">
+          <Button onClick={() => setWidgetOn(true)}>Crash the chart</Button>
+          <Button variant="outline" onClick={resetWidget}>Reset</Button>
+        </div>
+        <WidgetErrorBoundary key={`widget-${widgetRun}`} label="Revenue chart">
+          {widgetOn ? <Thrower message="Chart data was not in the expected shape (preview test)" /> : <p className="pv-muted">The chart is fine. Press the button to crash it.</p>}
+        </WidgetErrorBoundary>
+      </Block>
+
+      <Block title="Full-screen error" note="The last resort, for a crash that escapes every page. It covers the screen; use Close preview to leave">
+        <div className="pv-row">
+          <Button onClick={() => setFull("Something broke while drawing the page (preview test)")}>Full-screen error</Button>
+          <Button variant="outline" onClick={() => setFull(LOAD_MESSAGE)}>When a file fails to load</Button>
+        </div>
+      </Block>
+
+      {full && createPortal(
+        <div style={{ position: "fixed", inset: 0, zIndex: 1000, overflow: "auto", background: "var(--color-bg)" }}>
+          <RootErrorBoundary><Thrower message={full} /></RootErrorBoundary>
+          <div style={{ position: "fixed", top: "var(--space-3)", right: "var(--space-3)", zIndex: 1001 }}>
+            <Button variant="outline" size="sm" onClick={() => setFull(null)}>Close preview</Button>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
 function LoadingSection() {
   return (
     <>
@@ -449,6 +512,7 @@ const SECTIONS = {
   components: ComponentsSection,
   forms: FormsSection,
   feedback: FeedbackSection,
+  errors: ErrorsSection,
   loading: LoadingSection,
   tokens: TokensSection,
   icons: IconsSection,

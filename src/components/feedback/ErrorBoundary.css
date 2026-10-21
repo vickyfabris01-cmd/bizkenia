@@ -1,0 +1,47 @@
+/* src/components/feedback/ErrorBoundary.css — NEW FILE
+   Styles for the three error screens in ErrorBoundary.jsx. Tokens only, so the screens follow the
+   light and dark theme like the rest of the app. No component state or stores are used on purpose:
+   an error screen must keep working when the rest of the app does not. */
+
+.eb-screen { min-height: 100dvh; display: grid; place-items: center; padding: var(--space-6) var(--gutter); background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); }
+.eb-page { min-height: 50vh; display: grid; place-items: center; padding: var(--space-6) 0; font-family: var(--font-sans); }
+
+.eb-card { width: 100%; max-width: 520px; display: grid; gap: var(--space-4); justify-items: center; text-align: center; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); box-shadow: var(--shadow-md); padding: var(--space-8) var(--space-6); }
+.eb-card--flat { box-shadow: none; }
+
+/* The BizKenia logo is dark green, so it sits on a tile that turns light in dark mode (same as BrandLogo). */
+.eb-logo { display: inline-flex; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); }
+.eb-logo img { display: block; width: 88px; height: auto; }
+:root[data-theme="dark"] .eb-logo { background: var(--color-on-scrim); }
+@media (prefers-color-scheme: dark) { :root[data-theme="system"] .eb-logo { background: var(--color-on-scrim); } }
+
+.eb-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: var(--radius-full); background: var(--color-error-bg); color: var(--color-error-text); }
+.eb-title { margin: 0; font-size: var(--text-2xl); line-height: var(--lh-2xl); font-weight: var(--weight-bold); color: var(--color-text); }
+.eb-text { margin: 0; max-width: 44ch; color: var(--color-text-muted); line-height: 1.6; }
+.eb-meta { margin: 0; color: var(--color-text-subtle); font-size: var(--text-sm); }
+
+.eb-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); }
+.eb-btn { display: inline-flex; align-items: center; justify-content: center; min-height: var(--control-h-md); padding: 0 var(--space-4); border: 1px solid transparent; border-radius: var(--radius-md); font-family: inherit; font-size: var(--text-sm); font-weight: var(--weight-semibold); text-decoration: none; cursor: pointer; }
+.eb-btn:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.eb-btn--primary { background: var(--color-action); color: var(--color-on-action); }
+.eb-btn--outline { background: transparent; color: var(--color-text); border-color: var(--color-border-strong); }
+@media (hover: hover) {
+  .eb-btn--primary:hover { background: var(--color-action-hover); }
+  .eb-btn--outline:hover { background: var(--color-surface-2); }
+}
+
+/* Development only: the real message, then the stack in a closed panel. */
+.eb-dev { width: 100%; display: grid; gap: var(--space-2); text-align: left; }
+.eb-dev__msg { margin: 0; padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-error-bg); color: var(--color-error-text); font-family: var(--font-mono); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.eb-dev details { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-2); }
+.eb-dev summary { padding: var(--space-2) var(--space-3); color: var(--color-text-muted); font-size: var(--text-sm); font-weight: var(--weight-medium); cursor: pointer; }
+.eb-dev pre { margin: 0; padding: var(--space-3); max-height: 320px; overflow: auto; color: var(--color-text); font-family: var(--font-mono); font-size: 0.75rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* A small inline failure inside a page (a chart, a table). */
+.eb-widget { display: grid; gap: var(--space-2); justify-items: center; text-align: center; padding: var(--space-6) var(--space-4); border: 1px dashed var(--color-error); border-radius: var(--radius-lg); background: var(--color-error-bg); color: var(--color-error-text); font-family: var(--font-sans); }
+.eb-widget--compact { padding: var(--space-4); }
+.eb-widget p { margin: 0; font-size: var(--text-sm); }
+.eb-widget__label { font-weight: var(--weight-semibold); }
+.eb-widget__msg { font-family: var(--font-mono); opacity: 0.85; overflow-wrap: anywhere; }
+.eb-widget button { padding: var(--space-1) var(--space-3); border: 0; border-radius: var(--radius-md); background: transparent; color: inherit; font-family: inherit; font-size: var(--text-sm); font-weight: var(--weight-semibold); text-decoration: underline; cursor: pointer; }
+.eb-widget button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
