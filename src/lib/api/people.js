@@ -51,7 +51,7 @@ export const cancelTransfer = guard((id) => rpc("cancel_transfer", { p_transfer:
 export const decideTransfer = guard((id, f) => rpc("decide_transfer", {
   p_transfer: id, p_approve: f.approve, p_to_room: f.room || null, p_effective: f.effective || null, p_note: f.note || null }));
 export const availableRooms = guard(async (businessId) =>
-  wrap(await supabase.from("rooms").select("id, room_number, room_type, monthly_price, building:buildings(name)")
+  wrap(await supabase.from("rooms").select("id, room_number, room_type, monthly_price, semester_price, building:buildings(name)")
     .eq("tenant_id", businessId).eq("status", "available").order("room_number")));
 
 // ---- announcements -----------------------------------------------------------------------

@@ -14,7 +14,7 @@ import { useToast } from "../../hooks/useNotifications.js";
 import { useBusinessContext } from "../../router/BusinessContext.jsx";
 import { availableRooms, decideTransfer, listTransfers } from "../../lib/api/people.js";
 import { formatDate } from "../../lib/format.js";
-import { PageHead, Tabs, money, personName, roomLabel, todayISO } from "../rental/shared.jsx";
+import { PageHead, Tabs, personName, rentLabel, roomLabel, todayISO } from "../rental/shared.jsx";
 import { Input } from "../../components/ui";
 import { TRANSFER_BADGE } from "./TransferPage.jsx";
 
@@ -69,7 +69,7 @@ export default function TransfersPage() {
             {err && <Alert type="error" message={err} />}
             <p style={{ margin: 0 }}><strong>{personName(open.who)}</strong> in {roomLabel(open.from_room)} says: “{open.reason}”</p>
             <SelectInput label="Move to room" value={room} onChange={setRoom} placeholder="Choose an available room"
-              options={data.rooms.map((r) => ({ value: r.id, label: `${r.building?.name || ""} · ${r.room_number} · ${money(r.monthly_price)}` }))} />
+              options={data.rooms.map((r) => ({ value: r.id, label: `${r.building?.name || ""} · ${r.room_number} · ${rentLabel(r)}` }))} />
             <Input label="Move date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             <TextArea label="Note to the resident (optional)" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
           </div>

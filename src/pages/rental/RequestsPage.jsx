@@ -20,7 +20,7 @@ import { useToast } from "../../hooks/useNotifications.js";
 import { useBusinessContext } from "../../router/BusinessContext.jsx";
 import { getSettings, listFreeRooms, listRequests, respondRequest } from "../../lib/api/rental.js";
 import { formatDate, formatDateTime } from "../../lib/format.js";
-import { BILLING, PageHead, StatusBadge, Tabs, money, personName, roomLabel, todayISO } from "./shared.jsx";
+import { BILLING, PageHead, StatusBadge, Tabs, isHostelRoom, money, personName, rentLabel, roomLabel, todayISO } from "./shared.jsx";
 
 const HOURS = [{ value: "24", label: "1 day" }, { value: "48", label: "2 days" }, { value: "72", label: "3 days" }, { value: "168", label: "1 week" }];
 
@@ -36,8 +36,9 @@ function wanted(req) {
 function RequestModal({ req, assignment, onClose, onDone }) {
   const toast = useToast();
   const base = req.room_type || req.room;            // where the rent comes from
+  const hostel = Boolean(base) && isHostelRoom(base); // hostel rooms are billed per semester, the others monthly
   const [mode, setMode] = useState(null);            // null | "offer" | "reject"
-  const [f, setF] = useState({ billing: "monthly", price: String(base?.monthly_price ?? ""), moveIn: req.preferred_move_in || todayISO(), hours: "48", note: "", roomId: req.room_id || "" });
+  const [f, setF] = useState({ billing: hostel ? "semester" : "monthly", price: String((hostel ? base?.semester_price : base?.monthly_price) ?? ""), moveIn: req.preferred_move_in || todayISO(), hours: "48", note: "", roomId: req.room_id || "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
@@ -83,7 +84,7 @@ function RequestModal({ req, assignment, onClose, onDone }) {
         <dl className="rent-dl">
           <div><dt>Who</dt><dd>{personName(req.requester)}</dd></div>
           <div><dt>Contact</dt><dd>{[req.requester?.phone, req.requester?.email].filter(Boolean).join(" · ") || "—"}</dd></div>
-          <div><dt>Asked for</dt><dd>{req.room_type?.name ? `${req.room_type.name}${req.room_type.building?.name ? ` · ${req.room_type.building.name}` : ""}` : roomLabel(req.room)} · {money(base?.monthly_price)} a month</dd></div>
+          <div><dt>Asked for</dt><dd>{req.room_type?.name ? `${req.room_type.name}${req.room_type.building?.name ? ` · ${req.room_type.building.name}` : ""}` : roomLabel(req.room)} · {rentLabel(base)}</dd></div>
           <div><dt>Room</dt><dd>{req.room ? `Room ${req.room.room_number}${open && req.room_type_id ? " (their pick)" : ""}` : "No room picked, you or the system choose"}</dd></div>
           <div><dt>Wants to move in</dt><dd>{req.preferred_move_in ? formatDate(req.preferred_move_in) : "Not said"}</dd></div>
           <div><dt>Asked on</dt><dd>{formatDateTime(req.created_at)}</dd></div>
@@ -106,7 +107,7 @@ function RequestModal({ req, assignment, onClose, onDone }) {
               </>
             )}
             <div className="rent-form__row">
-              <SelectInput label="Billing" value={f.billing} onChange={pickBilling} options={BILLING.filter((b) => b.value === "monthly" || base?.semester_price)} />
+              <SelectInput label="Billing" value={f.billing} onChange={pickBilling} options={req.room_type_id ? BILLING.filter((b) => b.value === (hostel ? "semester" : "monthly")) : BILLING.filter((b) => b.value === "monthly" || base?.semester_price)} />
               <Input label="Agreed rent (KSh)" type="number" min="0" inputMode="numeric" value={f.price} onChange={(e) => set("price", e.target.value)} />
             </div>
             <div className="rent-form__row">

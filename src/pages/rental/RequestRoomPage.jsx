@@ -16,9 +16,7 @@ import useAsync from "../../hooks/useAsync.js";
 import useBusinessBrand from "../../hooks/useBusinessBrand.js";
 import { getBusinessBySlug } from "../../lib/api/directory.js";
 import { listRoomTypesPublic, submitTypeRequest } from "../../lib/api/rental.js";
-import { money, todayISO } from "./shared.jsx";
-
-const kindLabel = (k) => (k ? k.charAt(0).toUpperCase() + k.slice(1) : "");
+import { kindLabel, money, todayISO } from "./shared.jsx";
 
 /** One listing for a whole room type: photo, rent, what it has and how many rooms are still free. */
 export function TypeCard({ type, picked, onPick, children }) {
@@ -31,10 +29,11 @@ export function TypeCard({ type, picked, onPick, children }) {
         {!img && <span aria-hidden="true">{type.name.charAt(0).toUpperCase()}</span>}
       </div>
       <h3>{type.name}{type.building_name ? ` · ${type.building_name}` : ""}</h3>
-      <p className="rent-muted">{kindLabel(type.kind)} · sleeps {type.capacity}{type.building_address ? ` · ${type.building_address}` : ""}</p>
+      <p className="rent-muted">
+        {kindLabel(type.kind)}{type.is_hostel ? ` · hostel · sleeps ${type.capacity}` : ""}{type.building_address ? ` · ${type.building_address}` : ""}
+      </p>
       <p style={{ margin: 0 }}>
-        <strong className="rent-money">{money(type.monthly_price)}</strong> a month
-        {type.semester_price ? <span className="rent-muted"> · {money(type.semester_price)} a semester</span> : null}
+        <strong className="rent-money">{money(type.is_hostel ? type.semester_price : type.monthly_price)}</strong> {type.is_hostel ? "a semester" : "a month"}
       </p>
       <p className={`rtype__avail${available === 0 ? " rtype__avail--none" : ""}`}>
         {available === 0 ? `Fully occupied (${total} rooms)` : `${available} of ${total} room${total === 1 ? "" : "s"} available`}

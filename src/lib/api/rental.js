@@ -51,11 +51,17 @@ export const listRooms = guard(async (businessId) =>
 export const listRoomTypes = guard(async (businessId) =>
   wrap(await supabase.from("room_types").select("*, building:buildings(id, name)").eq("tenant_id", businessId).order("name")));
 
-/** Creates (no f.id) or edits a room type. An edit reaches all its rooms; a rent change reaches residents. Returns { id, repriced }. */
+/**
+ * Creates (no f.id) or edits a room type. The name is made by the database from the kind of room
+ * ("Single room", then "Single room (1)" in the same building). A hostel (f.is_hostel) has people it
+ * sleeps and a semester rent; every other type has a monthly rent. An edit reaches all its rooms and
+ * a rent change reaches residents. Returns { id, name, repriced }.
+ */
 export const saveRoomType = guard((businessId, f) => rpc("save_room_type", {
-  p_business: businessId, p_id: f.id || null, p_building: f.building_id, p_name: f.name, p_kind: f.kind,
-  p_capacity: Number(f.capacity) || 1, p_monthly: Number(f.monthly_price) || 0,
-  p_semester: f.semester_price === "" || f.semester_price == null ? null : Number(f.semester_price),
+  p_business: businessId, p_id: f.id || null, p_building: f.building_id, p_kind: f.kind, p_hostel: Boolean(f.is_hostel),
+  p_capacity: f.is_hostel ? Number(f.capacity) || 1 : 1,
+  p_monthly: f.is_hostel ? null : Number(f.monthly_price) || 0,
+  p_semester: f.is_hostel ? Number(f.semester_price) || 0 : null,
   p_description: f.description || null, p_amenities: f.amenities || [], p_images: f.images || [],
   p_allow_self_pick: Boolean(f.allow_self_pick),
 }));
@@ -82,7 +88,7 @@ export const listFreeRooms = guard(async (typeId) =>
   wrap(await supabase.from("rooms").select("id, room_number").eq("room_type_id", typeId).eq("status", "available")));
 
 // ---- requests --------------------------------------------------------------------------
-const REQ = `*, requester:profiles!rental_requests_requester_id_fkey(${PROFILE}), room:rooms(room_number, monthly_price, semester_price, status, building:buildings(name)), room_type:room_types(id, name, monthly_price, semester_price, allow_self_pick, building:buildings(name))`;
+const REQ = `*, requester:profiles!rental_requests_requester_id_fkey(${PROFILE}), room:rooms(room_number, monthly_price, semester_price, status, building:buildings(name)), room_type:room_types(id, name, kind, is_hostel, monthly_price, semester_price, allow_self_pick, building:buildings(name))`;
 export const listRequests = guard(async (businessId) => {
   await supabase.rpc("expire_offers", { p_business: businessId });
   return wrap(await supabase.from("rental_requests").select(REQ).eq("tenant_id", businessId).order("created_at", { ascending: false }));

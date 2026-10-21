@@ -21,11 +21,20 @@ import {
   addRooms, deleteBuilding, deleteRoom, deleteRoomType, listBuildings, listRoomTypes, listRooms,
   saveBuilding, saveRoomType, setRoomMaintenance,
 } from "../../lib/api/rental.js";
-import { PageHead, ROOM_TYPES, StatusBadge, money } from "./shared.jsx";
+import { HOSTEL_KINDS, KINDS, PageHead, StatusBadge, kindLabel, money } from "./shared.jsx";
 
 const MAX_AT_ONCE = 300;
 const byNumber = (a, b) => a.room_number.localeCompare(b.room_number, undefined, { numeric: true });
-const kindLabel = (k) => (k ? k.charAt(0).toUpperCase() + k.slice(1) : "");
+
+/** The name a type will get: its kind, then "Single room (1)", "(2)" if the building has one already. */
+export function nameFor(kind, takenNames) {
+  const base = kindLabel(kind);
+  const taken = new Set(takenNames);
+  if (!taken.has(base)) return base;
+  let n = 1;
+  while (taken.has(`${base} (${n})`)) n += 1;
+  return `${base} (${n})`;
+}
 
 /** "A", 7, 2 -> "A07"; pad 0 -> "A7". */
 function numberFor(prefix, n, pad) {
@@ -116,10 +125,10 @@ function BuildingModal({ open, onClose, businessId, building, onSaved }) {
   );
 }
 
-function TypeModal({ open, onClose, businessId, type, buildings, defaultBuilding, occupied, onSaved }) {
+function TypeModal({ open, onClose, businessId, type, buildings, defaultBuilding, occupied, held, allTypes, onSaved }) {
   const toast = useToast();
   const blank = {
-    building_id: defaultBuilding || buildings[0]?.id || "", name: "", kind: "single", capacity: 1, monthly_price: "", semester_price: "",
+    building_id: defaultBuilding || buildings[0]?.id || "", is_hostel: false, kind: "single", capacity: 1, monthly_price: "", semester_price: "",
     description: "", amenitiesText: "", images: [], allow_self_pick: false, prefix: "", from: "1", to: "", pad: "0",
   };
   const [f, setF] = useState(null);
@@ -130,14 +139,25 @@ function TypeModal({ open, onClose, businessId, type, buildings, defaultBuilding
     ? { ...type, semester_price: type.semester_price ?? "", description: type.description || "", amenitiesText: (type.amenities || []).join(", "), images: type.images || [] }
     : blank);
   const set = (k, v) => setF({ ...form, [k]: v });
-  const rentChanged = Boolean(type) && (Number(form.monthly_price) !== Number(type.monthly_price)
-    || (form.semester_price !== "" && Number(form.semester_price) !== Number(type.semester_price ?? NaN)));
+  const hostel = Boolean(form.is_hostel);
+  const rentChanged = Boolean(type) && (hostel
+    ? Number(form.semester_price) !== Number(type.semester_price ?? NaN)
+    : Number(form.monthly_price) !== Number(type.monthly_price));
+  const sameSpot = Boolean(type) && type.kind === form.kind && type.building_id === form.building_id;
+  const previewName = sameSpot ? type.name
+    : nameFor(form.kind, (allTypes || []).filter((t) => t.building_id === form.building_id && t.id !== type?.id).map((t) => t.name));
+  function setHostel(on) {
+    setF({ ...form, is_hostel: on, kind: on && !HOSTEL_KINDS.some((k) => k.value === form.kind) ? "single" : form.kind, capacity: on ? form.capacity : 1 });
+  }
 
   async function submit(e) {
     e.preventDefault();
     if (!form.building_id) { setError("Choose a building. Add one first if the list is empty."); return; }
-    if (!form.name.trim()) { setError("Enter a name for this room type, like Bedsitter."); return; }
-    if (!(Number(form.monthly_price) > 0)) { setError("Enter the monthly rent."); return; }
+    if (hostel) {
+      if (!(Number(form.semester_price) > 0)) { setError("Enter the semester rent."); return; }
+      const cap = Number(form.capacity);
+      if (!Number.isInteger(cap) || cap < 1 || cap > 20) { setError("People it sleeps must be a number from 1 to 20."); return; }
+    } else if (!(Number(form.monthly_price) > 0)) { setError("Enter the monthly rent."); return; }
     if (!type) {
       const problem = rangeProblem(form);
       if (problem) { setError(problem); return; }
@@ -182,19 +202,20 @@ function TypeModal({ open, onClose, businessId, type, buildings, defaultBuilding
             <Alert type="warning" title="Rent change"
               message={`${occupied} room${occupied === 1 ? " is" : "s are"} occupied. Saving a new rent updates what those residents pay from their next invoice, and each of them is notified. Invoices already created are not changed.`} />
           )}
-          <div className="rent-form__row">
-            <SelectInput label="Building" required value={form.building_id} onChange={(v) => set("building_id", v)}
-              options={buildings.map((b) => ({ value: b.id, label: b.name }))} placeholder="Choose a building" />
-            <Input label="Room type name" required value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Bedsitter" />
-          </div>
-          <div className="rent-form__row">
-            <SelectInput label="Kind of room" value={form.kind} onChange={(v) => set("kind", v)} options={ROOM_TYPES} />
-            <Input label="People it sleeps" type="number" min="1" max="20" value={form.capacity} onChange={(e) => set("capacity", e.target.value)} />
-          </div>
-          <div className="rent-form__row">
+          <SelectInput label="Building" required value={form.building_id} onChange={(v) => set("building_id", v)}
+            options={buildings.map((b) => ({ value: b.id, label: b.name }))} placeholder="Choose a building" />
+          <Toggle label="Hostel" checked={hostel} disabled={held > 0} onChange={setHostel} />
+          {held > 0 && <p className="rent-muted">A hostel setting cannot change while rooms of this type are occupied or reserved.</p>}
+          <SelectInput label="Kind of room" value={form.kind} onChange={(v) => set("kind", v)} options={hostel ? HOSTEL_KINDS : KINDS}
+            helper={`Shown to renters as “${previewName}”.`} />
+          {hostel ? (
+            <div className="rent-form__row">
+              <Input label="People it sleeps" required type="number" min="1" max="20" value={form.capacity} onChange={(e) => set("capacity", e.target.value)} />
+              <Input label="Semester rent (KSh)" required type="number" min="0" inputMode="numeric" value={form.semester_price} onChange={(e) => set("semester_price", e.target.value)} />
+            </div>
+          ) : (
             <Input label="Monthly rent (KSh)" required type="number" min="0" inputMode="numeric" value={form.monthly_price} onChange={(e) => set("monthly_price", e.target.value)} />
-            <Input label="Semester rent (KSh)" type="number" min="0" inputMode="numeric" value={form.semester_price} onChange={(e) => set("semester_price", e.target.value)} helper="Optional. For hostels billed every 6 months." />
-          </div>
+          )}
           <Input label="What it has" value={form.amenitiesText} onChange={(e) => set("amenitiesText", e.target.value)} helper="Separate with commas: Water, Security, Wi-Fi" />
           <TextArea label="Description" rows={3} value={form.description} onChange={(e) => set("description", e.target.value)} />
           <PhotoUploader businessId={businessId} folder="rooms" value={form.images} onChange={(v) => set("images", v)} label="Photos (up to 4)" />
@@ -341,10 +362,11 @@ export default function PropertiesPage() {
                         {!img && <span aria-hidden="true">{t.name.charAt(0).toUpperCase()}</span>}
                       </div>
                       <h3>{t.name}</h3>
-                      <p className="rent-muted">{t.building?.name} · {kindLabel(t.kind)} · sleeps {t.capacity}</p>
+                      <p className="rent-muted">{t.building?.name} · {kindLabel(t.kind)}{t.is_hostel ? ` · sleeps ${t.capacity}` : ""}</p>
                       <p style={{ margin: 0 }}>
-                        <strong className="rent-money">{money(t.monthly_price)}</strong> a month
-                        {t.semester_price ? <span className="rent-muted"> · {money(t.semester_price)} a semester</span> : null}
+                        {t.is_hostel
+                          ? <><strong className="rent-money">{money(t.semester_price)}</strong> a semester</>
+                          : <><strong className="rent-money">{money(t.monthly_price)}</strong> a month</>}
                       </p>
                       <p className="rtype__stats">
                         <span><strong>{total}</strong> rooms</span>
@@ -354,6 +376,7 @@ export default function PropertiesPage() {
                         {count(t.id, "maintenance") > 0 && <span><strong>{count(t.id, "maintenance")}</strong> maintenance</span>}
                       </p>
                       <div className="rent-chips">
+                        {t.is_hostel && <Badge variant="neutral">Hostel</Badge>}
                         {t.allow_self_pick ? <Badge variant="info">Renters pick their room</Badge> : <Badge variant="neutral">You assign the room</Badge>}
                         {total === 0 && <Badge variant="warning">No rooms yet</Badge>}
                       </div>
@@ -406,7 +429,8 @@ export default function PropertiesPage() {
 
       {bModal && <BuildingModal open key={bModal.building?.id || "new-b"} businessId={bid} building={bModal.building} onClose={() => setBModal(null)} onSaved={reload} />}
       {tModal && <TypeModal open key={tModal.type?.id || "new-t"} businessId={bid} type={tModal.type} buildings={buildings} defaultBuilding={buildingId}
-        occupied={tModal.type ? count(tModal.type.id, "occupied") : 0} onClose={() => setTModal(null)} onSaved={reload} />}
+        occupied={tModal.type ? count(tModal.type.id, "occupied") : 0}
+        held={tModal.type ? count(tModal.type.id, "occupied") + count(tModal.type.id, "reserved") : 0} allTypes={types} onClose={() => setTModal(null)} onSaved={reload} />}
       {addFor && <AddRoomsModal open key={addFor.id} type={addFor} onClose={() => setAddFor(null)} onSaved={reload} />}
       <ConfirmDialog isOpen={Boolean(delRoom)} title={`Delete room ${delRoom?.room_number || ""}?`}
         message="This cannot be undone. A room that has had residents cannot be deleted; put it under maintenance instead."

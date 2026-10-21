@@ -16,7 +16,7 @@ import { useBusinessContext } from "../../router/BusinessContext.jsx";
 import { addResident, listCycles, listRooms, listTenancies } from "../../lib/api/rental.js";
 import { formatDate } from "../../lib/format.js";
 import EndTenancyModal from "./EndTenancyModal.jsx";
-import { BILLING, PageHead, StatusBadge, money, personName, roomLabel, todayISO } from "./shared.jsx";
+import { BILLING, PageHead, StatusBadge, isHostelRoom, money, personName, rentLabel, roomLabel, todayISO } from "./shared.jsx";
 
 function AddResidentModal({ businessId, rooms, onClose, onDone }) {
   const toast = useToast();
@@ -29,7 +29,9 @@ function AddResidentModal({ businessId, rooms, onClose, onDone }) {
 
   function pickRoom(id) {
     const r = free.find((x) => x.id === id);
-    setF((s) => ({ ...s, room_id: id, price: r ? String(s.billing === "semester" && r.semester_price ? r.semester_price : r.monthly_price) : s.price }));
+    if (!r) { setF((s) => ({ ...s, room_id: id })); return; }
+    const billing = isHostelRoom(r) ? "semester" : "monthly";   // hostel rooms are billed per semester
+    setF((s) => ({ ...s, room_id: id, billing, price: String(billing === "semester" ? r.semester_price : r.monthly_price) }));
   }
   function pickBilling(v) {
     setF((s) => ({ ...s, billing: v, price: room ? String(v === "semester" && room.semester_price ? room.semester_price : room.monthly_price) : s.price }));
@@ -54,9 +56,9 @@ function AddResidentModal({ businessId, rooms, onClose, onDone }) {
         {error && <Alert type="error" message={error} />}
         <Input label="Their account email" type="email" required value={f.email} onChange={(e) => set("email", e.target.value)} helper="They must have signed up already." />
         <SelectInput label="Room" required value={f.room_id} onChange={pickRoom} placeholder={free.length ? "Choose an available room" : "No rooms are available"}
-          options={free.map((r) => ({ value: r.id, label: `${r.room_number} · ${r.building?.name || ""} · ${money(r.monthly_price)}` }))} />
+          options={free.map((r) => ({ value: r.id, label: `${r.room_number} · ${r.building?.name || ""} · ${rentLabel(r)}` }))} />
         <div className="rent-form__row">
-          <SelectInput label="Billing" value={f.billing} onChange={pickBilling} options={BILLING} />
+          <SelectInput label="Billing" value={f.billing} onChange={pickBilling} options={room ? BILLING.filter((b) => b.value === (isHostelRoom(room) ? "semester" : "monthly")) : BILLING} />
           <Input label="Agreed rent (KSh)" type="number" min="0" inputMode="numeric" value={f.price} onChange={(e) => set("price", e.target.value)} />
         </div>
         <Input label="Move-in date" type="date" value={f.move_in} onChange={(e) => set("move_in", e.target.value)} />

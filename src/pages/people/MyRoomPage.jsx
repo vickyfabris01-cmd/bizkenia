@@ -10,7 +10,7 @@ import useAsync from "../../hooks/useAsync.js";
 import { useBusinessContext } from "../../router/BusinessContext.jsx";
 import { myTenancy } from "../../lib/api/people.js";
 import { formatDate } from "../../lib/format.js";
-import { PageHead, money } from "../rental/shared.jsx";
+import { PageHead, kindLabel, money } from "../rental/shared.jsx";
 
 export default function MyRoomPage() {
   const { business } = useBusinessContext();
@@ -31,7 +31,7 @@ export default function MyRoomPage() {
           <CardBody>
             {images.length > 0 && <div className="rent-photos" style={{ marginBottom: "var(--space-4)" }}>{images.map((u, i) => <div className="rent-photo" key={u}><img src={u} alt={`Room photo ${i + 1}`} loading="lazy" /></div>)}</div>}
             <dl className="rent-dl">
-              <div><dt>Type</dt><dd style={{ textTransform: "capitalize" }}>{room.room_type}</dd></div>
+              <div><dt>Type</dt><dd>{kindLabel(room.room_type)}</dd></div>
               {room.floor?.floor_name && <div><dt>Floor</dt><dd>{room.floor.floor_name}</dd></div>}
               <div><dt>Rent</dt><dd className="rent-money">{money(t.agreed_price)} {t.billing_type === "semester" ? "per semester" : "per month"}</dd></div>
               <div><dt>Moved in</dt><dd>{formatDate(t.move_in_date)}</dd></div>

@@ -48,7 +48,7 @@ export function marketCard(kind) {
     to: kind === "shop" ? `/b/${x.business_slug}/p/${x.id}` : `/b/${x.business_slug}`,
     image: x.image,
     title: kind === "rooms" && x.building_name ? `${x.title} · ${x.building_name}` : x.title,   // rooms: x.title is the room type name
-    price: kind === "rooms" ? `${formatKsh(x.price)} / month` : `${formatKsh(x.price)}${perUnit(x.unit)}`,
+    price: kind === "rooms" ? `${formatKsh(x.price)} / ${x.is_hostel ? "semester" : "month"}` : `${formatKsh(x.price)}${perUnit(x.unit)}`,
     place: [x.business_name, x.county].filter(Boolean).join(" · "),
     badge: kind === "rooms" ? `${x.available} available` : undefined,   // one card per room type
   });

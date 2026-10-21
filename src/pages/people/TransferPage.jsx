@@ -12,7 +12,7 @@ import { useToast } from "../../hooks/useNotifications.js";
 import { useBusinessContext } from "../../router/BusinessContext.jsx";
 import { availableRooms, cancelTransfer, listTransfers, requestTransfer } from "../../lib/api/people.js";
 import { formatDate } from "../../lib/format.js";
-import { PageHead, money } from "../rental/shared.jsx";
+import { PageHead, rentLabel } from "../rental/shared.jsx";
 
 export const TRANSFER_BADGE = { pending: ["warning", "Waiting"], completed: ["success", "Approved and moved"], approved: ["success", "Approved"], rejected: ["error", "Declined"] };
 
@@ -54,7 +54,7 @@ export default function TransferPage() {
           <form className="rent-form" onSubmit={submit} noValidate>
             {err && <Alert type="error" message={err} />}
             <SelectInput label="Room you would like (optional)" value={room} onChange={setRoom} placeholder="Let the manager choose"
-              options={(data?.rooms || []).map((r) => ({ value: r.id, label: `${r.building?.name || ""} · ${r.room_number} · ${money(r.monthly_price)}` }))} />
+              options={(data?.rooms || []).map((r) => ({ value: r.id, label: `${r.building?.name || ""} · ${r.room_number} · ${rentLabel(r)}` }))} />
             <TextArea label="Why do you want to move?" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} required />
             <div><Button type="submit" loading={busy}>Send request</Button></div>
           </form>

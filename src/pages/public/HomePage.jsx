@@ -73,7 +73,7 @@ const farmCard = (p) => ({ key: p.id, to: `/b/${p.business_slug}`, image: p.imag
 const roomCard = (r) => ({
   key: r.id, to: `/b/${r.business_slug}`, image: r.images?.[0],
   title: `${r.name}${r.building_name ? ` · ${r.building_name}` : ""}`,
-  price: `${formatKsh(r.monthly_price)} / month`, place: where(r), badge: `${r.available} available`,
+  price: `${formatKsh(r.price)} / ${r.is_hostel ? "semester" : "month"}`, place: where(r), badge: `${r.available} available`,
 });
 
 // Grey wireframe of the whole page, same layout as the real one, shown until the hero is ready.
