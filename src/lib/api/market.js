@@ -45,7 +45,7 @@ const perUnit = (u) => (u && u !== "item" ? ` / ${u}` : "");
 export function marketCard(kind) {
   return (x) => ({
     key: x.id,
-    to: kind === "shop" ? `/b/${x.business_slug}/p/${x.id}` : `/b/${x.business_slug}`,
+    to: `/b/${x.business_slug}/${kind === "shop" ? "p" : kind === "farm" ? "produce" : "room"}/${x.id}`,
     image: x.image,
     title: kind === "rooms" && x.building_name ? `${x.title} · ${x.building_name}` : x.title,   // rooms: x.title is the room type name
     price: kind === "rooms" ? `${formatKsh(x.price)} / ${x.is_hostel ? "semester" : "month"}` : `${formatKsh(x.price)}${perUnit(x.unit)}`,

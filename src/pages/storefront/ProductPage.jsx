@@ -13,6 +13,7 @@ import { getShopProduct, listShopProducts } from "../../lib/api/storefront.js";
 import { useCart } from "../../store/cartStore.js";
 import useSeo from "../../hooks/useSeo.js";
 import { siteUrl } from "../../lib/seo.js";
+import VisitBusiness from "../../components/business/VisitBusiness.jsx";
 import { Gallery, ProductCard, Qty, StoreGate, WishButton, money, useWishlist } from "./shared.jsx";
 
 function Product({ b }) {
@@ -69,6 +70,7 @@ function Product({ b }) {
             <WishButton productId={p.id} wish={wish} />
             <span className="sf-muted" style={{ paddingLeft: 52, alignSelf: "center" }}>{wish.ids.has(p.id) ? "Saved to your wishlist" : "Save for later"}</span>
           </div>
+          <VisitBusiness business={b} label="Sold by" />
         </div>
       </div>
       {(more || []).filter((x) => x.id !== p.id).length > 0 && (

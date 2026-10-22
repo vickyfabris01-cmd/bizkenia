@@ -94,6 +94,7 @@ export default function BusinessPage() {
                 <div className="rent-rooms">
                   {types.map((t) => (
                     <TypeCard key={t.id} type={t}>
+                      <Button as={Link} to={`/b/${b.slug}/room/${t.id}`} variant="ghost">See details</Button>
                       {Number(t.available) > 0
                         ? <Button as={Link} to={`/b/${b.slug}/request?type=${t.id}`} variant="outline">Request {t.name}</Button>
                         : <p className="rent-muted" style={{ margin: 0 }}>Call or message the business to ask when one will be free.</p>}
@@ -112,13 +113,13 @@ export default function BusinessPage() {
                   <div className="listing-grid">
                     {produce.map((p) => (
                       <ListingCard key={p.id} listing={{
-                        key: p.id, image: p.images?.[0], title: p.name,
+                        key: p.id, to: `/b/${b.slug}/produce/${p.id}`, image: p.images?.[0], title: p.name,
                         price: `${formatKsh(p.price)}${p.unit && p.unit !== "item" ? ` / ${p.unit}` : ""}`,
                         badge: p.stock <= 0 ? "Out of stock" : undefined,
                       }} />
                     ))}
                   </div>
-                  <p className="rent-muted" style={{ marginTop: "var(--space-3)" }}>To buy, call or message the farm using the contact buttons.</p>
+                  <p className="rent-muted" style={{ marginTop: "var(--space-3)" }}>Open an item for details, or call or message the farm using the contact buttons.</p>
                 </>
               ) : <p className="rent-muted">This farm has not listed any produce yet. Call or message to ask what is available.</p>}
             </section>

@@ -18,9 +18,10 @@
 // page always receives 5 of each; from 640px CSS shows one full row (3, 4 or 5 cards) and under
 // 640px every card is in a sideways-scrolling row (about 2.3 cards in view).
 //
-// Latest businesses: the 4 newest shops, 4 newest farms and 4 newest rentals, one one-row .crow per
-// type (three database calls). The page always receives 4 of each; from 640px CSS shows one full
-// row (2, 3 or 4 cards) and under 640px every card is in a scrolling row (one card in view).
+// Latest businesses: the 5 newest shops, farms and rentals, one one-row .crow per type (three
+// database calls). Business cards are the same size as product cards, so the page always receives 5
+// of each; from 640px CSS shows one full row (3, 4 or 5 cards) and under 640px every card is in a
+// scrolling row (about 2.3 cards in view).
 //
 // Hero background: the super admin uploads photos in Settings. The photo showing now comes from
 // current_hero_image(). It is fetched and downloaded by lib/heroPreload.js, which main.jsx starts
@@ -49,7 +50,7 @@ const OWNER_STEPS = [
   "Get approved, go live and start managing.",
 ];
 
-// Latest businesses: one row per type, in this order, 4 of each.
+// Latest businesses: one row per type, in this order, 5 of each.
 const BIZ_ROWS = [
   { type: "shop", label: "Shops" },
   { type: "agriculture", label: "Farms" },
@@ -58,7 +59,7 @@ const BIZ_ROWS = [
 
 // Three calls, one per type, newest first. Only an error if every call failed.
 async function loadLatestBusinesses() {
-  const results = await Promise.all(BIZ_ROWS.map((r) => listBusinesses({ type: r.type, limit: 4 })));
+  const results = await Promise.all(BIZ_ROWS.map((r) => listBusinesses({ type: r.type, limit: 5 })));
   if (results.every((r) => r.error)) return { data: null, error: results[0].error };
   return { data: Object.fromEntries(BIZ_ROWS.map((r, i) => [r.type, results[i].data || []])), error: null };
 }
@@ -68,10 +69,10 @@ const perUnit = (u) => (u && u !== "item" ? ` / ${u}` : "");
 const where = (x) => [x.business_name, x.county].filter(Boolean).join(" · ");
 
 const shopCard = (p) => ({ key: p.id, to: `/b/${p.business_slug}/p/${p.id}`, image: p.images?.[0], title: p.name, price: `${formatKsh(p.price)}${perUnit(p.unit)}`, place: where(p) });
-const farmCard = (p) => ({ key: p.id, to: `/b/${p.business_slug}`, image: p.images?.[0], title: p.name, price: `${formatKsh(p.price)}${perUnit(p.unit)}`, place: where(p) });
+const farmCard = (p) => ({ key: p.id, to: `/b/${p.business_slug}/produce/${p.id}`, image: p.images?.[0], title: p.name, price: `${formatKsh(p.price)}${perUnit(p.unit)}`, place: where(p) });
 // one card per room type (a block of identical rooms is one card), with how many are still free
 const roomCard = (r) => ({
-  key: r.id, to: `/b/${r.business_slug}`, image: r.images?.[0],
+  key: r.id, to: `/b/${r.business_slug}/room/${r.id}`, image: r.images?.[0],
   title: `${r.name}${r.building_name ? ` · ${r.building_name}` : ""}`,
   price: `${formatKsh(r.price)} / ${r.is_hostel ? "semester" : "month"}`, place: where(r), badge: `${r.available} available`,
 });
@@ -98,7 +99,7 @@ function HomeSkeleton() {
 
       <section className="pg" aria-hidden="true">
         <div className="home-list__head"><Skeleton height={28} width={200} /></div>
-        <div className="crow crow--biz" data-rows="1">{[0, 1, 2, 3].map((i) => <BusinessCardSkeleton key={i} />)}</div>
+        <div className="crow crow--biz" data-rows="1">{[0, 1, 2, 3, 4].map((i) => <BusinessCardSkeleton key={i} />)}</div>
       </section>
 
       <section className="pg" aria-hidden="true">
@@ -205,7 +206,7 @@ export default function HomePage() {
           <Link to="/explore">See all</Link>
         </div>
         {loading ? (
-          <div className="crow crow--biz" data-rows="1">{[0, 1, 2, 3].map((i) => <BusinessCardSkeleton key={i} />)}</div>
+          <div className="crow crow--biz" data-rows="1">{[0, 1, 2, 3, 4].map((i) => <BusinessCardSkeleton key={i} />)}</div>
         ) : error ? (
           <Card><EmptyState icon="info" title="Businesses could not be loaded" description={error} compact /></Card>
         ) : bizGroups.length === 0 ? (

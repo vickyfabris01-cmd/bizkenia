@@ -1,12 +1,12 @@
-ROOM TYPES v3: kinds, Hostel toggle, automatic names
+ITEM PAGES + MATCHING CARDS (no database change, nothing to run in Supabase)
 
-1. Database (Supabase SQL editor, or `supabase db push`), in this order:
-   - 20261020100006_room_types.sql  (you already renamed it from ...100001)
-   - 20261020100007_room_type_listings.sql   (if not run yet)
-   - 20261020100008_room_kinds_and_hostel.sql   (NEW, in this zip)
-   100008 maps old kinds (bedsitter/studio -> Bed seater, double/dormitory -> Single room,
-   suite -> One bedroom), renames existing room types by the new rule ("Single room",
-   "Single room (1)"), and clears semester rent on non-hostel types.
-2. Copy the files in src/ over your project (same paths).
-3. Hostel ON = People it sleeps + Semester rent. OFF = Monthly rent only.
-   A type's hostel setting is locked while any of its rooms is occupied or reserved.
+Copy every file in src/ over your project (same paths). New files: VisitBusiness.jsx,
+ProduceDetailPage.jsx, RoomTypePage.jsx.
+
+- Product, produce and room cards open their own item page:
+    /b/:slug/p/:id (shop product, existed), /b/:slug/produce/:id (new), /b/:slug/room/:id (new)
+  Each item page has a "Visit shop / farm / business" card linking to the business page.
+- Farm produce is bought by WhatsApp, call or email (the farm has no cart): the WhatsApp button
+  carries the item name and price in the message.
+- Business cards now use the same columns, size and text as product cards: 5 across on desktop
+  (4 at 900px, 3 at 640px), about 2.3 in view on phones. Home shows 5 businesses per type, Explore 10.

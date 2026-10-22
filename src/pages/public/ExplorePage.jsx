@@ -30,9 +30,9 @@ import useAsync from "../../hooks/useAsync.js";
 import { listBusinesses } from "../../lib/api/directory.js";
 import { MARKET_KINDS, listMarket, marketCard } from "../../lib/api/market.js";
 
-const PER_SECTION = 8;  // businesses per section when no type is chosen (two rows of 4 on a wide screen)
-const PREVIEW_MIN = 4;  // fewest businesses a preview shows from 640px (2 columns x 2 rows): more than this needs "See all"
-const PAGE = 12;        // businesses per step when one type is chosen (fills whole rows at 1, 2, 3 and 4 columns)
+const PER_SECTION = 10; // businesses per section when no type is chosen (two rows of 5 on a wide screen)
+const PREVIEW_MIN = 6;  // fewest businesses a preview shows from 640px (3 columns x 2 rows): more than this needs "See all"
+const PAGE = 20;        // businesses per step when one type is chosen (fills whole rows at 2, 4 and 5 columns)
 const MAX = 120;        // the most the page loads for one type
 const LISTINGS = 10;    // products, produce or rooms per kind in the search results (two rows of 5)
 const LISTING_MIN = 6;  // fewest of them a preview shows from 640px (3 columns x 2 rows)
@@ -157,7 +157,7 @@ export default function ExplorePage() {
 
       <div className="explore-results" aria-live="polite" aria-busy={loading}>
         {loading && !data ? (
-          <div className="crow crow--biz" data-rows="2">{[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <BusinessCardSkeleton key={i} />)}</div>
+          <div className="crow crow--biz" data-rows="2">{[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => <BusinessCardSkeleton key={i} />)}</div>
         ) : error ? (
           <Card><EmptyState icon="info" title="Businesses could not be loaded" description={error} /></Card>
         ) : nothing ? (

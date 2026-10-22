@@ -1,17 +1,19 @@
-/* src/components/business/CardRows.css — NEW FILE. Tokens only.
+/* src/components/business/CardRows.css — MODIFIED (businesses now use the same columns as products). Tokens only.
  *
  * AIM
  * The two row layouts every list of cards uses (Home, Shop and rent, Explore). Imported by both
  * card components, so a page only has to put the class names on a wrapper.
  *
  *   .crow   a category row (a preview).       .crow--listing | .crow--biz    data-rows="1" | "2"
- *   .cgrid  a plain vertical grid (one type). .cgrid--listing | .cgrid--biz
+ *   .cgrid  a plain vertical grid (one type). .cgrid--listing | .cgrid--biz    data-rows="1" | "2"
+ *
+ * Business cards and product cards are the same square and sit in the same columns, so the two
+ * modifiers below share every rule.
  *
  * COLUMNS (cards per row)
- *                       phone (<640)                 640   768   900   1024  1100+
- *   products/produce/rooms   scroll row, ~2.3 in view   3     3     4     4     5
- *   businesses               scroll row, 1 in view      2     3     3     4     4
- *   In .cgrid on phones: products and rooms 2 per row, businesses 1 per row.
+ *                       phone (<640)                 640   900   1100+
+ *   every card type     scroll row, ~2.3 in view     3     4     5
+ *   In .cgrid on phones: 2 per row.
  *
  * PREVIEW ROWS from 640px up: cards that do not fill the row are hidden, so a row is always full
  * (one row = one row of cards, data-rows="2" = two rows). On phones every card stays in the scroll row.
@@ -25,25 +27,18 @@
 .crow > *, .cgrid > * { min-width: 0; }
 
 /* ---- number of columns (the table above) -------------------------------------------------- */
-.cgrid--listing { --cols: 2; }
-.cgrid--biz { --cols: 1; }
-@media (min-width: 640px) {
-  .crow--listing, .cgrid--listing { --cols: 3; }
-  .crow--biz, .cgrid--biz { --cols: 2; }
-}
-@media (min-width: 768px) { .crow--biz, .cgrid--biz { --cols: 3; } }
-@media (min-width: 900px) { .crow--listing, .cgrid--listing { --cols: 4; } }
-@media (min-width: 1024px) { .crow--biz, .cgrid--biz { --cols: 4; } }
-@media (min-width: 1100px) { .crow--listing, .cgrid--listing { --cols: 5; } }
+.cgrid--listing, .cgrid--biz { --cols: 2; }
+@media (min-width: 640px) { .crow--listing, .cgrid--listing, .crow--biz, .cgrid--biz { --cols: 3; } }
+@media (min-width: 900px) { .crow--listing, .cgrid--listing, .crow--biz, .cgrid--biz { --cols: 4; } }
+@media (min-width: 1100px) { .crow--listing, .cgrid--listing, .crow--biz, .cgrid--biz { --cols: 5; } }
 
 /* ---- .cgrid: a plain grid -------------------------------------------------------------------- */
 .cgrid { display: grid; gap: var(--space-3); grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); align-items: start; }
 @media (min-width: 640px) { .cgrid { gap: var(--space-4); } }
 
 /* ---- .crow on phones: one sideways-scrolling row ------------------------------------------------
-   A product card is sized so about 2.3 fit: two cards, two gaps and a peek of the third fill the
-   space from the left gutter to the screen edge. A business card is two product cards wide plus one
-   gap, so one shows with a peek of the next. (390px phone: about 152px and 316px.) */
+   A card is sized so about 2.3 fit: two cards, two gaps and a peek of the third fill the space from
+   the left gutter to the screen edge. (390px phone: about 152px.) */
 .crow {
   --crow-gap: var(--space-3);
   --crow-w1: calc((100% + var(--gutter) - 2 * var(--crow-gap)) / 2.3);
@@ -60,7 +55,6 @@
 }
 .crow::-webkit-scrollbar { display: none; }
 .crow > * { flex: 0 0 var(--crow-w1); scroll-snap-align: start; }
-.crow--biz > * { flex-basis: calc(2 * var(--crow-w1) + var(--crow-gap)); }
 
 /* ---- .crow from 640px: a full grid, extra cards hidden --------------------------------------- */
 @media (min-width: 640px) {
@@ -72,17 +66,11 @@
 }
 
 /* one row (data-rows="1", also when data-rows is missing): hide what does not fit */
-@media (min-width: 640px) and (max-width: 899px) { .crow--listing:not([data-rows="2"]) > :nth-child(n + 4) { display: none; } }
-@media (min-width: 900px) and (max-width: 1099px) { .crow--listing:not([data-rows="2"]) > :nth-child(n + 5) { display: none; } }
-@media (min-width: 1100px) { .crow--listing:not([data-rows="2"]) > :nth-child(n + 6) { display: none; } }
-@media (min-width: 640px) and (max-width: 767px) { .crow--biz:not([data-rows="2"]) > :nth-child(n + 3) { display: none; } }
-@media (min-width: 768px) and (max-width: 1023px) { .crow--biz:not([data-rows="2"]) > :nth-child(n + 4) { display: none; } }
-@media (min-width: 1024px) { .crow--biz:not([data-rows="2"]) > :nth-child(n + 5) { display: none; } }
+@media (min-width: 640px) and (max-width: 899px) { .crow:not([data-rows="2"]) > :nth-child(n + 4) { display: none; } }
+@media (min-width: 900px) and (max-width: 1099px) { .crow:not([data-rows="2"]) > :nth-child(n + 5) { display: none; } }
+@media (min-width: 1100px) { .crow:not([data-rows="2"]) > :nth-child(n + 6) { display: none; } }
 
 /* two rows (data-rows="2") */
-@media (min-width: 640px) and (max-width: 899px) { .crow--listing[data-rows="2"] > :nth-child(n + 7) { display: none; } }
-@media (min-width: 900px) and (max-width: 1099px) { .crow--listing[data-rows="2"] > :nth-child(n + 9) { display: none; } }
-@media (min-width: 1100px) { .crow--listing[data-rows="2"] > :nth-child(n + 11) { display: none; } }
-@media (min-width: 640px) and (max-width: 767px) { .crow--biz[data-rows="2"] > :nth-child(n + 5) { display: none; } }
-@media (min-width: 768px) and (max-width: 1023px) { .crow--biz[data-rows="2"] > :nth-child(n + 7) { display: none; } }
-@media (min-width: 1024px) { .crow--biz[data-rows="2"] > :nth-child(n + 9) { display: none; } }
+@media (min-width: 640px) and (max-width: 899px) { .crow[data-rows="2"] > :nth-child(n + 7) { display: none; } }
+@media (min-width: 900px) and (max-width: 1099px) { .crow[data-rows="2"] > :nth-child(n + 9) { display: none; } }
+@media (min-width: 1100px) { .crow[data-rows="2"] > :nth-child(n + 11) { display: none; } }

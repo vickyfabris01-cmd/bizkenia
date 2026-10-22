@@ -31,6 +31,8 @@ const ExplorePage = page(() => import("../pages/public/ExplorePage.jsx"));
 const ShopRentPage = page(() => import("../pages/public/ShopRentPage.jsx"));
 const ShopBrowsePage = page(() => import("../pages/storefront/BrowsePage.jsx"));
 const ShopProductPage = page(() => import("../pages/storefront/ProductPage.jsx"));
+const ProduceDetailPage = page(() => import("../pages/public/ProduceDetailPage.jsx"));
+const RoomTypePage = page(() => import("../pages/rental/RoomTypePage.jsx"));
 const ShopCartPage = page(() => import("../pages/storefront/CartPage.jsx"));
 const ShopCheckoutPage = page(() => import("../pages/storefront/CheckoutPage.jsx"));
 const MyOrdersPage = page(() => import("../pages/storefront/OrdersPage.jsx"));
@@ -131,6 +133,8 @@ export default function AppRouter() {
             <Route path="/b/:slug" element={<Guarded><BusinessPage /></Guarded>} />
             <Route path="/b/:slug/browse" element={<Guarded><ShopBrowsePage /></Guarded>} />
             <Route path="/b/:slug/p/:productId" element={<Guarded><ShopProductPage /></Guarded>} />
+            <Route path="/b/:slug/produce/:productId" element={<Guarded><ProduceDetailPage /></Guarded>} />
+            <Route path="/b/:slug/room/:typeId" element={<Guarded><RoomTypePage /></Guarded>} />
             <Route path="/b/:slug/cart" element={<Guarded><ShopCartPage /></Guarded>} />
             <Route element={<RequireAuth />}>
               <Route path="/b/:slug/checkout" element={<Guarded><ShopCheckoutPage /></Guarded>} />
