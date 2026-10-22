@@ -4,17 +4,19 @@
 // Lets the owner upload, replace or remove the business cover photo. The photo shows at the top
 // of the business card in the public list and on the public business page. Without one, those
 // places show the first letter of the business name on a green background.
+// Any photo can be chosen: the smart upload opens a crop window (16:9, drag and pinch to frame it,
+// JPEG, PNG or WebP) and only the framed result is uploaded.
 // Shared: used in the owner's Settings page of rental and agriculture businesses.
 
 import "./BusinessImageCards.css";
 import { useState } from "react";
 import { Button, Card, CardBody, CardHeader } from "../ui";
+import ImageUploadButton from "../ui/ImageUploadButton.jsx";
 import { useToast } from "../../hooks/useNotifications.js";
 import { COVER_MAX_MB, removeBusinessCover, uploadBusinessCover } from "../../lib/api/businessMedia.js";
 import { useBusinessStore } from "../../store/businessStore.js";
 import { useSession } from "../../store/sessionStore.js";
 
-const ACCEPT = "image/jpeg,image/png,image/webp";
 
 export default function BusinessCoverCard({ business }) {
   const toast = useToast();
@@ -25,9 +27,8 @@ export default function BusinessCoverCard({ business }) {
   // reload the person's businesses so the new cover shows everywhere
   const refresh = () => useBusinessStore.getState().load(user?.id, true);
 
-  async function onPick(e) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
+  async function onFiles(files) {
+    const file = files[0];
     if (!file) return;
     setBusy("upload");
     const { error, notice } = await uploadBusinessCover(business.id, file, cover);
@@ -56,13 +57,12 @@ export default function BusinessCoverCard({ business }) {
             {!cover && <span aria-hidden="true">{(business.name || "?").charAt(0).toUpperCase()}</span>}
           </div>
           <div className="bcov__actions">
-            <label className="bcov__file">
+            <ImageUploadButton className="bcov__file" preset="cover" disabled={busy !== ""} onFiles={onFiles} ariaLabel="Upload a cover photo">
               <span>{busy === "upload" ? "Uploading..." : cover ? "Replace photo" : "Choose a photo"}</span>
-              <input type="file" accept={ACCEPT} disabled={busy !== ""} onChange={onPick} aria-label="Upload a cover photo" />
-            </label>
+            </ImageUploadButton>
             {cover && <Button variant="ghost" loading={busy === "remove"} disabled={busy === "upload"} onClick={onRemove}>Remove photo</Button>}
           </div>
-          <p className="bcov__hint">JPG, PNG or WebP, up to {COVER_MAX_MB} MB. Landscape 16:9 only, for example 1920 x 1080. Keep the main subject in the middle, because the edges are cropped on small screens. A new photo replaces the old one.</p>
+          <p className="bcov__hint">Choose any photo, then frame it in 16:9 by dragging and pinching, and pick JPEG, PNG or WebP (up to {COVER_MAX_MB} MB). Keep the main subject in the middle, because the edges are cropped on small screens. A new photo replaces the old one.</p>
         </div>
       </CardBody>
     </Card>

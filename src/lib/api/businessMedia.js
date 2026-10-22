@@ -1,27 +1,26 @@
-// src/lib/api/businessMedia.js — MODIFIED (adds the logo; cover must be landscape 16:9)
+// src/lib/api/businessMedia.js — MODIFIED (the cover is framed and converted by the smart upload, so the 16:9 check is gone)
 //
 // AIM
 // The two business pictures: the cover photo (businesses.cover_url) and the logo
 // (businesses.logo_url). Files go to the public "business-media" bucket under
 // <businessId>/cover/ and <businessId>/logo/ (the existing storage rule lets the owner and
 // managers write there). Replacing or removing a picture deletes the old file from storage, so
-// nothing is left behind. The cover must be landscape 16:9; a photo that is not is turned down
-// softly: { data: null, error: null, notice: "..." }. Every function returns { data, error }
-// and never throws.
+// nothing is left behind. The cover arrives already cropped to 16:9 and converted by the smart
+// upload (components/ui/ImageUploadButton.jsx), so this file only checks the type and the size.
+// Every function returns { data, error } and never throws.
 
 import { supabase } from "../../config/supabase.js";
-import { checkWide169 } from "../imageCheck.js";
 
 const BUCKET = "business-media";
 const TYPES = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 const NOT_CONNECTED = { data: null, error: "The app is not connected to the database yet." };
 
-export const COVER_MAX_MB = 4;
+export const COVER_MAX_MB = 5; // the storage bucket refuses anything bigger
 export const LOGO_MAX_MB = 2;
 
 const KINDS = {
-  cover: { column: "cover_url", folder: "cover", maxMb: COVER_MAX_MB, wide: true, who: "cover photo" },
-  logo: { column: "logo_url", folder: "logo", maxMb: LOGO_MAX_MB, wide: false, who: "logo" },
+  cover: { column: "cover_url", folder: "cover", maxMb: COVER_MAX_MB, who: "cover photo" },
+  logo: { column: "logo_url", folder: "logo", maxMb: LOGO_MAX_MB, who: "logo" },
 };
 
 // storage path of a file we uploaded for this business and kind, or "" for anything else
@@ -47,10 +46,6 @@ export async function uploadBusinessImage(kind, businessId, file, oldUrl) {
   const k = KINDS[kind];
   if (!TYPES[file.type]) return { data: null, error: "Use a JPG, PNG or WebP photo." };
   if (file.size > k.maxMb * 1024 * 1024) return { data: null, error: `The ${k.who} must be under ${k.maxMb} MB.` };
-  if (k.wide) {
-    const shape = await checkWide169(file);
-    if (!shape.ok) return { data: null, error: null, notice: shape.message };
-  }
   const path = `${businessId}/${k.folder}/${crypto.randomUUID()}.${TYPES[file.type]}`;
   const up = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false });
   if (up.error) return { data: null, error: up.error.message };

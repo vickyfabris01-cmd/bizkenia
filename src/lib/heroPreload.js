@@ -1,91 +1,155 @@
-// src/lib/heroPreload.js — NEW FILE
+// src/lib/heroPreload.js — MODIFIED (a slideshow clock: every online hero photo takes a turn, one every 4 minutes)
 //
 // AIM
-// Get the home page hero photo ready BEFORE the home page draws, and only once per session.
-// main.jsx starts this before React renders, so the database call and the image download run
-// while the app is starting up. The home page shows a skeleton until this is ready, then draws
-// the real page in one go, so the photo never appears after the text.
+// Decides which online hero photo the home page shows, and when it changes. The home page itself is
+// never held back: it draws at once with the picture kept in the code (src/assets/hero), and the
+// online photo is faded in over it as soon as it has been downloaded (components/home/HeroBanner.jsx).
 //
-// "Ready" means one of these has happened:
-//   - the current hero photo was found and fully downloaded     -> ready, with a url
-//   - there are no active hero photos                           -> ready, no url (plain hero)
-//   - the lookup or the download failed                         -> ready, no url (plain hero)
-//   - it took longer than HERO_TIMEOUT_MS                       -> ready, no url (plain hero)
-// So the page can never get stuck on the skeleton.
+// THE CLOCK
+// The photo on show is worked out from the wall clock: slot = floor(now / 4 minutes), photo =
+// slot modulo the number of photos. So every visitor sees the same photo, and the rhythm does not
+// depend on which page is open or on when Home was last visited: coming back to Home after ten minutes
+// simply shows the photo that belongs to now. While the site is open a timer wakes at each 4-minute
+// boundary, downloads the next photo FIRST, and only then moves on, so the picture never pops in.
+// A tab that was in the background catches up when it becomes visible again.
 //
-// Once per session: a good result (a photo, or "no photos") is kept in sessionStorage, so later
-// visits to home, and refreshes in the same tab, are ready on the very first paint with no skeleton
-// and no database call. A failure or a timeout is NOT kept, so the next page load tries again.
-// The database rotates the photo every 12 hours to a week, so keeping it for one session is safe.
+// KEPT IN THE SESSION
+// The list of photos is kept in sessionStorage for 10 minutes, so a refresh or another visit to Home
+// starts on the right photo with no wait. A failed lookup is not kept. Every 8th boundary (about 32
+// minutes) the list is read again, so photos the super admin adds, deletes or switches off are picked up.
 //
 // EXPORTS
-//   startHeroPreload()   begin (safe to call many times; only the first call does the work)
-//   useHeroPreload()     React hook -> { ready, url }
+//   ROTATE_MS, TRANSITION_MS   4 minutes between photos, 2 seconds for the change itself
+//   startHeroPreload()         begin (safe to call many times; only the first call does the work)
+//   useHeroSlides()            React hook -> { ready, images: [{ url, alt }], index }
+//   heroIntroduced()           true once an online photo has been on screen in this visit (or the list came
+//                              from earlier in the session). Until then the home page shows the picture kept
+//                              in the code first and ANIMATES the photo in over it, even when the photo was
+//                              downloaded before the page drew.
+//   markHeroIntroduced()       called by the banner when a photo has been shown
 
 import { useEffect, useSyncExternalStore } from "react";
-import { getHeroImage } from "./api/hero.js";
+import { listHeroSlides } from "./api/hero.js";
 
-const STORAGE_KEY = "hero-preload-v1";
-export const HERO_TIMEOUT_MS = 5000;
+export const ROTATE_MS = 4 * 60 * 1000;
+export const TRANSITION_MS = 2000;
 
-let state = { ready: false, url: "" };
-let started = null; // the promise from the first start; also the "already started" flag
+const STORAGE_KEY = "hero-slides-v2";
+const CACHE_MS = 10 * 60 * 1000;
+const REFRESH_EVERY = 8;        // boundaries between two reads of the list
+const LOAD_TIMEOUT_MS = 8000;   // give up on one photo after this long and try the next
+
+let state = { ready: false, images: [], index: 0 };
+let started = null;
+let introduced = false;
+let timer = 0;
+let ticks = 0;
 const listeners = new Set();
 
-function readSession() {
+function setState(next) {
+  state = next;
+  listeners.forEach((notify) => notify());
+}
+
+const slotIndex = (n) => Math.floor(Date.now() / ROTATE_MS) % n;
+
+function readCache() {
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const saved = JSON.parse(raw);
-    return typeof saved?.url === "string" ? saved : null;
+    const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null");
+    if (!saved || !Array.isArray(saved.images) || Date.now() - saved.at > CACHE_MS) return null;
+    return saved.images;
   } catch (e) {
     return null;
   }
 }
 
-function writeSession(url) {
-  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ url })); } catch (e) { /* private mode: fine */ }
+function writeCache(images) {
+  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ at: Date.now(), images })); } catch (e) { /* private mode: fine */ }
 }
 
-function settle(url, remember) {
-  state = { ready: true, url };
-  if (remember) writeSession(url);
-  listeners.forEach((notify) => notify());
+// Downloads one photo; resolves true when it is ready to draw.
+function preload(url) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const t = setTimeout(() => resolve(false), LOAD_TIMEOUT_MS);
+    img.onload = () => { clearTimeout(t); resolve(true); };
+    img.onerror = () => { clearTimeout(t); resolve(false); };
+    img.src = url;
+  });
 }
+
+// The first photo that downloads, starting at `start` and going round. -1 when none does.
+async function firstLoadable(images, start) {
+  for (let k = 0; k < images.length; k++) {
+    const i = (start + k) % images.length;
+    if (await preload(images[i].url)) return i;
+  }
+  return -1;
+}
+
+// Read the list again and settle on the photo that belongs to this moment.
+async function refresh() {
+  const { data, error } = await listHeroSlides();
+  if (error) {
+    if (!state.ready) setState({ ready: true, images: [], index: 0 }); // the fallback picture stays; not kept for next time
+    return;
+  }
+  if (data.length === 0) {
+    setState({ ready: true, images: [], index: 0 });
+    writeCache([]);
+    return;
+  }
+  const i = await firstLoadable(data, slotIndex(data.length));
+  if (i < 0) { setState({ ...state, ready: true }); return; }
+  setState({ ready: true, images: data, index: i });
+  writeCache(data);
+}
+
+// Move on to the photo that belongs to now, once it has been downloaded.
+async function advance() {
+  const n = state.images.length;
+  if (n < 2) return;
+  const i = await firstLoadable(state.images, slotIndex(n));
+  if (i >= 0 && i !== state.index) setState({ ...state, index: i });
+}
+
+function schedule() {
+  clearTimeout(timer);
+  timer = setTimeout(tick, ROTATE_MS - (Date.now() % ROTATE_MS) + 50); // the next 4-minute boundary
+}
+
+async function tick() {
+  ticks += 1;
+  try {
+    if (ticks % REFRESH_EVERY === 0) await refresh();
+    else await advance();
+  } finally {
+    schedule();
+  }
+}
+
+export const heroIntroduced = () => introduced;
+export const markHeroIntroduced = () => { introduced = true; };
 
 export function startHeroPreload() {
   if (started) return started;
 
-  const saved = readSession();
-  if (saved) {
-    state = { ready: true, url: saved.url };
+  const cached = readCache();
+  if (cached) {
+    // Known from earlier in this session: on screen from the first paint, no waiting, no animation.
+    introduced = true;
+    setState({ ready: true, images: cached, index: cached.length ? slotIndex(cached.length) : 0 });
     started = Promise.resolve();
-    return started;
+  } else {
+    started = refresh();
   }
+  schedule();
 
-  started = new Promise((resolve) => {
-    let done = false;
-    const finish = (url, remember) => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      settle(url, remember);
-      resolve();
-    };
-    const timer = setTimeout(() => finish("", false), HERO_TIMEOUT_MS);
-
-    getHeroImage()
-      .then(({ data, error }) => {
-        if (error) return finish("", false);
-        if (!data?.url) return finish("", true); // no active photos: remember, plain hero
-        const img = new Image();
-        img.onload = () => finish(data.url, true);
-        img.onerror = () => finish("", false);
-        img.src = data.url;
-        return undefined;
-      })
-      .catch(() => finish("", false));
-  });
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") { advance(); schedule(); } // a background tab catches up
+    });
+  }
   return started;
 }
 
@@ -96,7 +160,7 @@ function subscribe(notify) {
 
 const getSnapshot = () => state;
 
-export function useHeroPreload() {
+export function useHeroSlides() {
   useEffect(() => { startHeroPreload(); }, []); // a safety net when home is not the first page opened
   return useSyncExternalStore(subscribe, getSnapshot);
 }

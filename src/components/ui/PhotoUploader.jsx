@@ -1,31 +1,32 @@
 // src/components/ui/PhotoUploader.jsx — NEW FILE
 //
 // AIM
-// Lets staff add and remove photos (rooms, later farms and shops). Files go to the public
-// "business-media" storage bucket under <businessId>/<folder>/, and the form keeps the list of
-// public URLs. Only the business owner or a manager may upload (storage rule in migration p2_04).
+// Lets staff add and remove photos (rooms, later farms and shops). Each chosen photo first opens
+// the crop window (smart upload: frame it, pick JPEG, PNG or WebP), then the finished file goes to the
+// public "business-media" storage bucket under <businessId>/<folder>/, and the form keeps the list
+// of public URLs. Only the business owner or a manager may upload (storage rule in migration p2_04).
 //
 // PROPS
 //   businessId  id of the business (first folder of the path; the storage rule checks it)
 //   folder      sub folder name, e.g. "rooms"
 //   value       array of image URLs        onChange(nextArray)
-//   max         most photos allowed (default 4)         maxMb  biggest file in MB (default 3)
+//   max         most photos allowed (default 4)         maxMb  biggest file in MB (default 5, the bucket's limit)
+//   preset      crop shape, see lib/imagePipeline.js (default "room", 16:10)
 //   label       text above
 
 import { useId, useState } from "react";
 import { supabase } from "../../config/supabase.js";
 import Icon from "./Icon.jsx";
+import ImageUploadButton from "./ImageUploadButton.jsx";
 
 const TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-export default function PhotoUploader({ businessId, folder = "photos", value = [], onChange, max = 4, maxMb = 3, label = "Photos" }) {
+export default function PhotoUploader({ businessId, folder = "photos", value = [], onChange, max = 4, maxMb = 5, label = "Photos", preset = "room" }) {
   const id = useId();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  async function onPick(e) {
-    const files = Array.from(e.target.files || []);
-    e.target.value = "";
+  async function onFiles(files) {
     if (!files.length) return;
     setError("");
     if (!supabase) { setError("The app is not connected to the database yet."); return; }
@@ -59,10 +60,9 @@ export default function PhotoUploader({ businessId, folder = "photos", value = [
           </div>
         ))}
         {value.length < max && (
-          <label className="rent-photo rent-photo--add">
+          <ImageUploadButton className="rent-photo rent-photo--add" preset={preset} multiple maxFiles={max - value.length} disabled={busy} onFiles={onFiles} ariaLabel="Add photos">
             <span><Icon name="plus" size={18} /><br />{busy ? "Uploading…" : "Add"}</span>
-            <input type="file" accept={TYPES.join(",")} multiple disabled={busy} onChange={onPick} aria-label="Add photos" />
-          </label>
+          </ImageUploadButton>
         )}
       </div>
       {error && <p className="ui-field__error" role="alert">{error}</p>}

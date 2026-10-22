@@ -17,7 +17,7 @@ const guard = (fn) => (...args) => (supabase ? fn(...args) : Promise.resolve(NOT
 const text = (v) => (v == null ? null : String(v).trim() || null);
 const num = (v) => (v === "" || v == null ? null : Number(v));
 
-export const PHOTO_MAX_MB = 4;
+export const PHOTO_MAX_MB = 5; // the storage bucket refuses anything bigger
 export const MAX_PHOTOS = 5;
 const TYPES = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 const BUCKET = "business-media";

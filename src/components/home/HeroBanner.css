@@ -1,0 +1,29 @@
+/* src/components/home/HeroBanner.css — NEW FILE. The photo layers behind the home page hero.
+   Layers: .hero-slides (z 0) < .hero-shade (z 1) < the page's own content (z 2, see HomePage.css).
+   The 2-second changes are chosen by data-anim on .hero-slides; --hero-ms is their length. */
+.hero-slides { position: absolute; inset: 0; z-index: 0; overflow: hidden; --hero-ms: 2000ms; }
+.hero-slide { position: absolute; inset: 0; background-size: cover; background-position: center; background-repeat: no-repeat; }
+
+/* The dark wash that keeps white text readable on any photo. It fades in when a photo first appears. */
+.hero-shade { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0; transition: opacity 1.5s ease; background: linear-gradient(180deg, rgba(5, 46, 22, 0.78), rgba(5, 46, 22, 0.55)); }
+.home-hero--image .hero-shade { opacity: 1; }
+
+/* fade: the new photo fades in over the old one */
+.hero-slides[data-anim="fade"] .hero-slide--in { animation: hero-fade var(--hero-ms) ease-in-out both; }
+@keyframes hero-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* uncover: the old photo slides away to the left and the new one is already there underneath */
+.hero-slides[data-anim="uncover"] .hero-slide--base { z-index: 2; animation: hero-uncover var(--hero-ms) ease-in-out both; }
+.hero-slides[data-anim="uncover"] .hero-slide--in { z-index: 1; }
+@keyframes hero-uncover { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+
+/* push: the new photo comes in from the right and pushes the old one out to the left */
+.hero-slides[data-anim="push"] .hero-slide--base { animation: hero-push-out var(--hero-ms) ease-in-out both; }
+.hero-slides[data-anim="push"] .hero-slide--in { animation: hero-push-in var(--hero-ms) ease-in-out both; }
+@keyframes hero-push-out { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+@keyframes hero-push-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+/* random bars: 8 copies of the new photo, each cut to one bar (clip-path set in HeroBanner.jsx),
+   switched on one after another in random order (animation-delay set per bar) */
+.hero-slide--bar { opacity: 0; animation: hero-bar 500ms ease-out both; }
+@keyframes hero-bar { from { opacity: 0; } to { opacity: 1; } }

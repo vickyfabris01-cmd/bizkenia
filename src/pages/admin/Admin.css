@@ -25,10 +25,16 @@
 
 /* Home page hero images (HeroImagesCard) */
 .hero-adm { display: grid; gap: var(--space-5); }
-.hero-adm__restart { display: flex; align-items: end; }
 .hero-adm__file { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 var(--space-4); border: 1px dashed var(--color-border-strong); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font-weight: var(--weight-medium); cursor: pointer; position: relative; }
 .hero-adm__file:hover { background: var(--color-surface-2); }
 .hero-adm__file input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.hero-adm__file.is-disabled, .hero-adm__replace.is-disabled { opacity: 0.5; cursor: not-allowed; }
+.hero-adm__file.is-disabled input, .hero-adm__replace.is-disabled input { cursor: not-allowed; }
+/* "Replace image": the same shape as a small outline button, with the file input hidden inside it */
+.hero-adm__replace { position: relative; display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 var(--space-3); border: 1px solid var(--color-control-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font-size: var(--text-sm); font-weight: var(--weight-medium); cursor: pointer; }
+.hero-adm__replace:hover { background: var(--color-surface-2); }
+.hero-adm__replace:focus-within { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.hero-adm__replace input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 .hero-adm__list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
 .hero-adm__item { display: grid; grid-template-columns: 96px 1fr; gap: var(--space-3); align-items: center; padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
 .hero-adm__thumb { width: 96px; height: 64px; object-fit: cover; border-radius: var(--radius-md); background: var(--color-surface-2); }

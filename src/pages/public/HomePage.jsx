@@ -23,16 +23,17 @@
 // of each; from 640px CSS shows one full row (3, 4 or 5 cards) and under 640px every card is in a
 // scrolling row (about 2.3 cards in view).
 //
-// Hero background: the super admin uploads photos in Settings. The photo showing now comes from
-// current_hero_image(). It is fetched and downloaded by lib/heroPreload.js, which main.jsx starts
-// before React renders and which remembers the result for the whole session. Until it is ready the
-// page shows a grey skeleton of itself, then the real page draws in one go. If there is no photo,
-// or it cannot load, or it takes too long, the original plain green hero is used.
+// Hero background: components/home/HeroBanner.jsx. The hero draws at once with the picture kept in the
+// code (src/assets/hero, empty = plain green). The online photos the super admin keeps in Settings
+// (up to 5) are faded in over it as soon as they have downloaded, then take turns every 4 minutes with
+// fade, random bars, uncover and push changes. lib/heroPreload.js keeps the clock, so the rhythm
+// carries on whichever page is open. The page no longer waits for the photo.
 
 import "./HomePage.css";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Badge, Button, Card, EmptyState, Icon, Skeleton } from "../../components/ui";
+import { Badge, Button, Card, EmptyState, Icon } from "../../components/ui";
+import HeroBanner from "../../components/home/HeroBanner.jsx";
 import BusinessCard, { BusinessCardSkeleton } from "../../components/business/BusinessCard.jsx";
 import ListingCard, { ListingCardSkeleton } from "../../components/business/ListingCard.jsx";
 import { BUSINESS_TYPES } from "../../config/counties.js";
@@ -40,7 +41,6 @@ import useAsync from "../../hooks/useAsync.js";
 import useBrand from "../../hooks/useBrand.js";
 import { listBusinesses, listHomeListings } from "../../lib/api/directory.js";
 import { formatKsh } from "../../lib/format.js";
-import { useHeroPreload } from "../../lib/heroPreload.js";
 import { useSession } from "../../store/sessionStore.js";
 import { useBusinessStore } from "../../store/businessStore.js";
 
@@ -77,41 +77,6 @@ const roomCard = (r) => ({
   price: `${formatKsh(r.price)} / ${r.is_hostel ? "semester" : "month"}`, place: where(r), badge: `${r.available} available`,
 });
 
-// Grey wireframe of the whole page, same layout as the real one, shown until the hero is ready.
-function HomeSkeleton() {
-  return (
-    <div role="status" aria-live="polite" aria-label="Loading">
-      <section className="home-hero" aria-hidden="true">
-        <div className="home-hero__inner">
-          <Skeleton height={44} width="min(520px, 90%)" />
-          <Skeleton height={18} width="min(460px, 80%)" />
-          <div className="home-search">
-            <Skeleton height={44} style={{ flex: 1 }} />
-            <Skeleton height={44} width={48} />
-          </div>
-        </div>
-      </section>
-
-      <section className="pg" aria-hidden="true">
-        <div className="home-list__head"><Skeleton height={28} width={240} /></div>
-        <div className="crow crow--listing" data-rows="1">{[0, 1, 2, 3, 4].map((i) => <ListingCardSkeleton key={i} />)}</div>
-      </section>
-
-      <section className="pg" aria-hidden="true">
-        <div className="home-list__head"><Skeleton height={28} width={200} /></div>
-        <div className="crow crow--biz" data-rows="1">{[0, 1, 2, 3, 4].map((i) => <BusinessCardSkeleton key={i} />)}</div>
-      </section>
-
-      <section className="pg" aria-hidden="true">
-        <Skeleton height={28} width={180} style={{ marginBottom: "var(--space-3)" }} />
-        <div className="pg-grid pg-grid--3">
-          {[0, 1, 2].map((i) => <Skeleton key={i} height={110} style={{ borderRadius: "var(--radius-lg)" }} />)}
-        </div>
-      </section>
-    </div>
-  );
-}
-
 export default function HomePage() {
   const brand = useBrand();
   const navigate = useNavigate();
@@ -121,7 +86,6 @@ export default function HomePage() {
   const [term, setTerm] = useState("");
   const { data, error, loading } = useAsync(loadLatestBusinesses, []);
   const { data: listings, error: listError, loading: listLoading } = useAsync(() => listHomeListings(5), []);
-  const hero = useHeroPreload(); // { ready, url }; url is "" when the plain green hero is used
   const first = (profile?.full_name || "").split(" ")[0];
   const ownsBusiness = Boolean(user) && memberships.length > 0;
 
@@ -142,15 +106,9 @@ export default function HomePage() {
     navigate(`/explore${s ? `?${s}` : ""}`);
   }
 
-  // The lists keep loading in the background while the skeleton shows.
-  if (!hero.ready) return <HomeSkeleton />;
-
   return (
     <>
-      <section
-        className={`home-hero${hero.url ? " home-hero--image" : ""}`}
-        style={hero.url ? { backgroundImage: `url("${hero.url}")` } : undefined}
-      >
+      <HeroBanner>
         <div className="home-hero__inner">
           <h1 className="home-hero__title">
             {first ? `Hello, ${first}. What are you looking for?` : "Find rentals and local businesses across Kenya"}
@@ -171,7 +129,7 @@ export default function HomePage() {
             <Button type="submit" aria-label="Search" leftIcon={<Icon name="search" size={18} />}>Search</Button>
           </form>
         </div>
-      </section>
+      </HeroBanner>
 
       <section className="pg" aria-labelledby="home-listings-h">
         <div className="home-list__head">

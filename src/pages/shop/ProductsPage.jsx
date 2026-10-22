@@ -14,6 +14,7 @@ import "./Shop.css";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Badge, Button, Card, CardBody, EmptyState, Input, SelectInput } from "../../components/ui";
 import { ConfirmDialog, Modal } from "../../components/modals/Modal.jsx";
+import ImageUploadButton from "../../components/ui/ImageUploadButton.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { useToast } from "../../hooks/useNotifications.js";
 import {
@@ -105,9 +106,8 @@ function PhotoManager({ bid, images, set, onUploaded }) {
   const [busy, setBusy] = useState(false);
   const list = images || [];
 
-  async function onPick(e) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
+  async function onFiles(files) {
+    const file = files[0];
     if (!file) return;
     if (list.length >= MAX_PHOTOS) { toast.info(`A product can have up to ${MAX_PHOTOS} photos.`); return; }
     setBusy(true);
@@ -136,8 +136,10 @@ function PhotoManager({ bid, images, set, onUploaded }) {
           ))}
         </div>
       )}
-      <label className="shop-file"><span>{busy ? "Uploading..." : "Add a photo"}</span><input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={onPick} aria-label="Add a product photo" /></label>
-      <p className="shop-hint">JPG, PNG or WebP, up to {PHOTO_MAX_MB} MB each, up to {MAX_PHOTOS} photos. The first one is the main photo.</p>
+      <ImageUploadButton className="shop-file" preset="product" disabled={busy || list.length >= MAX_PHOTOS} onFiles={onFiles} ariaLabel="Add a product photo">
+        <span>{busy ? "Uploading..." : "Add a photo"}</span>
+      </ImageUploadButton>
+      <p className="shop-hint">Any photo works: you frame it as a square (drag and pinch) and choose JPEG, PNG or WebP. Up to {MAX_PHOTOS} photos, {PHOTO_MAX_MB} MB each. The first one is the main photo.</p>
     </div>
   );
 }

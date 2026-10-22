@@ -1,8 +1,8 @@
 /* src/pages/public/HomePage.css — MODIFIED (the nth-child row rules are gone: .crow in CardRows.css lays out the cards) */
 .home-hero { background: var(--color-primary-soft); border-bottom: 1px solid var(--color-border); }
-/* Phones: a compact hero (about a quarter of the screen): small padding and gaps, a 20px headline
+/* Phones: a compact hero (still well under half the screen, 24px taller than before): a 20px headline
    that may use the full width, a one or two line paragraph and one 44px search row. */
-.home-hero__inner { max-width: var(--container-max); margin: 0 auto; padding: var(--space-3) var(--gutter); display: grid; gap: var(--space-2); }
+.home-hero__inner { max-width: var(--container-max); margin: 0 auto; padding: var(--space-6) var(--gutter); display: grid; gap: var(--space-2); }
 .home-hero__title { margin: 0; font-size: var(--text-xl); line-height: 1.2; font-weight: var(--weight-bold); color: var(--color-on-primary-soft); }
 .home-hero__lead { margin: 0; max-width: 60ch; color: var(--color-text); font-size: var(--text-sm); line-height: 1.35; }
 .home-hero__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
@@ -60,9 +60,12 @@
 .home-owner__actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
 @media (min-width: 768px) { .home-owner { grid-template-columns: 1fr auto; } }
 
-/* Hero with a background photo. The plain .home-hero rules above stay as the fallback. */
-.home-hero--image { position: relative; background-size: cover; background-position: center; border-bottom-color: transparent; }
-.home-hero--image::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5, 46, 22, 0.78), rgba(5, 46, 22, 0.55)); }
-.home-hero--image .home-hero__inner { position: relative; }
+/* Hero with a background photo. The photo layers and the dark wash are in HeroBanner.css; this keeps
+   the page's own content above them and turns the text white once there is a picture. The plain
+   .home-hero rules above stay as the fallback (no picture in the code, no online photo). */
+.home-hero { position: relative; overflow: hidden; }
+.home-hero .home-hero__inner { position: relative; z-index: 2; }
+.home-hero__title, .home-hero__lead { transition: color 1.5s ease; }
+.home-hero--image { border-bottom-color: transparent; }
 .home-hero--image .home-hero__title,
 .home-hero--image .home-hero__lead { color: #fff; }

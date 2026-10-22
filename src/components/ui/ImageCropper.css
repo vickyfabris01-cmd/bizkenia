@@ -1,0 +1,44 @@
+/* src/components/ui/ImageCropper.css — NEW FILE. Styles for ImageCropper.jsx and ImageUploadButton.jsx. Tokens only. */
+.crop { display: grid; gap: var(--space-3); }
+.crop__intro, .crop__note { margin: 0; color: var(--color-text-muted); font-size: var(--text-sm); }
+
+/* The frame is shaped like the place the photo will be shown. It is never taller than about half
+   the screen, so the controls stay in reach on a phone. */
+.crop__frame {
+  --r: 1.7778;
+  position: relative; overflow: hidden; justify-self: center;
+  width: min(100%, calc(48dvh * var(--r))); aspect-ratio: var(--r);
+  background: var(--color-surface-2); border-radius: var(--radius-md); border: 1px solid var(--color-border);
+  touch-action: none; /* dragging and pinching move the photo, not the page */
+  cursor: grab; user-select: none; -webkit-user-select: none;
+}
+.crop__frame:active { cursor: grabbing; }
+.crop__frame:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.crop__img { position: absolute; left: 0; top: 0; max-width: none; transform-origin: 0 0; pointer-events: none; will-change: transform; }
+.crop__grid {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(to right, transparent calc(33.333% - 0.5px), rgba(255, 255, 255, 0.55) calc(33.333% - 0.5px), rgba(255, 255, 255, 0.55) calc(33.333% + 0.5px), transparent calc(33.333% + 0.5px), transparent calc(66.666% - 0.5px), rgba(255, 255, 255, 0.55) calc(66.666% - 0.5px), rgba(255, 255, 255, 0.55) calc(66.666% + 0.5px), transparent calc(66.666% + 0.5px)),
+    linear-gradient(to bottom, transparent calc(33.333% - 0.5px), rgba(255, 255, 255, 0.55) calc(33.333% - 0.5px), rgba(255, 255, 255, 0.55) calc(33.333% + 0.5px), transparent calc(33.333% + 0.5px), transparent calc(66.666% - 0.5px), rgba(255, 255, 255, 0.55) calc(66.666% - 0.5px), rgba(255, 255, 255, 0.55) calc(66.666% + 0.5px), transparent calc(66.666% + 0.5px));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.crop__zoom { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: var(--space-2); }
+.crop__zoom input[type="range"] { width: 100%; min-width: 0; accent-color: var(--color-primary); height: 44px; margin: 0; }
+.crop__step { width: 44px; height: 44px; border-radius: var(--radius-full); border: 1px solid var(--color-control-border); background: var(--color-surface); color: var(--color-text); font-size: var(--text-xl); line-height: 1; cursor: pointer; }
+.crop__step:hover:not(:disabled) { background: var(--color-surface-2); }
+.crop__step:disabled { opacity: 0.45; cursor: default; }
+.crop__step:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+.crop__format { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.crop__label { font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--color-text); margin-right: var(--space-1); }
+.crop__chip { appearance: none; min-height: 44px; padding: 0 var(--space-4); border-radius: var(--radius-full); border: 1px solid var(--color-control-border); background: var(--color-surface); color: var(--color-text); font-family: inherit; font-size: var(--text-sm); font-weight: var(--weight-medium); cursor: pointer; }
+.crop__chip[aria-checked="true"] { background: var(--color-primary-soft); color: var(--color-on-primary-soft); border-color: var(--color-primary); }
+.crop__chip:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+.crop__warn { margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--color-warning-bg); color: var(--color-warning-text); font-size: var(--text-sm); }
+.crop__error { margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--color-error-bg); color: var(--color-error-text); font-size: var(--text-sm); }
+.crop__status { margin: 0; color: var(--color-text-muted); }
+
+/* ImageUploadButton: the message that sits next to the picker when a chosen file was not a picture. */
+.imgup__error { display: block; margin-top: var(--space-1); color: var(--color-error-text); font-size: var(--text-sm); }
