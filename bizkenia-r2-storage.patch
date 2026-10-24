@@ -1,0 +1,956 @@
+From 7e46ca38bae1d4a365de0ebedba08371d5655d7e Mon Sep 17 00:00:00 2001
+From: claude <c@c>
+Date: Sat, 24 Oct 2026 10:17:22 +0000
+Subject: [PATCH] R2 file storage: Worker, can_write_files, storage helper,
+ edge function cleanup, migration tools
+
+---
+ docs/R2-STORAGE.md                            |  67 ++++++
+ package.json                                  |   3 +-
+ scripts/migrate-storage-to-r2.mjs             |  55 +++++
+ scripts/rewrite-storage-urls.sql              |  40 ++++
+ src/components/ui/PhotoUploader.jsx           |   5 +-
+ src/lib/api/businessMedia.js                  |  11 +-
+ src/lib/api/hero.js                           |  15 +-
+ src/lib/api/shop.js                           |   7 +-
+ src/lib/storage.js                            |  59 +++++
+ src/pages/account/AccountPage.jsx             |   5 +-
+ supabase/functions/_shared/storage.ts         |  23 ++
+ supabase/functions/delete-account/index.ts    |   6 +-
+ supabase/functions/delete-business/index.ts   |   4 +-
+ .../purge-closed-businesses/index.ts          |   4 +-
+ .../20261024100001_r2_can_write_files.sql     |  29 +++
+ worker/index.js                               | 210 ++++++++++++++++++
+ worker/worker.test.mjs                        |  81 +++++++
+ wrangler.jsonc                                |  17 +-
+ 18 files changed, 612 insertions(+), 29 deletions(-)
+ create mode 100644 docs/R2-STORAGE.md
+ create mode 100644 scripts/migrate-storage-to-r2.mjs
+ create mode 100644 scripts/rewrite-storage-urls.sql
+ create mode 100644 src/lib/storage.js
+ create mode 100644 supabase/migrations/20261024100001_r2_can_write_files.sql
+ create mode 100644 worker/index.js
+ create mode 100644 worker/worker.test.mjs
+
+diff --git a/docs/R2-STORAGE.md b/docs/R2-STORAGE.md
+new file mode 100644
+index 0000000..bc97106
+--- /dev/null
++++ b/docs/R2-STORAGE.md
+@@ -0,0 +1,67 @@
++# Moving file storage from Supabase to Cloudflare R2
++
++Pictures (logos, covers, room and product photos, avatars, home hero) can live in R2 instead of
++Supabase Storage. One setting switches between them, so you can go back at any time.
++
++How it works: the browser sends the file to `/api/files/...` on your own site (the Worker in
++`worker/index.js`). The Worker asks Supabase "may this person write here?" (`can_write_files`, same
++rules as before), checks the file really is a JPG/PNG/WebP, then saves it in R2. Reading pictures is
++public and cached. The site itself is still served as free static assets; only `/api/files/*` wakes the Worker.
++
++## Order matters. Do these in order.
++
++**1. Bucket** (skip if done). Dashboard > R2 > Create bucket `bizkenia-files`. Leave public access OFF.
++
++**2. Fill in `wrangler.jsonc` > `vars`**: `SUPABASE_URL` and `SUPABASE_ANON_KEY` (public values, the same as your
++`VITE_SUPABASE_*`). Keep `ALLOWED_ORIGINS` for local testing, or clear it.
++
++**3. Database function.** Run `supabase/migrations/20261024100001_r2_can_write_files.sql`
++(`npx supabase db push`, or paste it in the SQL editor).
++
++**4. Admin secret** (PowerShell, in the project folder). Pick a long random value:
++```
++npx wrangler secret put FILES_ADMIN_SECRET
++```
++
++**5. Deploy** (push to GitHub as usual). Then open `https://<your-site>/api/files/business-media/x` and you
++should see `{"error":"Not found."}`. That means the Worker is live and the site still loads normally.
++Nothing uses R2 yet.
++
++**6. Copy the old files** (dry run first). Variables are in the header of `scripts/migrate-storage-to-r2.mjs`.
++```
++node scripts/migrate-storage-to-r2.mjs --dry-run
++node scripts/migrate-storage-to-r2.mjs
++```
++The service-role key is only for this script on your laptop. Never commit it or put it in the Worker.
++
++**7. Switch the site.** In Cloudflare > Workers > bizkenia > Settings > Build > Variables, add
++`VITE_STORAGE_PROVIDER = r2` and redeploy. (For local testing put it in `.env.local` and also set
++`VITE_FILES_API_URL=https://<your-site>/api/files`.) New uploads now go to R2. Test: upload a logo, a
++product photo, an avatar; delete one.
++
++**8. Repoint saved addresses.** Open `scripts/rewrite-storage-urls.sql`, fill in the two prefixes, run it with
++`v_apply = false`, check the counts, then set it to `true`. Take a backup first.
++
++**9. Edge functions** (so deleting a business or account also deletes its R2 files):
++```
++npx supabase secrets set FILES_ADMIN_URL=https://<your-site>/api/files/admin FILES_ADMIN_SECRET=<same secret>
++npx supabase functions deploy delete-account delete-business purge-closed-businesses
++```
++
++**10. Later (after a week or two).** When nothing points at Supabase Storage any more, empty those three
++buckets to free the space.
++
++## Going back
++Set `VITE_STORAGE_PROVIDER=supabase` and redeploy. Files uploaded to R2 in the meantime stay in R2, and
++their saved addresses keep working because the Worker still serves them.
++
++## Notes
++- Serving pictures through the Worker counts toward the Workers free plan (100,000 requests a day). Images are
++  cached, so repeat views are cheap. For heavy traffic, connect a custom domain to the bucket and set
++  `VITE_FILES_BASE_URL=https://cdn.<your-domain>`; the Worker is then used only for uploads and deletes.
++- Saved addresses contain your site's domain. If you change the domain later, run the rewrite script again.
++- Limits enforced by the Worker: business and hero photos 5 MB, avatars 2 MB, JPG/PNG/WebP only (checked
++  from the file contents, not the name).
++- Tests: `npm run test:worker`.
++- Private documents (contracts, IDs) need a different route: not public, signed or Worker-checked reads. Not
++  included here; ask when you get to it.
+diff --git a/package.json b/package.json
+index 1f36c92..403e698 100644
+--- a/package.json
++++ b/package.json
+@@ -9,7 +9,8 @@
+     "preview": "vite preview",
+     "lint": "eslint src --ext .js,.jsx --report-unused-disable-directives --max-warnings 5",
+     "check:budget": "node scripts/check-budget.mjs",
+-    "test:e2e": "playwright test"
++    "test:e2e": "playwright test",
++    "test:worker": "node --test worker/worker.test.mjs"
+   },
+   "dependencies": {
+     "@supabase/supabase-js": "^2.39.0",
+diff --git a/scripts/migrate-storage-to-r2.mjs b/scripts/migrate-storage-to-r2.mjs
+new file mode 100644
+index 0000000..9527643
+--- /dev/null
++++ b/scripts/migrate-storage-to-r2.mjs
+@@ -0,0 +1,55 @@
++// scripts/migrate-storage-to-r2.mjs
++// AIM: copy every file from the three Supabase Storage buckets into R2, through the Worker's admin
++// route. Safe to run again and again: files already in R2 are skipped. Nothing is deleted from Supabase.
++//
++//   PowerShell:
++//   $env:SUPABASE_URL="https://xxxx.supabase.co"
++//   $env:SUPABASE_SERVICE_ROLE_KEY="..."        # keep on your laptop only, never commit it
++//   $env:FILES_ADMIN_URL="https://your-site/api/files/admin"
++//   $env:FILES_ADMIN_SECRET="..."               # the same one you set with wrangler secret put
++//   node scripts/migrate-storage-to-r2.mjs --dry-run     # lists what would be copied
++//   node scripts/migrate-storage-to-r2.mjs               # copies
++
++import { createClient } from "@supabase/supabase-js";
++
++const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, FILES_ADMIN_URL, FILES_ADMIN_SECRET } = process.env;
++const dry = process.argv.includes("--dry-run");
++if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !FILES_ADMIN_URL || !FILES_ADMIN_SECRET) {
++  console.error("Set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, FILES_ADMIN_URL and FILES_ADMIN_SECRET first.");
++  process.exit(1);
++}
++const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
++const BUCKETS = ["business-media", "site-media", "avatars"];
++
++async function* walk(bucket, prefix = "") {
++  for (let offset = 0; ; offset += 100) {
++    const { data, error } = await admin.storage.from(bucket).list(prefix, { limit: 100, offset, sortBy: { column: "name", order: "asc" } });
++    if (error) throw new Error(`${bucket}/${prefix}: ${error.message}`);
++    if (!data.length) return;
++    for (const item of data) {
++      const path = prefix ? `${prefix}/${item.name}` : item.name;
++      if (item.id === null) yield* walk(bucket, path); // a folder
++      else yield path;
++    }
++    if (data.length < 100) return;
++  }
++}
++
++const stats = { copied: 0, skipped: 0, failed: 0 };
++for (const bucket of BUCKETS) {
++  for await (const path of walk(bucket)) {
++    if (dry) { console.log("would copy", bucket, path); stats.copied++; continue; }
++    const { data: blob, error } = await admin.storage.from(bucket).download(path);
++    if (error) { console.error("FAILED download", bucket, path, error.message); stats.failed++; continue; }
++    const res = await fetch(`${FILES_ADMIN_URL.replace(/\/+$/, "")}/${bucket}/${path.split("/").map(encodeURIComponent).join("/")}`, {
++      method: "PUT",
++      headers: { "X-Admin-Secret": FILES_ADMIN_SECRET, "Content-Type": blob.type || "application/octet-stream" },
++      body: Buffer.from(await blob.arrayBuffer()),
++    });
++    if (res.status === 201) { stats.copied++; console.log("copied ", bucket, path); }
++    else if (res.status === 409) stats.skipped++;
++    else { stats.failed++; console.error("FAILED upload", bucket, path, res.status, await res.text()); }
++  }
++}
++console.log(dry ? "\nDry run." : "\nDone.", stats);
++if (stats.failed) process.exitCode = 2;
+diff --git a/scripts/rewrite-storage-urls.sql b/scripts/rewrite-storage-urls.sql
+new file mode 100644
+index 0000000..d71d7c4
+--- /dev/null
++++ b/scripts/rewrite-storage-urls.sql
+@@ -0,0 +1,40 @@
++-- scripts/rewrite-storage-urls.sql
++-- AIM: after the files are copied to R2 and the site runs with VITE_STORAGE_PROVIDER=r2, point every
++-- stored picture address (business logos and covers, room/product photos, avatars...) at the new place.
++-- Run in the Supabase SQL editor. It scans every text, text[] and jsonb column of every table in the
++-- public schema, so no column is forgotten. Run it first with v_apply = false (counts only), then true.
++-- Take a backup first (Supabase dashboard > Database > Backups).
++--
++-- Fill in the two prefixes. They must end where the bucket name begins:
++--   old: https://<project-ref>.supabase.co/storage/v1/object/public/
++--   new: the address the app now writes, up to the bucket name, e.g.
++--        https://bizkenia.<you>.workers.dev/api/files/     or    https://cdn.example.com/
++do $$
++declare
++  v_old   text    := 'https://YOUR-PROJECT-REF.supabase.co/storage/v1/object/public/';
++  v_new   text    := 'https://YOUR-SITE/api/files/';
++  v_apply boolean := false;
++  c record; n bigint; total bigint := 0;
++begin
++  if v_old like '%YOUR-%' or v_new like '%YOUR-%' then raise exception 'Fill in v_old and v_new first.'; end if;
++  for c in
++    select col.table_name t, col.column_name k, col.data_type d, col.udt_name u
++    from information_schema.columns col
++    join information_schema.tables tb on tb.table_schema = col.table_schema and tb.table_name = col.table_name
++    where col.table_schema = 'public' and tb.table_type = 'BASE TABLE'
++      and (col.data_type in ('text', 'character varying', 'jsonb') or (col.data_type = 'ARRAY' and col.udt_name = '_text'))
++  loop
++    if c.d in ('text', 'character varying') then
++      execute format('select count(*) from public.%I where %I like %L', c.t, c.k, v_old || '%') into n;
++      if n > 0 and v_apply then execute format('update public.%I set %I = replace(%I, %L, %L) where %I like %L', c.t, c.k, c.k, v_old, v_new, c.k, v_old || '%'); end if;
++    elsif c.d = 'jsonb' then
++      execute format('select count(*) from public.%I where %I::text like %L', c.t, c.k, '%' || v_old || '%') into n;
++      if n > 0 and v_apply then execute format('update public.%I set %I = replace(%I::text, %L, %L)::jsonb where %I::text like %L', c.t, c.k, c.k, v_old, v_new, c.k, '%' || v_old || '%'); end if;
++    else
++      execute format('select count(*) from public.%I where exists (select 1 from unnest(%I) x where x like %L)', c.t, c.k, v_old || '%') into n;
++      if n > 0 and v_apply then execute format('update public.%I set %I = (select array_agg(replace(x, %L, %L)) from unnest(%I) x) where exists (select 1 from unnest(%I) x where x like %L)', c.t, c.k, v_old, v_new, c.k, c.k, v_old || '%'); end if;
++    end if;
++    if n > 0 then raise notice '% rows in %.%', n, c.t, c.k; total := total + n; end if;
++  end loop;
++  raise notice '% % rows in total.', case when v_apply then 'Updated' else 'Would update' end, total;
++end $$;
+diff --git a/src/components/ui/PhotoUploader.jsx b/src/components/ui/PhotoUploader.jsx
+index d4b6a9c..bb2b7b0 100644
+--- a/src/components/ui/PhotoUploader.jsx
++++ b/src/components/ui/PhotoUploader.jsx
+@@ -18,6 +18,7 @@ import { useId, useState } from "react";
+ import { supabase } from "../../config/supabase.js";
+ import Icon from "./Icon.jsx";
+ import ImageUploadButton from "./ImageUploadButton.jsx";
++import { uploadFile, publicUrl } from "../../lib/storage.js";
+ 
+ const TYPES = ["image/jpeg", "image/png", "image/webp"];
+ 
+@@ -41,9 +42,9 @@ export default function PhotoUploader({ businessId, folder = "photos", value = [
+     for (const f of files) {
+       const ext = f.type === "image/png" ? "png" : f.type === "image/webp" ? "webp" : "jpg";
+       const path = `${businessId}/${folder}/${crypto.randomUUID()}.${ext}`;
+-      const { error: upErr } = await supabase.storage.from("business-media").upload(path, f, { contentType: f.type, upsert: false });
++      const { error: upErr } = await uploadFile("business-media", path, f);
+       if (upErr) { setError(upErr.message); break; }
+-      urls.push(supabase.storage.from("business-media").getPublicUrl(path).data.publicUrl);
++      urls.push(publicUrl("business-media", path));
+     }
+     setBusy(false);
+     if (urls.length) onChange([...value, ...urls]);
+diff --git a/src/lib/api/businessMedia.js b/src/lib/api/businessMedia.js
+index 30ee6f6..aa8ad38 100644
+--- a/src/lib/api/businessMedia.js
++++ b/src/lib/api/businessMedia.js
+@@ -10,6 +10,7 @@
+ // Every function returns { data, error } and never throws.
+ 
+ import { supabase } from "../../config/supabase.js";
++import { uploadFile, removeFiles, publicUrl } from "../storage.js";
+ 
+ const BUCKET = "business-media";
+ const TYPES = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+@@ -47,16 +48,16 @@ export async function uploadBusinessImage(kind, businessId, file, oldUrl) {
+   if (!TYPES[file.type]) return { data: null, error: "Use a JPG, PNG or WebP photo." };
+   if (file.size > k.maxMb * 1024 * 1024) return { data: null, error: `The ${k.who} must be under ${k.maxMb} MB.` };
+   const path = `${businessId}/${k.folder}/${crypto.randomUUID()}.${TYPES[file.type]}`;
+-  const up = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false });
++  const up = await uploadFile(BUCKET, path, file);
+   if (up.error) return { data: null, error: up.error.message };
+-  const url = supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
++  const url = publicUrl(BUCKET, path);
+   const err = await setColumn(businessId, k.column, url);
+   if (err) {
+-    await supabase.storage.from(BUCKET).remove([path]); // do not leave a file nobody points to
++    await removeFiles(BUCKET, [path]); // do not leave a file nobody points to
+     return { data: null, error: err };
+   }
+   const old = ownPathOf(businessId, k.folder, oldUrl);
+-  if (old) await supabase.storage.from(BUCKET).remove([old]); // the replaced file is deleted
++  if (old) await removeFiles(BUCKET, [old]); // the replaced file is deleted
+   return { data: { url }, error: null };
+ }
+ 
+@@ -66,7 +67,7 @@ export async function removeBusinessImage(kind, businessId, oldUrl) {
+   const err = await setColumn(businessId, k.column, null);
+   if (err) return { data: null, error: err };
+   const old = ownPathOf(businessId, k.folder, oldUrl);
+-  if (old) await supabase.storage.from(BUCKET).remove([old]);
++  if (old) await removeFiles(BUCKET, [old]);
+   return { data: null, error: null };
+ }
+ 
+diff --git a/src/lib/api/hero.js b/src/lib/api/hero.js
+index c05e36a..3f22b0c 100644
+--- a/src/lib/api/hero.js
++++ b/src/lib/api/hero.js
+@@ -12,6 +12,7 @@
+ // work succeeded but a leftover file could not be removed, `notice` says so.
+ 
+ import { supabase } from "../../config/supabase.js";
++import { uploadFile, removeFiles, publicUrl } from "../storage.js";
+ 
+ const BUCKET = "site-media";
+ const FOLDER = "hero";
+@@ -21,7 +22,7 @@ const NOT_CONNECTED = { data: null, error: "The app is not connected to the data
+ export const HERO_MAX_IMAGES = 5;
+ export const HERO_MAX_MB = 5; // the storage bucket refuses anything bigger
+ 
+-const urlFor = (path) => supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
++const urlFor = (path) => publicUrl(BUCKET, path);
+ const withUrl = (row) => ({ ...row, url: urlFor(row.storage_path) });
+ 
+ function checkFile(file) {
+@@ -56,14 +57,14 @@ export async function adminUploadHeroImage(file, label, nextOrder) {
+   if (countErr) return { data: null, error: countErr.message };
+   if ((count || 0) >= HERO_MAX_IMAGES) return { data: null, error: `There can be at most ${HERO_MAX_IMAGES} hero photos. Replace or delete one first.` };
+   const path = `${FOLDER}/${crypto.randomUUID()}.${TYPES[file.type]}`;
+-  const up = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false });
++  const up = await uploadFile(BUCKET, path, file);
+   if (up.error) return { data: null, error: up.error.message };
+   const { data: auth } = await supabase.auth.getUser();
+   const { data, error } = await supabase.from("hero_images")
+     .insert({ storage_path: path, alt_text: (label || "").trim() || null, sort_order: nextOrder || 0, created_by: auth?.user?.id || null })
+     .select().single();
+   if (error) {
+-    await supabase.storage.from(BUCKET).remove([path]); // do not leave a file with no row
++    await removeFiles(BUCKET, [path]); // do not leave a file with no row
+     return { data: null, error: error.message };
+   }
+   return { data: withUrl(data), error: null };
+@@ -75,14 +76,14 @@ export async function adminReplaceHeroImage(image, file) {
+   const bad = checkFile(file);
+   if (bad) return { data: null, error: bad };
+   const path = `${FOLDER}/${crypto.randomUUID()}.${TYPES[file.type]}`;
+-  const up = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false });
++  const up = await uploadFile(BUCKET, path, file);
+   if (up.error) return { data: null, error: up.error.message };
+   const { data, error } = await supabase.from("hero_images").update({ storage_path: path }).eq("id", image.id).select().maybeSingle();
+   if (error || !data) {
+-    await supabase.storage.from(BUCKET).remove([path]); // the row still points to the old file, so drop the new one
++    await removeFiles(BUCKET, [path]); // the row still points to the old file, so drop the new one
+     return { data: null, error: error?.message || "That photo no longer exists. Reload the page." };
+   }
+-  const del = await supabase.storage.from(BUCKET).remove([image.storage_path]); // the old file is deleted for good
++  const del = await removeFiles(BUCKET, [image.storage_path]); // the old file is deleted for good
+   if (del.error) return { data: withUrl(data), error: null, notice: "The new photo is in place, but the old file could not be deleted from storage." };
+   return { data: withUrl(data), error: null };
+ }
+@@ -106,7 +107,7 @@ export async function adminDeleteHeroImage(image) {
+   if (!supabase) return NOT_CONNECTED;
+   const { error } = await supabase.from("hero_images").delete().eq("id", image.id);
+   if (error) return { data: null, error: error.message };
+-  const del = await supabase.storage.from(BUCKET).remove([image.storage_path]);
++  const del = await removeFiles(BUCKET, [image.storage_path]);
+   if (del.error) return { data: null, error: null, notice: "The photo was removed, but its file could not be deleted from storage." };
+   return { data: null, error: null };
+ }
+diff --git a/src/lib/api/shop.js b/src/lib/api/shop.js
+index 8c2bc0d..5c55b6b 100644
+--- a/src/lib/api/shop.js
++++ b/src/lib/api/shop.js
+@@ -10,6 +10,7 @@
+ // under <businessId>/products/.
+ 
+ import { supabase } from "../../config/supabase.js";
++import { uploadFile, removeFiles, publicUrl } from "../storage.js";
+ 
+ const wrap = ({ data, error }) => ({ data: data ?? null, error: error?.message || null });
+ const NOT_CONNECTED = { data: null, error: "The app is not connected to the database yet." };
+@@ -136,9 +137,9 @@ export const uploadProductPhoto = guard(async (bid, file) => {
+   if (!TYPES[file.type]) return { data: null, error: "Use a JPG, PNG or WebP photo." };
+   if (file.size > PHOTO_MAX_MB * 1024 * 1024) return { data: null, error: `Each photo must be under ${PHOTO_MAX_MB} MB.` };
+   const path = `${bid}/products/${crypto.randomUUID()}.${TYPES[file.type]}`;
+-  const up = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false });
++  const up = await uploadFile(BUCKET, path, file);
+   if (up.error) return { data: null, error: up.error.message };
+-  return { data: { url: supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl }, error: null };
++  return { data: { url: publicUrl(BUCKET, path) }, error: null };
+ });
+ 
+ // delete a product photo we uploaded (best effort; only inside this business's products/ folder)
+@@ -148,7 +149,7 @@ export const removeProductPhoto = guard(async (bid, url) => {
+   if (i < 0) return { data: null, error: null };
+   const path = decodeURIComponent(url.slice(i + marker.length).split("?")[0]);
+   if (!path.startsWith(`${bid}/products/`)) return { data: null, error: null };
+-  await supabase.storage.from(BUCKET).remove([path]);
++  await removeFiles(BUCKET, [path]);
+   return { data: null, error: null };
+ });
+ 
+diff --git a/src/lib/storage.js b/src/lib/storage.js
+new file mode 100644
+index 0000000..c17bccd
+--- /dev/null
++++ b/src/lib/storage.js
+@@ -0,0 +1,59 @@
++// src/lib/storage.js
++// AIM: the one place the app talks to file storage. Every upload, delete and picture address goes
++// through here, so switching between Supabase Storage and Cloudflare R2 is one setting:
++//   VITE_STORAGE_PROVIDER = supabase (default) | r2
++// Optional, only for r2:
++//   VITE_FILES_API_URL   where uploads go (default: this site's own /api/files)
++//   VITE_FILES_BASE_URL  public address of the pictures if you serve R2 from your own domain, e.g.
++//                        https://cdn.example.com  (it must serve keys as <bucket>/<path>)
++// Results mirror what supabase-js returns ({ error: null | { message } }) so callers barely change.
++
++import { supabase } from "../config/supabase.js";
++
++const env = import.meta.env;
++export const STORAGE_PROVIDER = String(env.VITE_STORAGE_PROVIDER || "supabase").toLowerCase() === "r2" ? "r2" : "supabase";
++const trim = (s) => String(s || "").replace(/\/+$/, "");
++const encode = (path) => String(path).split("/").map(encodeURIComponent).join("/");
++const apiBase = () => trim(env.VITE_FILES_API_URL) || "/api/files";
++const absolute = (u) => (/^https?:\/\//.test(u) ? u : `${window.location.origin}${u}`);
++
++async function token() {
++  const { data } = await supabase.auth.getSession();
++  return data?.session?.access_token || "";
++}
++
++async function r2(method, url, init) {
++  try {
++    const res = await fetch(url, { method, ...init });
++    if (res.ok) return { error: null };
++    let message = "";
++    try { message = (await res.json()).error || ""; } catch { /* not JSON */ }
++    return { error: { message: message || `Upload failed (${res.status}).` } };
++  } catch {
++    return { error: { message: "Could not reach the file service. Check your connection." } };
++  }
++}
++
++/** Saves a file. Never overwrites an existing name. */
++export async function uploadFile(bucket, path, file) {
++  if (STORAGE_PROVIDER === "supabase") return supabase.storage.from(bucket).upload(path, file, { contentType: file.type, upsert: false });
++  const t = await token();
++  if (!t) return { error: { message: "Please sign in again." } };
++  return r2("PUT", `${apiBase()}/${bucket}/${encode(path)}`, { headers: { Authorization: `Bearer ${t}`, "Content-Type": file.type }, body: file });
++}
++
++/** Deletes files (a list of paths in one bucket). */
++export async function removeFiles(bucket, paths) {
++  if (!paths.length) return { error: null };
++  if (STORAGE_PROVIDER === "supabase") return supabase.storage.from(bucket).remove(paths);
++  const t = await token();
++  if (!t) return { error: { message: "Please sign in again." } };
++  return r2("POST", `${apiBase()}/remove`, { headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" }, body: JSON.stringify({ bucket, paths }) });
++}
++
++/** The address a picture is shown from. */
++export function publicUrl(bucket, path) {
++  if (STORAGE_PROVIDER === "supabase") return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
++  const base = trim(env.VITE_FILES_BASE_URL);
++  return `${base || absolute(apiBase())}/${bucket}/${encode(path)}`;
++}
+diff --git a/src/pages/account/AccountPage.jsx b/src/pages/account/AccountPage.jsx
+index 2509f4b..c71c222 100644
+--- a/src/pages/account/AccountPage.jsx
++++ b/src/pages/account/AccountPage.jsx
+@@ -15,6 +15,7 @@ import { useBusinessStore } from "../../store/businessStore.js";
+ import { cleanKenyanPhone } from "../../components/ui/PhoneInput.jsx";
+ import { collect, password as vPassword, phone as vPhone, required } from "../../lib/validate.js";
+ import DeleteAccountCard from "../../components/lifecycle/DeleteAccountCard.jsx";
++import { uploadFile, publicUrl } from "../../lib/storage.js";
+ 
+ export default function AccountPage() {
+   const navigate = useNavigate();
+@@ -47,9 +48,9 @@ export default function AccountPage() {
+     if (f.size > 2 * 1024 * 1024) return setFormError("The picture must be under 2 MB.");
+     setFormError(""); setPicBusy(true);
+     const path = `${user.id}/${crypto.randomUUID()}.${types[f.type]}`;
+-    const { error: upErr } = await supabase.storage.from("avatars").upload(path, f, { contentType: f.type });
++    const { error: upErr } = await uploadFile("avatars", path, f);
+     if (upErr) { setPicBusy(false); return setFormError(upErr.message); }
+-    const url = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
++    const url = publicUrl("avatars", path);
+     const { error } = await useSession.getState().updateProfile({ avatar_url: url });
+     setPicBusy(false);
+     if (error) return setFormError(error);
+diff --git a/supabase/functions/_shared/storage.ts b/supabase/functions/_shared/storage.ts
+index d86ec02..b9d43a4 100644
+--- a/supabase/functions/_shared/storage.ts
++++ b/supabase/functions/_shared/storage.ts
+@@ -18,3 +18,26 @@ export async function removePaths(admin: SupabaseClient, bucket: string, paths:
+   }
+   return failed;
+ }
++
++/**
++ * Deletes everything a business or a person keeps in a bucket: the Supabase copies listed earlier
++ * (`supabasePaths`, from pathsFor) AND the Cloudflare R2 folder, through the Worker's admin route.
++ * Set FILES_ADMIN_URL (https://<your-site>/api/files/admin) and FILES_ADMIN_SECRET as function
++ * secrets. Without them only Supabase is cleaned, which is right until you move to R2.
++ */
++export async function removeFolder(admin: SupabaseClient, bucket: string, folder: string, supabasePaths: string[] = []): Promise<void> {
++  if (supabasePaths.length) await removePaths(admin, bucket, supabasePaths);
++  const base = Deno.env.get("FILES_ADMIN_URL")?.replace(/\/+$/, "");
++  const secret = Deno.env.get("FILES_ADMIN_SECRET");
++  if (!base || !secret) return;
++  try {
++    const res = await fetch(`${base}/remove-folder`, {
++      method: "POST",
++      headers: { "Content-Type": "application/json", "X-Admin-Secret": secret },
++      body: JSON.stringify({ bucket, folder }),
++    });
++    if (!res.ok) console.error("[storage] R2 folder removal failed", bucket, folder, res.status);
++  } catch (e) {
++    console.error("[storage] R2 folder removal error", bucket, folder, (e as Error).message); // data is already gone; log only
++  }
++}
+diff --git a/supabase/functions/delete-account/index.ts b/supabase/functions/delete-account/index.ts
+index 04e6bb2..462ad30 100644
+--- a/supabase/functions/delete-account/index.ts
++++ b/supabase/functions/delete-account/index.ts
+@@ -10,7 +10,7 @@
+ // Answers { ok: true }.
+ import { corsFor, jsonFor } from "../_shared/http.ts";
+ import { adminClient, passwordIsCorrect, signedInUser } from "../_shared/auth.ts";
+-import { pathsFor, removePaths } from "../_shared/storage.ts";
++import { pathsFor, removeFolder } from "../_shared/storage.ts";
+ 
+ Deno.serve(async (req) => {
+   const cors = corsFor(req);
+@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
+     const files = await pathsFor(admin, "business-media", id);
+     const { error } = await admin.rpc("purge_business", { p_business: id, p_force: true });
+     if (error) return json({ error: error.message }, 400);
+-    if (files.length) await removePaths(admin, "business-media", files);
++    await removeFolder(admin, "business-media", id, files);
+   }
+ 
+   // 3. the login
+@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
+   // 4. what is left of the person
+   const { error: cleanErr } = await admin.rpc("account_delete_cleanup", { p_user: user.id });
+   if (cleanErr) console.error("[delete-account] cleanup failed", cleanErr.message);
+-  if (pictures.length) await removePaths(admin, "avatars", pictures);
++  await removeFolder(admin, "avatars", user.id, pictures);
+ 
+   return json({ ok: true });
+ });
+diff --git a/supabase/functions/delete-business/index.ts b/supabase/functions/delete-business/index.ts
+index 968d8ae..e8ab3b5 100644
+--- a/supabase/functions/delete-business/index.ts
++++ b/supabase/functions/delete-business/index.ts
+@@ -9,7 +9,7 @@
+ // Answers { result: "closed" | "deleted" }.
+ import { corsFor, jsonFor } from "../_shared/http.ts";
+ import { adminClient, passwordIsCorrect, signedInUser } from "../_shared/auth.ts";
+-import { pathsFor, removePaths } from "../_shared/storage.ts";
++import { pathsFor, removeFolder } from "../_shared/storage.ts";
+ 
+ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+ 
+@@ -42,6 +42,6 @@ Deno.serve(async (req) => {
+   const { data, error } = await admin.rpc("owner_close_business", { p_user: user.id, p_business: businessId });
+   if (error) return json({ error: error.message }, 400);
+ 
+-  if (data === "deleted" && files.length) await removePaths(admin, "business-media", files);
++  if (data === "deleted") await removeFolder(admin, "business-media", businessId, files);
+   return json({ result: data });
+ });
+diff --git a/supabase/functions/purge-closed-businesses/index.ts b/supabase/functions/purge-closed-businesses/index.ts
+index 12b2b85..bbee4a0 100644
+--- a/supabase/functions/purge-closed-businesses/index.ts
++++ b/supabase/functions/purge-closed-businesses/index.ts
+@@ -8,7 +8,7 @@
+ // Answers { reminded, purged, failed: [{ id, error }] }.
+ import { corsFor, jsonFor } from "../_shared/http.ts";
+ import { adminClient } from "../_shared/auth.ts";
+-import { pathsFor, removePaths } from "../_shared/storage.ts";
++import { pathsFor, removeFolder } from "../_shared/storage.ts";
+ 
+ const DAY = 86_400_000;
+ 
+@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
+     const files = await pathsFor(admin, "business-media", id);
+     const { error } = await admin.rpc("purge_business", { p_business: id, p_force: false });
+     if (error) { failed.push({ id, error: error.message }); continue; }
+-    if (files.length) await removePaths(admin, "business-media", files);
++    await removeFolder(admin, "business-media", id, files);
+     purged.push(id);
+   }
+   return json({ reminded, purged: purged.length, failed });
+diff --git a/supabase/migrations/20261024100001_r2_can_write_files.sql b/supabase/migrations/20261024100001_r2_can_write_files.sql
+new file mode 100644
+index 0000000..1040709
+--- /dev/null
++++ b/supabase/migrations/20261024100001_r2_can_write_files.sql
+@@ -0,0 +1,29 @@
++-- supabase/migrations/20261024100001_r2_can_write_files.sql
++-- AIM: the Cloudflare Worker (worker/index.js) stores files in R2 and asks THIS function, with the
++-- signed-in person's own token, whether they may write the given files. The rules are the same ones
++-- the Supabase storage policies already enforce (p2_04, p4_07, p3_06), kept in one place:
++--   business-media  owner or manager of the business named by the first folder
++--   site-media      super admin, inside hero/ only
++--   avatars         the person, inside their own folder only
++-- Returns false (never an error) for anyone not signed in or for any path that breaks a rule.
++create or replace function public.can_write_files(p_bucket text, p_paths text[]) returns boolean
++language sql stable security definer set search_path = public as $$
++  select auth.uid() is not null
++     and coalesce(array_length(p_paths, 1), 0) between 1 and 100
++     and not exists (
++       select 1 from unnest(p_paths) as f(path)
++       where not coalesce(
++         case p_bucket
++           when 'business-media' then
++             case when split_part(f.path, '/', 1) ~ '^[0-9a-f-]{36}$' and split_part(f.path, '/', 2) <> ''
++                  then public.is_staff(split_part(f.path, '/', 1)::uuid) else false end
++           when 'site-media' then
++             split_part(f.path, '/', 1) = 'hero' and split_part(f.path, '/', 2) <> '' and public.is_super_admin()
++           when 'avatars' then
++             split_part(f.path, '/', 1) = auth.uid()::text and split_part(f.path, '/', 2) <> ''
++           else false
++         end, false)
++     );
++$$;
++revoke all on function public.can_write_files(text, text[]) from public, anon;
++grant execute on function public.can_write_files(text, text[]) to authenticated;
+diff --git a/worker/index.js b/worker/index.js
+new file mode 100644
+index 0000000..6418ff6
+--- /dev/null
++++ b/worker/index.js
+@@ -0,0 +1,210 @@
++// worker/index.js
++// AIM: file storage for BizKenia on Cloudflare R2. This Worker only answers /api/files/* (see
++// "run_worker_first" in wrangler.jsonc); every other request is served by the static site as before.
++//
++//   GET  /api/files/<bucket>/<path>        public read of an image (cached, immutable)
++//   PUT  /api/files/<bucket>/<path>        upload   (signed-in user; checked against Supabase)
++//   POST /api/files/remove                 delete   {bucket, paths:[...]} (same check)
++//   PUT  /api/files/admin/<bucket>/<path>  copy-in for the migration script   (needs the admin secret)
++//   POST /api/files/admin/remove-folder    delete a whole folder {bucket, folder} (needs the admin secret)
++//
++// Who may write is decided by ONE Postgres function, public.can_write_files(), called with the
++// user's own token, so the rules stay next to the rest of your row-level security.
++// Objects are stored under the key "<bucket>/<path>", so URLs keep the shape the app already parses.
++
++const MB = 1024 * 1024;
++const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
++const FILE = "[A-Za-z0-9_-]{1,80}\\.(?:jpg|png|webp)";
++const BUCKETS = {
++  "business-media": { maxBytes: 5 * MB, path: new RegExp(`^${UUID}(?:/[A-Za-z0-9_-]{1,40}){1,3}/${FILE}$`) },
++  "site-media": { maxBytes: 5 * MB, path: new RegExp(`^hero/${FILE}$`) },
++  avatars: { maxBytes: 2 * MB, path: new RegExp(`^${UUID}/${FILE}$`) },
++};
++const FOLDER = new RegExp(`^(?:${UUID}|hero)$`);
++
++const json = (body, status = 200, extra = {}) =>
++  new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...extra } });
++
++function corsHeaders(request, env) {
++  const origin = request.headers.get("Origin");
++  if (!origin) return {};
++  const allowed = new Set([new URL(request.url).origin, ...String(env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean)]);
++  if (!allowed.has(origin)) return {};
++  return {
++    "Access-Control-Allow-Origin": origin,
++    "Access-Control-Allow-Methods": "GET, HEAD, PUT, POST, OPTIONS",
++    "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Admin-Secret",
++    "Access-Control-Max-Age": "86400",
++    Vary: "Origin",
++  };
++}
++
++// "/api/files/a/b%20c" -> ["a","b c"], or null if anything looks like path trickery
++function parseSegments(pathname) {
++  const rest = pathname.slice("/api/files/".length);
++  if (!rest) return null;
++  const out = [];
++  for (const raw of rest.split("/")) {
++    let seg;
++    try { seg = decodeURIComponent(raw); } catch { return null; }
++    if (!seg || seg === "." || seg === ".." || /[\\\u0000-\u001f]/.test(seg)) return null;
++    out.push(seg);
++  }
++  return out;
++}
++
++// the real type comes from the file's own first bytes, never from what the browser says
++function sniff(b) {
++  if (b.length > 12 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return { ext: "jpg", type: "image/jpeg" };
++  if (b.length > 12 && [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((v, i) => b[i] === v)) return { ext: "png", type: "image/png" };
++  if (b.length > 12 && String.fromCharCode(...b.slice(0, 4)) === "RIFF" && String.fromCharCode(...b.slice(8, 12)) === "WEBP") return { ext: "webp", type: "image/webp" };
++  return null;
++}
++
++// reads the body but gives up as soon as it passes `max` bytes (Content-Length can be missing or wrong)
++async function readLimited(body, max) {
++  if (!body) return { bytes: new Uint8Array(0) };
++  const reader = body.getReader();
++  const chunks = [];
++  let total = 0;
++  for (;;) {
++    const { done, value } = await reader.read();
++    if (done) break;
++    total += value.byteLength;
++    if (total > max) { await reader.cancel(); return { tooBig: true }; }
++    chunks.push(value);
++  }
++  const bytes = new Uint8Array(total);
++  let at = 0;
++  for (const c of chunks) { bytes.set(c, at); at += c.byteLength; }
++  return { bytes };
++}
++
++function sameSecret(a, b) {
++  if (!a || !b || a.length !== b.length) return false;
++  let diff = 0;
++  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
++  return diff === 0;
++}
++
++const isAdmin = (request, env) => sameSecret(request.headers.get("X-Admin-Secret") || "", env.FILES_ADMIN_SECRET || "");
++
++// asks Supabase, as the signed-in user, whether they may write these paths
++async function userMayWrite(request, env, bucket, paths) {
++  const token = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
++  if (!token) return { status: 401 };
++  let res;
++  try {
++    res = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/can_write_files`, {
++      method: "POST",
++      headers: { apikey: env.SUPABASE_ANON_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
++      body: JSON.stringify({ p_bucket: bucket, p_paths: paths }),
++    });
++  } catch { return { status: 502 }; }
++  if (res.status === 401) return { status: 401 };
++  if (!res.ok) return { status: 502 };
++  return (await res.json()) === true ? { ok: true } : { status: 403 };
++}
++
++const NOPE = { 401: "Please sign in again.", 403: "You are not allowed to change these files.", 502: "Could not check your permission. Try again." };
++
++async function upload(request, env, bucket, path, admin) {
++  const cfg = BUCKETS[bucket];
++  if (!cfg || !cfg.path.test(path)) return json({ error: "That file name is not allowed." }, 400);
++  const declared = Number(request.headers.get("Content-Length"));
++  if (declared > cfg.maxBytes) return json({ error: `The photo must be under ${cfg.maxBytes / MB} MB.` }, 413);
++  if (!admin) {
++    const who = await userMayWrite(request, env, bucket, [path]);
++    if (!who.ok) return json({ error: NOPE[who.status] }, who.status); // checked BEFORE reading the body
++  }
++  const read = await readLimited(request.body, cfg.maxBytes);
++  if (read.tooBig) return json({ error: `The photo must be under ${cfg.maxBytes / MB} MB.` }, 413);
++  const kind = sniff(read.bytes);
++  if (!kind || path.slice(path.lastIndexOf(".") + 1) !== kind.ext) return json({ error: "Use a JPG, PNG or WebP photo." }, 415);
++  const stored = await env.BIZKENIA_FILES.put(`${bucket}/${path}`, read.bytes, {
++    httpMetadata: { contentType: kind.type, cacheControl: "public, max-age=31536000, immutable" },
++    onlyIf: { etagDoesNotMatch: "*" }, // never overwrite: same as upsert:false
++  });
++  if (!stored) return json({ error: "A file with that name already exists." }, 409);
++  return json({ ok: true, path }, 201);
++}
++
++async function remove(request, env) {
++  let body;
++  try { body = await request.json(); } catch { return json({ error: "Bad request." }, 400); }
++  const { bucket, paths } = body || {};
++  const cfg = BUCKETS[bucket];
++  if (!cfg || !Array.isArray(paths) || paths.length < 1 || paths.length > 100 || !paths.every((p) => typeof p === "string" && cfg.path.test(p)))
++    return json({ error: "Bad request." }, 400);
++  const who = await userMayWrite(request, env, bucket, paths);
++  if (!who.ok) return json({ error: NOPE[who.status] }, who.status);
++  await env.BIZKENIA_FILES.delete(paths.map((p) => `${bucket}/${p}`));
++  return json({ ok: true });
++}
++
++async function removeFolder(request, env) {
++  let body;
++  try { body = await request.json(); } catch { return json({ error: "Bad request." }, 400); }
++  const { bucket, folder } = body || {};
++  if (!BUCKETS[bucket] || !FOLDER.test(String(folder))) return json({ error: "Bad request." }, 400);
++  const prefix = `${bucket}/${folder}/`;
++  let removed = 0, cursor;
++  do {
++    const page = await env.BIZKENIA_FILES.list({ prefix, cursor, limit: 500 });
++    if (page.objects.length) { await env.BIZKENIA_FILES.delete(page.objects.map((o) => o.key)); removed += page.objects.length; }
++    cursor = page.truncated ? page.cursor : undefined;
++  } while (cursor);
++  return json({ ok: true, removed });
++}
++
++async function read(request, env, ctx, bucket, path) {
++  const cfg = BUCKETS[bucket];
++  if (!cfg || !cfg.path.test(path)) return json({ error: "Not found." }, 404);
++  const cache = typeof caches !== "undefined" ? caches.default : null;
++  const cacheKey = new Request(new URL(request.url).origin + new URL(request.url).pathname, { method: "GET" });
++  if (cache && request.method === "GET") { const hit = await cache.match(cacheKey); if (hit) return hit; }
++  const obj = await env.BIZKENIA_FILES.get(`${bucket}/${path}`);
++  if (!obj) return json({ error: "Not found." }, 404, { "Cache-Control": "no-store" });
++  const headers = {
++    "Content-Type": obj.httpMetadata?.contentType || "application/octet-stream",
++    "Cache-Control": "public, max-age=31536000, immutable",
++    ETag: obj.httpEtag,
++    "X-Content-Type-Options": "nosniff",
++    "Content-Security-Policy": "default-src 'none'; sandbox",
++    "Cross-Origin-Resource-Policy": "cross-origin",
++  };
++  if (request.method === "HEAD") return new Response(null, { headers });
++  const res = new Response(obj.body, { headers });
++  if (cache) ctx.waitUntil(cache.put(cacheKey, res.clone()));
++  return res;
++}
++
++export default {
++  async fetch(request, env, ctx) {
++    const cors = corsHeaders(request, env);
++    const done = (res) => { for (const [k, v] of Object.entries(cors)) res.headers.set(k, v); return res; };
++    const url = new URL(request.url);
++    if (!url.pathname.startsWith("/api/files/")) return new Response("Not found", { status: 404 });
++    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
++    const seg = parseSegments(url.pathname);
++    if (!seg) return done(json({ error: "Bad request." }, 400));
++    try {
++      if (seg[0] === "admin") {
++        if (!isAdmin(request, env)) return done(json({ error: "Not allowed." }, 403));
++        if (seg[1] === "remove-folder" && request.method === "POST") return done(await removeFolder(request, env));
++        if (request.method === "PUT" && seg.length > 2) return done(await upload(request, env, seg[1], seg.slice(2).join("/"), true));
++        return done(json({ error: "Not found." }, 404));
++      }
++      if (seg[0] === "remove" && seg.length === 1 && request.method === "POST") return done(await remove(request, env));
++      if (seg.length >= 2) {
++        const bucket = seg[0], path = seg.slice(1).join("/");
++        if (request.method === "GET" || request.method === "HEAD") return done(await read(request, env, ctx, bucket, path));
++        if (request.method === "PUT") return done(await upload(request, env, bucket, path, false));
++      }
++      return done(json({ error: "Not found." }, 404));
++    } catch (err) {
++      console.error("[files]", err && err.message);
++      return done(json({ error: "Something went wrong. Try again." }, 500));
++    }
++  },
++};
+diff --git a/worker/worker.test.mjs b/worker/worker.test.mjs
+new file mode 100644
+index 0000000..5100435
+--- /dev/null
++++ b/worker/worker.test.mjs
+@@ -0,0 +1,81 @@
++// Run: node --test worker/worker.test.mjs   (no install needed)
++import test from "node:test";
++import assert from "node:assert/strict";
++import worker from "./index.js";
++
++const BIZ = "11111111-1111-4111-8111-111111111111";
++const OTHER = "22222222-2222-4222-8222-222222222222";
++const JPG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
++const HTML = new TextEncoder().encode("<html><script>alert(1)</script></html>");
++
++function fakeR2() {
++  const m = new Map();
++  return {
++    m,
++    async put(k, v, o) { if (o?.onlyIf && m.has(k)) return null; m.set(k, { v, o }); return { key: k }; },
++    async get(k) { const e = m.get(k); return e && { body: e.v, httpMetadata: e.o.httpMetadata, httpEtag: '"x"' }; },
++    async delete(keys) { for (const k of [].concat(keys)) m.delete(k); },
++    async list({ prefix }) { return { objects: [...m.keys()].filter((k) => k.startsWith(prefix)).map((key) => ({ key })), truncated: false }; },
++  };
++}
++// Supabase says yes only for the token "staff" and only inside BIZ's folder
++globalThis.fetch = async (_u, init) => {
++  const tok = init.headers.Authorization.replace("Bearer ", "");
++  const { p_paths } = JSON.parse(init.body);
++  return new Response(JSON.stringify(tok === "staff" && p_paths.every((p) => p.startsWith(BIZ + "/"))), { status: 200 });
++};
++const env = () => ({ BIZKENIA_FILES: fakeR2(), SUPABASE_URL: "https://x.supabase.co", SUPABASE_ANON_KEY: "anon", FILES_ADMIN_SECRET: "s3cret", ALLOWED_ORIGINS: "http://localhost:5173" });
++const call = (e, method, path, { body, headers } = {}) =>
++  worker.fetch(new Request("https://site.test" + path, { method, body, headers }), e, { waitUntil() {} });
++const put = (e, path, body, tok = "staff") => call(e, "PUT", path, { body, headers: tok ? { Authorization: `Bearer ${tok}` } : {} });
++
++test("staff can upload, public can read, nosniff set", async () => {
++  const e = env(); const p = `/api/files/business-media/${BIZ}/cover/a1.jpg`;
++  assert.equal((await put(e, p, JPG)).status, 201);
++  const r = await call(e, "GET", p);
++  assert.equal(r.status, 200); assert.equal(r.headers.get("content-type"), "image/jpeg");
++  assert.equal(r.headers.get("x-content-type-options"), "nosniff");
++});
++test("no token -> 401, wrong user -> 403, other business folder -> 403", async () => {
++  const e = env(); const p = `/api/files/business-media/${BIZ}/cover/a1.jpg`;
++  assert.equal((await put(e, p, JPG, null)).status, 401);
++  assert.equal((await put(e, p, JPG, "stranger")).status, 403);
++  assert.equal((await put(e, `/api/files/business-media/${OTHER}/cover/a1.jpg`, JPG)).status, 403);
++  assert.equal(e.BIZKENIA_FILES.m.size, 0);
++});
++test("html renamed to .jpg is refused; extension must match real type", async () => {
++  const e = env();
++  assert.equal((await put(e, `/api/files/business-media/${BIZ}/cover/a.jpg`, HTML)).status, 415);
++  assert.equal((await put(e, `/api/files/business-media/${BIZ}/cover/a.png`, JPG)).status, 415);
++});
++test("too big, existing name, traversal, unknown bucket, svg name", async () => {
++  const e = env(); const big = new Uint8Array(2 * 1024 * 1024 + 1); big.set(JPG);
++  assert.equal((await put(e, `/api/files/avatars/${BIZ}/a.jpg`, big)).status, 413);
++  await put(e, `/api/files/business-media/${BIZ}/cover/a.jpg`, JPG);
++  assert.equal((await put(e, `/api/files/business-media/${BIZ}/cover/a.jpg`, JPG)).status, 409);
++  assert.equal((await put(e, `/api/files/business-media/${BIZ}/../${OTHER}/a.jpg`, JPG)).status, 400);
++  assert.equal((await put(e, `/api/files/secrets/${BIZ}/a.jpg`, JPG)).status, 400);
++  assert.equal((await put(e, `/api/files/business-media/${BIZ}/cover/a.svg`, JPG)).status, 400);
++});
++test("remove needs permission", async () => {
++  const e = env(); const path = `${BIZ}/cover/a.jpg`;
++  await put(e, `/api/files/business-media/${path}`, JPG);
++  const rm = (tok) => call(e, "POST", "/api/files/remove", { body: JSON.stringify({ bucket: "business-media", paths: [path] }), headers: tok ? { Authorization: `Bearer ${tok}` } : {} });
++  assert.equal((await rm("stranger")).status, 403); assert.equal(e.BIZKENIA_FILES.m.size, 1);
++  assert.equal((await rm("staff")).status, 200); assert.equal(e.BIZKENIA_FILES.m.size, 0);
++});
++test("admin routes need the secret; remove-folder empties a folder", async () => {
++  const e = env(); const p = `/api/files/admin/business-media/${BIZ}/logo/z.jpg`;
++  assert.equal((await put(e, p, JPG, "staff")).status, 403);
++  assert.equal((await call(e, "PUT", p, { body: JPG, headers: { "X-Admin-Secret": "s3cret" } })).status, 201);
++  const rf = (s) => call(e, "POST", "/api/files/admin/remove-folder", { body: JSON.stringify({ bucket: "business-media", folder: BIZ }), headers: { "X-Admin-Secret": s } });
++  assert.equal((await rf("wrong")).status, 403);
++  assert.equal((await rf("s3cret")).status, 200); assert.equal(e.BIZKENIA_FILES.m.size, 0);
++});
++test("CORS only for the site and listed origins", async () => {
++  const e = env();
++  const ok = await call(e, "OPTIONS", "/api/files/remove", { headers: { Origin: "http://localhost:5173" } });
++  assert.equal(ok.headers.get("access-control-allow-origin"), "http://localhost:5173");
++  const bad = await call(e, "OPTIONS", "/api/files/remove", { headers: { Origin: "https://evil.test" } });
++  assert.equal(bad.headers.get("access-control-allow-origin"), null);
++});
+diff --git a/wrangler.jsonc b/wrangler.jsonc
+index f7b259a..aaf96d4 100644
+--- a/wrangler.jsonc
++++ b/wrangler.jsonc
+@@ -1,8 +1,21 @@
+ {
+   "name": "bizkenia",
++  "main": "worker/index.js",
+   "compatibility_date": "2026-10-01",
+   "assets": {
+     "directory": "./dist",
+-    "not_found_handling": "single-page-application"
++    "not_found_handling": "single-page-application",
++    // only file requests wake the Worker; the site itself is still served as free static assets
++    "run_worker_first": ["/api/files/*"]
++  },
++  "r2_buckets": [
++    { "binding": "BIZKENIA_FILES", "bucket_name": "bizkenia-files" }
++  ],
++  // These two are public values (the same ones the site already ships in VITE_*). Fill them in.
++  // The admin secret is NOT here: set it with `npx wrangler secret put FILES_ADMIN_SECRET`.
++  "vars": {
++    "SUPABASE_URL": "https://YOUR-PROJECT-REF.supabase.co",
++    "SUPABASE_ANON_KEY": "YOUR-ANON-KEY",
++    "ALLOWED_ORIGINS": "http://localhost:5173"
+   }
+-}
+\ No newline at end of file
++}
+-- 
+2.43.0
+

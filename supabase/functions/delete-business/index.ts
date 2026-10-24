@@ -9,7 +9,7 @@
 // Answers { result: "closed" | "deleted" }.
 import { corsFor, jsonFor } from "../_shared/http.ts";
 import { adminClient, passwordIsCorrect, signedInUser } from "../_shared/auth.ts";
-import { pathsFor, removePaths } from "../_shared/storage.ts";
+import { pathsFor, removeFolder } from "../_shared/storage.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -42,6 +42,6 @@ Deno.serve(async (req) => {
   const { data, error } = await admin.rpc("owner_close_business", { p_user: user.id, p_business: businessId });
   if (error) return json({ error: error.message }, 400);
 
-  if (data === "deleted" && files.length) await removePaths(admin, "business-media", files);
+  if (data === "deleted") await removeFolder(admin, "business-media", businessId, files);
   return json({ result: data });
 });

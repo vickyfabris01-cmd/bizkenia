@@ -1,8 +1,21 @@
 {
   "name": "bizkenia",
+  "main": "worker/index.js",
   "compatibility_date": "2026-10-01",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
+    // only file requests wake the Worker; the site itself is still served as free static assets
+    "run_worker_first": ["/api/files/*"]
+  },
+  "r2_buckets": [
+    { "binding": "BIZKENIA_FILES", "bucket_name": "bizkenia-files" }
+  ],
+  // These two are public values (the same ones the site already ships in VITE_*). Fill them in.
+  // The admin secret is NOT here: set it with `npx wrangler secret put FILES_ADMIN_SECRET`.
+  "vars": {
+    "SUPABASE_URL": "https://vhjptjbonpzpohdqydrt.supabase.co",
+    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoanB0amJvbnB6cG9oZHF5ZHJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MTM1MjAsImV4cCI6MjA4OTA4OTUyMH0.yJqHOeJ6E6ldx-gcPU9isATbYiiF8hQnO22zlmFjeAk",
+    "ALLOWED_ORIGINS": "http://localhost:5173"
   }
 }

@@ -15,6 +15,7 @@ import { useBusinessStore } from "../../store/businessStore.js";
 import { cleanKenyanPhone } from "../../components/ui/PhoneInput.jsx";
 import { collect, password as vPassword, phone as vPhone, required } from "../../lib/validate.js";
 import DeleteAccountCard from "../../components/lifecycle/DeleteAccountCard.jsx";
+import { uploadFile, publicUrl } from "../../lib/storage.js";
 
 export default function AccountPage() {
   const navigate = useNavigate();
@@ -47,9 +48,9 @@ export default function AccountPage() {
     if (f.size > 2 * 1024 * 1024) return setFormError("The picture must be under 2 MB.");
     setFormError(""); setPicBusy(true);
     const path = `${user.id}/${crypto.randomUUID()}.${types[f.type]}`;
-    const { error: upErr } = await supabase.storage.from("avatars").upload(path, f, { contentType: f.type });
+    const { error: upErr } = await uploadFile("avatars", path, f);
     if (upErr) { setPicBusy(false); return setFormError(upErr.message); }
-    const url = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+    const url = publicUrl("avatars", path);
     const { error } = await useSession.getState().updateProfile({ avatar_url: url });
     setPicBusy(false);
     if (error) return setFormError(error);

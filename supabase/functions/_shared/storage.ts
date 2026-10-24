@@ -18,3 +18,26 @@ export async function removePaths(admin: SupabaseClient, bucket: string, paths: 
   }
   return failed;
 }
+
+/**
+ * Deletes everything a business or a person keeps in a bucket: the Supabase copies listed earlier
+ * (`supabasePaths`, from pathsFor) AND the Cloudflare R2 folder, through the Worker's admin route.
+ * Set FILES_ADMIN_URL (https://<your-site>/api/files/admin) and FILES_ADMIN_SECRET as function
+ * secrets. Without them only Supabase is cleaned, which is right until you move to R2.
+ */
+export async function removeFolder(admin: SupabaseClient, bucket: string, folder: string, supabasePaths: string[] = []): Promise<void> {
+  if (supabasePaths.length) await removePaths(admin, bucket, supabasePaths);
+  const base = Deno.env.get("FILES_ADMIN_URL")?.replace(/\/+$/, "");
+  const secret = Deno.env.get("FILES_ADMIN_SECRET");
+  if (!base || !secret) return;
+  try {
+    const res = await fetch(`${base}/remove-folder`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Admin-Secret": secret },
+      body: JSON.stringify({ bucket, folder }),
+    });
+    if (!res.ok) console.error("[storage] R2 folder removal failed", bucket, folder, res.status);
+  } catch (e) {
+    console.error("[storage] R2 folder removal error", bucket, folder, (e as Error).message); // data is already gone; log only
+  }
+}
