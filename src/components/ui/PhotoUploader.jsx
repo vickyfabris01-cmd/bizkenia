@@ -18,6 +18,7 @@ import { useId, useState } from "react";
 import { supabase } from "../../config/supabase.js";
 import Icon from "./Icon.jsx";
 import ImageUploadButton from "./ImageUploadButton.jsx";
+import { uploadFile, publicUrl } from "../../lib/storage.js";
 
 const TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -41,9 +42,9 @@ export default function PhotoUploader({ businessId, folder = "photos", value = [
     for (const f of files) {
       const ext = f.type === "image/png" ? "png" : f.type === "image/webp" ? "webp" : "jpg";
       const path = `${businessId}/${folder}/${crypto.randomUUID()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("business-media").upload(path, f, { contentType: f.type, upsert: false });
+      const { error: upErr } = await uploadFile("business-media", path, f);
       if (upErr) { setError(upErr.message); break; }
-      urls.push(supabase.storage.from("business-media").getPublicUrl(path).data.publicUrl);
+      urls.push(publicUrl("business-media", path));
     }
     setBusy(false);
     if (urls.length) onChange([...value, ...urls]);

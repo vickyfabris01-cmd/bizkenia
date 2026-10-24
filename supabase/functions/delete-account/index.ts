@@ -10,7 +10,7 @@
 // Answers { ok: true }.
 import { corsFor, jsonFor } from "../_shared/http.ts";
 import { adminClient, passwordIsCorrect, signedInUser } from "../_shared/auth.ts";
-import { pathsFor, removePaths } from "../_shared/storage.ts";
+import { pathsFor, removeFolder } from "../_shared/storage.ts";
 
 Deno.serve(async (req) => {
   const cors = corsFor(req);
@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     const files = await pathsFor(admin, "business-media", id);
     const { error } = await admin.rpc("purge_business", { p_business: id, p_force: true });
     if (error) return json({ error: error.message }, 400);
-    if (files.length) await removePaths(admin, "business-media", files);
+    await removeFolder(admin, "business-media", id, files);
   }
 
   // 3. the login
@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
   // 4. what is left of the person
   const { error: cleanErr } = await admin.rpc("account_delete_cleanup", { p_user: user.id });
   if (cleanErr) console.error("[delete-account] cleanup failed", cleanErr.message);
-  if (pictures.length) await removePaths(admin, "avatars", pictures);
+  await removeFolder(admin, "avatars", user.id, pictures);
 
   return json({ ok: true });
 });

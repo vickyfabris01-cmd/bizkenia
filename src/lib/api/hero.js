@@ -12,6 +12,7 @@
 // work succeeded but a leftover file could not be removed, `notice` says so.
 
 import { supabase } from "../../config/supabase.js";
+import { uploadFile, removeFiles, publicUrl } from "../storage.js";
 
 const BUCKET = "site-media";
 const FOLDER = "hero";
@@ -21,7 +22,7 @@ const NOT_CONNECTED = { data: null, error: "The app is not connected to the data
 export const HERO_MAX_IMAGES = 5;
 export const HERO_MAX_MB = 5; // the storage bucket refuses anything bigger
 
-const urlFor = (path) => supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+const urlFor = (path) => publicUrl(BUCKET, path);
 const withUrl = (row) => ({ ...row, url: urlFor(row.storage_path) });
 
 function checkFile(file) {
@@ -56,14 +57,14 @@ export async function adminUploadHeroImage(file, label, nextOrder) {
   if (countErr) return { data: null, error: countErr.message };
   if ((count || 0) >= HERO_MAX_IMAGES) return { data: null, error: `There can be at most ${HERO_MAX_IMAGES} hero photos. Replace or delete one first.` };
   const path = `${FOLDER}/${crypto.randomUUID()}.${TYPES[file.type]}`;
-  const up = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false });
+  const up = await uploadFile(BUCKET, path, file);
   if (up.error) return { data: null, error: up.error.message };
   const { data: auth } = await supabase.auth.getUser();
   const { data, error } = await supabase.from("hero_images")
     .insert({ storage_path: path, alt_text: (label || "").trim() || null, sort_order: nextOrder || 0, created_by: auth?.user?.id || null })
     .select().single();
   if (error) {
-    await supabase.storage.from(BUCKET).remove([path]); // do not leave a file with no row
+    await removeFiles(BUCKET, [path]); // do not leave a file with no row
     return { data: null, error: error.message };
   }
   return { data: withUrl(data), error: null };
@@ -75,14 +76,14 @@ export async function adminReplaceHeroImage(image, file) {
   const bad = checkFile(file);
   if (bad) return { data: null, error: bad };
   const path = `${FOLDER}/${crypto.randomUUID()}.${TYPES[file.type]}`;
-  const up = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false });
+  const up = await uploadFile(BUCKET, path, file);
   if (up.error) return { data: null, error: up.error.message };
   const { data, error } = await supabase.from("hero_images").update({ storage_path: path }).eq("id", image.id).select().maybeSingle();
   if (error || !data) {
-    await supabase.storage.from(BUCKET).remove([path]); // the row still points to the old file, so drop the new one
+    await removeFiles(BUCKET, [path]); // the row still points to the old file, so drop the new one
     return { data: null, error: error?.message || "That photo no longer exists. Reload the page." };
   }
-  const del = await supabase.storage.from(BUCKET).remove([image.storage_path]); // the old file is deleted for good
+  const del = await removeFiles(BUCKET, [image.storage_path]); // the old file is deleted for good
   if (del.error) return { data: withUrl(data), error: null, notice: "The new photo is in place, but the old file could not be deleted from storage." };
   return { data: withUrl(data), error: null };
 }
@@ -106,7 +107,7 @@ export async function adminDeleteHeroImage(image) {
   if (!supabase) return NOT_CONNECTED;
   const { error } = await supabase.from("hero_images").delete().eq("id", image.id);
   if (error) return { data: null, error: error.message };
-  const del = await supabase.storage.from(BUCKET).remove([image.storage_path]);
+  const del = await removeFiles(BUCKET, [image.storage_path]);
   if (del.error) return { data: null, error: null, notice: "The photo was removed, but its file could not be deleted from storage." };
   return { data: null, error: null };
 }

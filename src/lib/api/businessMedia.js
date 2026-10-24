@@ -10,6 +10,7 @@
 // Every function returns { data, error } and never throws.
 
 import { supabase } from "../../config/supabase.js";
+import { uploadFile, removeFiles, publicUrl } from "../storage.js";
 
 const BUCKET = "business-media";
 const TYPES = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
@@ -47,16 +48,16 @@ export async function uploadBusinessImage(kind, businessId, file, oldUrl) {
   if (!TYPES[file.type]) return { data: null, error: "Use a JPG, PNG or WebP photo." };
   if (file.size > k.maxMb * 1024 * 1024) return { data: null, error: `The ${k.who} must be under ${k.maxMb} MB.` };
   const path = `${businessId}/${k.folder}/${crypto.randomUUID()}.${TYPES[file.type]}`;
-  const up = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false });
+  const up = await uploadFile(BUCKET, path, file);
   if (up.error) return { data: null, error: up.error.message };
-  const url = supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+  const url = publicUrl(BUCKET, path);
   const err = await setColumn(businessId, k.column, url);
   if (err) {
-    await supabase.storage.from(BUCKET).remove([path]); // do not leave a file nobody points to
+    await removeFiles(BUCKET, [path]); // do not leave a file nobody points to
     return { data: null, error: err };
   }
   const old = ownPathOf(businessId, k.folder, oldUrl);
-  if (old) await supabase.storage.from(BUCKET).remove([old]); // the replaced file is deleted
+  if (old) await removeFiles(BUCKET, [old]); // the replaced file is deleted
   return { data: { url }, error: null };
 }
 
@@ -66,7 +67,7 @@ export async function removeBusinessImage(kind, businessId, oldUrl) {
   const err = await setColumn(businessId, k.column, null);
   if (err) return { data: null, error: err };
   const old = ownPathOf(businessId, k.folder, oldUrl);
-  if (old) await supabase.storage.from(BUCKET).remove([old]);
+  if (old) await removeFiles(BUCKET, [old]);
   return { data: null, error: null };
 }
 

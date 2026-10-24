@@ -8,7 +8,7 @@
 // Answers { reminded, purged, failed: [{ id, error }] }.
 import { corsFor, jsonFor } from "../_shared/http.ts";
 import { adminClient } from "../_shared/auth.ts";
-import { pathsFor, removePaths } from "../_shared/storage.ts";
+import { pathsFor, removeFolder } from "../_shared/storage.ts";
 
 const DAY = 86_400_000;
 
@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     const files = await pathsFor(admin, "business-media", id);
     const { error } = await admin.rpc("purge_business", { p_business: id, p_force: false });
     if (error) { failed.push({ id, error: error.message }); continue; }
-    if (files.length) await removePaths(admin, "business-media", files);
+    await removeFolder(admin, "business-media", id, files);
     purged.push(id);
   }
   return json({ reminded, purged: purged.length, failed });

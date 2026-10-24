@@ -10,6 +10,7 @@
 // under <businessId>/products/.
 
 import { supabase } from "../../config/supabase.js";
+import { uploadFile, removeFiles, publicUrl } from "../storage.js";
 
 const wrap = ({ data, error }) => ({ data: data ?? null, error: error?.message || null });
 const NOT_CONNECTED = { data: null, error: "The app is not connected to the database yet." };
@@ -136,9 +137,9 @@ export const uploadProductPhoto = guard(async (bid, file) => {
   if (!TYPES[file.type]) return { data: null, error: "Use a JPG, PNG or WebP photo." };
   if (file.size > PHOTO_MAX_MB * 1024 * 1024) return { data: null, error: `Each photo must be under ${PHOTO_MAX_MB} MB.` };
   const path = `${bid}/products/${crypto.randomUUID()}.${TYPES[file.type]}`;
-  const up = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false });
+  const up = await uploadFile(BUCKET, path, file);
   if (up.error) return { data: null, error: up.error.message };
-  return { data: { url: supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl }, error: null };
+  return { data: { url: publicUrl(BUCKET, path) }, error: null };
 });
 
 // delete a product photo we uploaded (best effort; only inside this business's products/ folder)
@@ -148,7 +149,7 @@ export const removeProductPhoto = guard(async (bid, url) => {
   if (i < 0) return { data: null, error: null };
   const path = decodeURIComponent(url.slice(i + marker.length).split("?")[0]);
   if (!path.startsWith(`${bid}/products/`)) return { data: null, error: null };
-  await supabase.storage.from(BUCKET).remove([path]);
+  await removeFiles(BUCKET, [path]);
   return { data: null, error: null };
 });
 
