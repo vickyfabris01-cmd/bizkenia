@@ -1,4 +1,4 @@
-// src/pages/farm/shared.jsx — NEW FILE
+// src/pages/farm/shared.jsx — MODIFIED (store categories include produce and machinery)
 //
 // AIM
 // Small pieces every farm screen uses: the page heading, tabs, stat tiles, status badges with
@@ -30,7 +30,7 @@ export const opts = (list) => list.map((v) => ({ value: v, label: cap(v) }));
 
 export const CROP_STATUS = { planned: ["neutral", "Planned"], planted: ["info", "Planted"], growing: ["success", "Growing"], harvested: ["brand", "Harvested"] };
 export const ACTIVITY_KINDS = ["planting", "fertilising", "spraying", "watering", "weeding", "other"];
-export const ITEM_CATEGORIES = ["seed", "fertiliser", "chemical", "feed", "tool", "fuel", "other"];
+export const ITEM_CATEGORIES = ["produce", "seed", "fertiliser", "chemical", "feed", "tool", "machinery", "fuel", "other"];
 export const SPECIES = ["cattle", "goats", "sheep", "pigs", "poultry", "rabbits", "bees", "fish", "other"];
 export const EVENT_KINDS = ["vaccination", "feeding", "treatment", "birth", "sale", "loss", "other"];
 export const EXPENSE_CATEGORIES = ["seeds", "fertiliser", "chemicals", "labour", "feed", "equipment", "fuel", "transport", "other"];

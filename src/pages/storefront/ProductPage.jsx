@@ -1,4 +1,4 @@
-// src/pages/storefront/ProductPage.jsx — NEW FILE (Phase 5 step 2)
+// src/pages/storefront/ProductPage.jsx — MODIFIED (Phase 5 step 2; "Ask on WhatsApp" added)
 //
 // AIM
 // /b/:slug/p/:productId — one product: photo gallery, price (with the old price struck through),
@@ -13,6 +13,7 @@ import { getShopProduct, listShopProducts } from "../../lib/api/storefront.js";
 import { useCart } from "../../store/cartStore.js";
 import useSeo from "../../hooks/useSeo.js";
 import { siteUrl } from "../../lib/seo.js";
+import { toE164 } from "../../lib/phone.js";
 import VisitBusiness from "../../components/business/VisitBusiness.jsx";
 import { Gallery, ProductCard, Qty, StoreGate, WishButton, money, useWishlist } from "./shared.jsx";
 
@@ -37,6 +38,8 @@ function Product({ b }) {
   }
   const out = p.stock < 1;
   const room = Math.max(0, p.stock - inCart);
+  const wa = toE164(b.whatsapp || b.phone);
+  const ask = encodeURIComponent(`Hello ${b.name}, I have a question about ${p.name} (${money(p.price)} / ${p.unit}) that I saw on the site.`);
 
   function add(then) {
     const r = useCart.getState().add({ product: p, shop: { id: b.id, slug: b.slug, name: b.name } }, qty);
@@ -70,6 +73,7 @@ function Product({ b }) {
             <WishButton productId={p.id} wish={wish} />
             <span className="sf-muted" style={{ paddingLeft: 52, alignSelf: "center" }}>{wish.ids.has(p.id) ? "Saved to your wishlist" : "Save for later"}</span>
           </div>
+          {wa && <Button as="a" href={`https://wa.me/${wa}?text=${ask}`} target="_blank" rel="noopener noreferrer" variant="outline" fullWidth>Ask on WhatsApp</Button>}
           <VisitBusiness business={b} label="Sold by" />
         </div>
       </div>

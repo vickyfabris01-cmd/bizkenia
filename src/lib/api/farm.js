@@ -1,4 +1,4 @@
-// src/lib/api/farm.js — NEW FILE
+// src/lib/api/farm.js — MODIFIED (store item serial and condition, crop field quantity, livestock class)
 //
 // AIM
 // Everything the farm (agriculture) screens ask of the database, grouped by screen. Every
@@ -49,6 +49,7 @@ export const saveCrop = guard(async (bid, f) => {
     field_id: f.field_id, name: f.name.trim(), variety: text(f.variety), status: f.status || "planned",
     area_ha: num(f.area_ha), planned_date: f.planned_date || null, planted_date: f.planted_date || null,
     expected_harvest: f.expected_harvest || null, notes: text(f.notes),
+    field_quantity: f.field_quantity === "" || f.field_quantity == null ? null : Number(f.field_quantity), field_unit: text(f.field_unit) || "kg",
   };
   const q = f.id ? supabase.from("crops").update(row).eq("id", f.id) : supabase.from("crops").insert({ ...row, business_id: bid });
   return wrap(await q.select().single());
@@ -103,7 +104,7 @@ export const listItems = guard(async (bid) =>
   wrap(await supabase.from("farm_inventory_items").select("*").eq("business_id", bid).order("name")));
 
 export const saveItem = guard(async (bid, f) => {
-  const row = { name: f.name.trim(), category: f.category || "other", unit: f.unit?.trim() || "kg", reorder_level: Number(f.reorder_level) || 0, unit_cost: num(f.unit_cost), notes: text(f.notes) };
+  const row = { name: f.name.trim(), category: f.category || "other", unit: f.unit?.trim() || "kg", reorder_level: Number(f.reorder_level) || 0, unit_cost: num(f.unit_cost), notes: text(f.notes), serial_no: text(f.serial_no), condition: f.condition || null };
   // The quantity of an existing item changes only through stock movements.
   const q = f.id ? supabase.from("farm_inventory_items").update(row).eq("id", f.id)
                  : supabase.from("farm_inventory_items").insert({ ...row, business_id: bid, quantity: Number(f.quantity) || 0 });
@@ -125,7 +126,7 @@ export const listGroups = guard(async (bid) =>
   wrap(await supabase.from("livestock_groups").select("*").eq("business_id", bid).order("name")));
 
 export const saveGroup = guard(async (bid, f) => {
-  const row = { name: f.name.trim(), species: f.species || "cattle", breed: text(f.breed), notes: text(f.notes) };
+  const row = { name: f.name.trim(), species: f.species || "cattle", breed: text(f.breed), animal_class: text(f.animal_class), notes: text(f.notes) };
   const q = f.id ? supabase.from("livestock_groups").update(row).eq("id", f.id)
                  : supabase.from("livestock_groups").insert({ ...row, business_id: bid, head_count: Math.max(0, parseInt(f.head_count, 10) || 0) });
   const res = wrap(await q.select().single());

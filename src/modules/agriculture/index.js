@@ -1,9 +1,9 @@
-// src/modules/agriculture/index.js — MODIFIED (adds Produce and Produce stock)
+// src/modules/agriculture/index.js — MODIFIED (Store, Sales and Orders; produce stock now comes from what the farm holds)
 //
 // AIM
 // The agriculture module's navigation. An agriculture business (a farm) shows this menu to its
-// owner and managers: dashboard, crops, produce for sale, produce stock, fields and land,
-// inventory, livestock, income and expenses, tasks, analytics, reports, and settings (owner only).
+// owner and managers: dashboard, crops, produce for sale, sales, orders, fields and land,
+// store and tools, livestock, income and expenses, tasks, analytics, reports, and settings (owner only).
 // Every screen is built, so none opens the ComingSoon page. Screens live in src/pages/farm/
 // (Reports is shared with rental; Produce reuses the shop's product screens).
 
@@ -20,9 +20,10 @@ registerModule({
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "", end: true, phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/FarmDashboard.jsx")) },
     { id: "crops", label: "Crops", icon: "home", path: "crops", phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/CropsPage.jsx")) },
     { id: "produce", label: "Produce for sale", icon: "megaphone", path: "produce", phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/ProducePage.jsx")) },
-    { id: "produce-stock", label: "Produce stock", icon: "file", path: "produce-stock", phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/ProduceStockPage.jsx")) },
+    { id: "sales", label: "Sales", icon: "card", path: "sales", phase: 5, roles: BOTH, element: lazy(() => import("../../pages/farm/FarmSalesPage.jsx")) },
+    { id: "orders", label: "Orders", icon: "file", path: "orders", phase: 5, roles: BOTH, element: lazy(() => import("../../pages/farm/FarmOrdersPage.jsx")) },
     { id: "fields", label: "Fields and land", icon: "building", path: "fields", phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/FieldsPage.jsx")) },
-    { id: "inventory", label: "Inventory", icon: "file", path: "inventory", phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/InventoryPage.jsx")) },
+    { id: "inventory", label: "Store and tools", icon: "building", path: "inventory", phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/InventoryPage.jsx")) },
     { id: "livestock", label: "Livestock", icon: "users", path: "livestock", phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/LivestockPage.jsx")) },
     { id: "money", label: "Income and expenses", icon: "card", path: "money", phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/MoneyPage.jsx")) },
     { id: "tasks", label: "Tasks", icon: "check", path: "tasks", phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/TasksPage.jsx")) },

@@ -1,4 +1,4 @@
-// src/pages/storefront/CheckoutPage.jsx — NEW FILE (Phase 5 step 2)
+// src/pages/storefront/CheckoutPage.jsx — MODIFIED (Phase 5 step 2; a farm checkout is pickup only, paid by M-Pesa)
 //
 // AIM
 // /b/:slug/checkout (sign-in required; the cart is kept through sign-in). Three steps:
@@ -34,7 +34,12 @@ function Checkout({ b }) {
   const profile = useSession((s) => s.profile);
   const all = useCart((s) => s.lines);
   const lines = useMemo(() => all.filter((l) => l.businessId === b.id), [all, b.id]);
-  const { data: terms } = useAsync(() => getShopTerms(b.id), [b.id]);
+  const farm = b.business_type === "agriculture";
+  const { data: shopTerms } = useAsync(() => (farm ? Promise.resolve({ data: null, error: null }) : getShopTerms(b.id)), [b.id, farm]);
+  // A farm has no delivery settings: the buyer pays by M-Pesa and collects from the farm.
+  const terms = farm
+    ? { delivery_enabled: false, pickup_enabled: true, pay_on_delivery: false, delivery_fee: 0, free_delivery_over: null, delivery_note: "", pickup_address: [b.address, b.county].filter(Boolean).join(", ") || "the farm" }
+    : shopTerms;
   const { data: saved } = useAsync(() => listAddresses(), []);
   const [step, setStep] = useState(0);
   const [err, setErr] = useState("");

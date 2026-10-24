@@ -1,4 +1,4 @@
-// src/pages/storefront/CartPage.jsx — NEW FILE (Phase 5 step 2)
+// src/pages/storefront/CartPage.jsx — MODIFIED (Phase 5 step 2; also the cart for a farm: pay by M-Pesa and collect)
 //
 // AIM
 // /b/:slug/cart — the cart for one shop. Refreshes price and stock from the database when it opens
@@ -17,6 +17,7 @@ function Cart({ b }) {
   const all = useCart((s) => s.lines);
   const lines = all.filter((l) => l.businessId === b.id);
   const [notice, setNotice] = useState("");
+  const farm = b.business_type === "agriculture";
 
   useEffect(() => {
     const mine = useCart.getState().linesFor(b.id);
@@ -30,7 +31,7 @@ function Cart({ b }) {
   }, [b.id]);
 
   if (!lines.length) {
-    return <Card><EmptyState icon="search" title="Your cart is empty" description="Add something you like and it will wait for you here." action={<Button as={Link} to={`/b/${b.slug}/browse`}>Browse products</Button>} /></Card>;
+    return <Card><EmptyState icon="search" title="Your cart is empty" description="Add something you like and it will wait for you here." action={<Button as={Link} to={farm ? `/b/${b.slug}` : `/b/${b.slug}/browse`}>{farm ? "See the farm's produce" : "Browse products"}</Button>} /></Card>;
   }
   return (
     <>
@@ -41,9 +42,9 @@ function Cart({ b }) {
         <Card>
           <div className="sf-sum">
             <div><span>Subtotal</span><span>{money(lineTotal(lines))}</span></div>
-            <p className="sf-muted">Delivery is added at checkout.</p>
+            <p className="sf-muted">{farm ? "Pay by M-Pesa, then collect from the farm." : "Delivery is added at checkout."}</p>
             <Button fullWidth size="lg" onClick={() => navigate(`/b/${b.slug}/checkout`)}>Checkout</Button>
-            <Button fullWidth variant="ghost" as={Link} to={`/b/${b.slug}/browse`}>Keep shopping</Button>
+            <Button fullWidth variant="ghost" as={Link} to={farm ? `/b/${b.slug}` : `/b/${b.slug}/browse`}>Keep shopping</Button>
           </div>
         </Card>
       </div>

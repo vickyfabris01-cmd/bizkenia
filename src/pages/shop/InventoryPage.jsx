@@ -1,8 +1,10 @@
-// src/pages/shop/InventoryPage.jsx — MODIFIED (optional wording props so farms can reuse it for produce)
+// src/pages/shop/InventoryPage.jsx — MODIFIED (shows what is in the store and what is listed)
 //
 // AIM
-// /app/:slug/inventory — how many of each product you have. At or below a product's warning level
-// it shows "Low stock". Stock changes only by recording stock in (new stock arrived), stock out
+// /app/:slug/inventory — how many of each product you have in your store, and how many of those are
+// listed for sale (choose how many to list on the Products screen). At or below a product's warning
+// level it shows "Low stock". A product that comes from a farm's store, field or livestock is
+// counted there, not here. Stock changes only by recording stock in (new stock arrived), stock out
 // (lost or used) or a recount; each is kept in the product's history, and stock can never go below
 // zero. Sales and cancelled orders change stock automatically and show in the history too.
 //
@@ -55,7 +57,8 @@ export default function InventoryPage({ title = "Inventory", noun = "product", p
   if (loading && !rows) return <Loading />;
   if (error) return <LoadError error={error} onRetry={reload} />;
   const items = (rows || []).filter((p) => p.status !== "archived");
-  const isLow = (p) => p.stock <= 0 || (Number(p.low_stock_level) > 0 && p.stock <= p.low_stock_level);
+  const onHand = (p) => (p.source_kind ? p.stock : p.store_quantity);
+  const isLow = (p) => onHand(p) <= 0 || (Number(p.low_stock_level) > 0 && onHand(p) <= p.low_stock_level);
   const low = items.filter(isLow);
   const shown = tab === "low" ? low : items;
 
@@ -83,16 +86,16 @@ export default function InventoryPage({ title = "Inventory", noun = "product", p
       ) : (
         <div className="shop-cards">
           {shown.map((p) => {
-            const out = p.stock <= 0;
-            const pct = Number(p.low_stock_level) > 0 ? Math.min(100, Math.round((p.stock / (Number(p.low_stock_level) * 2)) * 100)) : 100;
+            const out = onHand(p) <= 0;
+            const pct = Number(p.low_stock_level) > 0 ? Math.min(100, Math.round((onHand(p) / (Number(p.low_stock_level) * 2)) * 100)) : 100;
             return (
               <Card key={p.id}><CardBody>
                 <div className="shop-card__row"><h3 className="shop-card__title">{p.name}</h3>{out ? <Badge variant="error">Out of stock</Badge> : isLow(p) ? <Badge variant="warning">Low stock</Badge> : null}</div>
-                <p className="shop-stat__value" style={{ margin: "var(--space-2) 0" }}>{p.stock} <span className="shop-card__meta">{p.unit}</span></p>
-                <div className={`shop-meter${isLow(p) ? " shop-meter--low" : ""}`} role="img" aria-label={`${p.stock} in stock, warning at ${p.low_stock_level}`}><span style={{ width: `${out ? 0 : pct}%` }} /></div>
-                <p className="shop-card__meta">Warn at {p.low_stock_level}</p>
+                <p className="shop-stat__value" style={{ margin: "var(--space-2) 0" }}>{onHand(p)} <span className="shop-card__meta">{p.source_kind ? `${p.unit} listed` : `${p.unit} in store`}</span></p>
+                <div className={`shop-meter${isLow(p) ? " shop-meter--low" : ""}`} role="img" aria-label={`${onHand(p)} in stock, warning at ${p.low_stock_level}`}><span style={{ width: `${out ? 0 : pct}%` }} /></div>
+                <p className="shop-card__meta">{p.source_kind ? "Counted in your store, field or livestock" : `${p.stock} on sale${p.store_quantity > p.stock ? ` · ${p.store_quantity - p.stock} not listed` : ""}`}{p.source_kind ? "" : ` · Warn at ${p.low_stock_level}`}</p>
                 <div className="shop-split" style={{ marginTop: "var(--space-2)" }}>
-                  <Button size="sm" onClick={() => { setMv({ kind: "in", quantity: "", note: "" }); setMvErr(""); setMove(p); }}>Update stock</Button>
+                  <Button size="sm" disabled={Boolean(p.source_kind)} onClick={() => { setMv({ kind: "in", quantity: "", note: "" }); setMvErr(""); setMove(p); }}>Update stock</Button>
                   <Button size="sm" variant="outline" onClick={() => setHistory(p)}>History</Button>
                 </div>
               </CardBody></Card>
@@ -106,7 +109,7 @@ export default function InventoryPage({ title = "Inventory", noun = "product", p
         {move && (
           <form id="shop-stock-form" className="shop-form" onSubmit={submit} noValidate>
             {mvErr && <Alert type="error" message={mvErr} />}
-            <p className="shop-hint" style={{ margin: 0 }}>Now: {move.stock} {move.unit}</p>
+            <p className="shop-hint" style={{ margin: 0 }}>In your store now: {move.store_quantity} {move.unit}</p>
             <SelectInput label="What happened" value={mv.kind} onChange={(v) => setMv({ ...mv, kind: v })} options={Object.entries(MOVES).map(([value, label]) => ({ value, label }))} />
             <Input label={mv.kind === "adjust" ? "Amount counted" : "Amount"} type="number" min="0" step="1" required value={mv.quantity} onChange={(e) => setMv({ ...mv, quantity: e.target.value })} />
             <Input label="Note" value={mv.note} onChange={(e) => setMv({ ...mv, note: e.target.value })} placeholder="Delivery from supplier, damaged in store…" />

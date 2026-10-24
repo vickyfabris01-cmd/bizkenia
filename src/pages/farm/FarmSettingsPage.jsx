@@ -1,4 +1,4 @@
-// src/pages/farm/FarmSettingsPage.jsx — MODIFIED (Phase 6: Danger zone — hand over or delete the business)
+// src/pages/farm/FarmSettingsPage.jsx — MODIFIED (Phase 6 Danger zone; M-Pesa details for online orders)
 //
 // AIM
 // /app/:slug/settings (owner only) — the farm's profile and a summary of how it is set up: name,
@@ -12,6 +12,7 @@ import { Badge, Button, Card, CardBody, CardHeader } from "../../components/ui";
 import BusinessLogoCard from "../../components/business/BusinessLogoCard.jsx";
 import BusinessCoverCard from "../../components/business/BusinessCoverCard.jsx";
 import BusinessDangerZone from "../../components/lifecycle/BusinessDangerZone.jsx";
+import { MpesaCard } from "../shop/ShopSettingsPage.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { getFarmSummary } from "../../lib/api/farm.js";
 import { formatDate } from "../../lib/format.js";
@@ -66,6 +67,8 @@ export default function FarmSettingsPage() {
         <BusinessLogoCard business={business} />
         <BusinessCoverCard business={business} />
       </div>
+
+      <MpesaCard bid={bid} />
 
       <BusinessDangerZone business={business} />
     </div>

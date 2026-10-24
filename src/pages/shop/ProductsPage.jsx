@@ -1,17 +1,27 @@
-// src/pages/shop/ProductsPage.jsx — MODIFIED (optional wording props so farms can reuse it for produce)
+// src/pages/shop/ProductsPage.jsx — MODIFIED (stock comes from what you hold; farms list from their store, field or livestock)
 //
 // AIM
 // /app/:slug/products — the shop's catalogue. Search, filter by status and category, add a
 // product with up to five photos, edit it, put it on sale or archive it, and manage categories.
-// A product is only visible to shoppers when it is "On sale". Opening stock is set when the
-// product is created; after that stock changes on the Inventory screen. A photo that is replaced
-// or removed, or uploaded and then abandoned, is deleted from storage.
+// A product is only visible to shoppers when it is "On sale". A photo that is replaced or removed,
+// or uploaded and then abandoned, is deleted from storage.
+//
+// STOCK
+//   Shop   a product is its own store: "In my store" is what the shop has and "Quantity to list" is
+//          what is on sale (or "list everything"). Store stock changes on the Inventory screen.
+//   Farm   (farm prop) every listing must come from something the farm holds: an item in the store
+//          (produce, tools, machinery, inputs), a crop in the field, or a livestock group. The
+//          database refuses to list more than is on hand. A listing may use a different unit and
+//          ratio, for example maize fodder in bundles of 5 kg from the maize crop. "Available until"
+//          hides greens and vegetables after a date. ?source=item:ID (or crop:/livestock:) opens the
+//          form for that holding.
 //
 // Props are all optional and default to the shop's wording. The farm's Produce screen passes its
-// own title, nouns and default unit (see pages/farm/ProducePage.jsx).
+// own title, nouns, default unit and farm (see pages/farm/ProducePage.jsx).
 
 import "./Shop.css";
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Alert, Badge, Button, Card, CardBody, EmptyState, Input, SelectInput } from "../../components/ui";
 import { ConfirmDialog, Modal } from "../../components/modals/Modal.jsx";
 import ImageUploadButton from "../../components/ui/ImageUploadButton.jsx";
@@ -19,16 +29,20 @@ import useAsync from "../../hooks/useAsync.js";
 import { useToast } from "../../hooks/useNotifications.js";
 import {
   MAX_PHOTOS, PHOTO_MAX_MB, deleteCategory, deleteProduct, listCategories, listProducts, removeProductPhoto,
-  saveCategory, saveProduct, uploadProductPhoto,
+  listSources, saveCategory, saveProduct, uploadProductPhoto,
 } from "../../lib/api/shop.js";
 import { FormModal, Loading, LoadError, PageHead, ProductBadge, money, useShop } from "./shared.jsx";
 
 const STATUS_OPTIONS = [{ value: "draft", label: "Draft (hidden)" }, { value: "active", label: "On sale" }, { value: "archived", label: "Archived (hidden)" }];
 
+const KIND_LABEL = { item: "Store", crop: "Field", livestock: "Livestock" };
+
 function stockBadge(p) {
-  if (p.stock <= 0) return <Badge variant="error">Out of stock</Badge>;
-  if (Number(p.low_stock_level) > 0 && p.stock <= p.low_stock_level) return <Badge variant="warning">Low stock: {p.stock}</Badge>;
-  return <Badge variant="neutral">{p.stock} in stock</Badge>;
+  if (p.source_kind) return p.stock <= 0 ? <Badge variant="warning">Nothing listed</Badge> : <Badge variant="neutral">{p.stock} {p.unit} listed</Badge>;
+  if (p.store_quantity <= 0) return <Badge variant="error">Out of stock</Badge>;
+  if (p.stock <= 0) return <Badge variant="warning">Not listed · {p.store_quantity} in store</Badge>;
+  if (Number(p.low_stock_level) > 0 && p.stock <= p.low_stock_level) return <Badge variant="warning">Low: {p.stock} listed</Badge>;
+  return <Badge variant="neutral">{p.stock} listed{p.store_quantity > p.stock ? ` · ${p.store_quantity - p.stock} in store` : ""}</Badge>;
 }
 
 function Thumb({ p }) {
@@ -155,6 +169,7 @@ export default function ProductsPage({
   unitPlaceholder = "item, kg, litre, pack",
   emptyHelp = "Add your first product with a photo and a price. Set it to On sale when it is ready.",
   deleteMessage = "Past orders keep its name and price. Consider archiving instead to hide it. This cannot be undone.",
+  farm = false,
 }) {
   const Noun = noun.charAt(0).toUpperCase() + noun.slice(1);
   const { bid } = useShop();
@@ -171,25 +186,79 @@ export default function ProductsPage({
   const [err, setErr] = useState("");
   const uploaded = useRef([]);
   const saved = useRef(false);
+  const [params, setParams] = useSearchParams();
 
   useEffect(() => { const t = setTimeout(() => { setTerm(search); setLimit(24); }, 300); return () => clearTimeout(t); }, [search]);
 
   const { data: categories, reload: reloadCats } = useAsync(() => listCategories(bid), [bid]);
   const { data: rows, error, loading, reload } = useAsync(() => listProducts(bid, { search: term, status, categoryId: cat, limit: limit + 1 }), [bid, term, status, cat, limit]);
 
+  const { data: sources, reload: reloadSources } = useAsync(() => (farm ? listSources(bid) : Promise.resolve({ data: null, error: null })), [bid, farm]);
+  const srcList = sources?.all || [];
+  const findSrc = (key) => srcList.find((s) => s.key === key);
+  const srcOptions = [{ value: "", label: "Choose where it comes from" }, ...srcList.map((s) => ({
+    value: s.key, label: `${KIND_LABEL[s.kind]}: ${s.name} (${s.onhand} ${s.unit}${s.listed ? `, ${s.free} not yet offered` : ""})`,
+  }))];
+
+  // "Put on sale" buttons elsewhere open this form for one holding: ?source=item:ID
+  useEffect(() => {
+    const key = params.get("source");
+    if (!farm || !key || !sources) return;
+    const src = srcList.find((s) => s.key === key);
+    setParams({}, { replace: true });
+    if (src) openForm({ prefill: src });
+  }, [params, sources]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const catOptions = [{ value: "", label: "No category" }, ...(categories || []).map((c) => ({ value: c.id, label: c.name }))];
-  const fields = (isNew) => [
-    { key: "name", label: `${Noun} name`, required: true, placeholder: namePlaceholder },
-    { key: "category_id", label: "Category", type: "select", options: catOptions },
-    { key: "price", label: "Price (KSh)", type: "number", min: "0", step: "any", required: true },
-    { key: "compare_at_price", label: "Old price (KSh, optional)", type: "number", min: "0", step: "any", helper: "Shown crossed out beside the price when higher" },
-    { key: "unit", label: "Sold by", placeholder: unitPlaceholder },
-    { key: "sku", label: "SKU or code (optional)" },
-    ...(isNew ? [{ key: "stock", label: "Stock you have now", type: "number", min: "0", step: "1" }] : []),
-    { key: "low_stock_level", label: "Warn me when stock is at or below", type: "number", min: "0", step: "1" },
-    { key: "status", label: "Visibility", type: "select", options: STATUS_OPTIONS },
-    { key: "description", label: "Description", type: "textarea" },
-  ];
+  const fields = (isNew) => {
+    const cur = form?.product;
+    const common = [
+      { key: "name", label: `${Noun} name`, required: true, placeholder: namePlaceholder },
+    ];
+    const pricing = [
+      { key: "price", label: "Price (KSh)", type: "number", min: "0", step: "any", required: true },
+      { key: "compare_at_price", label: "Old price (KSh, optional)", type: "number", min: "0", step: "any", helper: "Shown crossed out beside the price when higher" },
+      { key: "unit", label: "Sold by", placeholder: unitPlaceholder },
+    ];
+    const tail = [
+      { key: "status", label: "Visibility", type: "select", options: STATUS_OPTIONS },
+      { key: "description", label: "Description", type: "textarea" },
+    ];
+    if (farm) {
+      return [
+        ...common,
+        ...(!isNew && cur && !cur.source_kind ? [{ key: "legacy", type: "note", text: "This item is not linked to your store, field or livestock yet, so its quantity is not tracked. Choose where it comes from to link it." }] : []),
+        { key: "source", label: "Where does it come from?", type: "select", options: srcOptions, required: isNew,
+          helper: srcList.length ? "Store items, crops in the field and livestock you have recorded." : "Nothing recorded yet. Add items to your Store, crops or livestock first." },
+        { key: "per_unit", label: "How much of it each unit sold uses", type: "number", min: "0", step: "any", show: (v) => Boolean(v.source),
+          helper: (v) => { const sel = findSrc(v.source); return sel ? `Counted in ${sel.unit}. Example: a crate of 20 kg uses 20; selling it as a bundle of 5 kg uses 5.` : ""; } },
+        { key: "stock", label: "How many to list", type: "number", min: "0", step: "1",
+          helper: (v) => {
+            const sel = findSrc(v.source);
+            if (!sel) return "Choose where it comes from first.";
+            const own = cur && v.source === `${cur.source_kind}:${cur.source_id}` ? Number(cur.stock) * Number(cur.per_unit) : 0;
+            const pu = Number(v.per_unit) > 0 ? Number(v.per_unit) : 1;
+            return `Up to ${Math.floor((sel.free + own) / pu)} can be listed. ${sel.name}: ${sel.onhand} ${sel.unit} on hand, ${Math.max(0, sel.listed - own)} already offered.`;
+          } },
+        ...pricing,
+        { key: "category_id", label: "Category", type: "select", options: catOptions },
+        { key: "available_until", label: "Available until (optional)", type: "date", helper: "Greens and vegetables do not keep. After this date it is hidden from buyers." },
+        ...tail,
+      ];
+    }
+    return [
+      ...common,
+      { key: "category_id", label: "Category", type: "select", options: catOptions },
+      ...pricing,
+      { key: "sku", label: "SKU or code (optional)" },
+      ...(isNew ? [{ key: "store_quantity", label: "In my store now", type: "number", min: "0", step: "1" }]
+        : [{ key: "store_note", type: "note", text: `In your store: ${cur?.store_quantity ?? 0}. Change the store quantity on the Inventory screen.` }]),
+      { key: "list_all", label: "List everything I have for sale", type: "switch" },
+      { key: "stock", label: "Quantity to list", type: "number", min: "0", step: "1", show: (v) => !v.list_all, helper: "Keep some back if you like. You can change this any time." },
+      { key: "low_stock_level", label: "Warn me when stock is at or below", type: "number", min: "0", step: "1" },
+      ...tail,
+    ];
+  };
 
   function openForm(f) { uploaded.current = []; saved.current = false; setForm(f); }
   function closeForm() {
@@ -206,7 +275,7 @@ export default function ProductsPage({
     const after = v.images || [];
     [...before.filter((u) => !after.includes(u)), ...uploaded.current.filter((u) => !after.includes(u))].forEach((u) => removeProductPhoto(bid, u));
     toast.success(form?.product ? `${Noun} updated` : `${Noun} added`);
-    reload();
+    reload(); reloadSources();
     return r;
   }
 
@@ -216,7 +285,7 @@ export default function ProductsPage({
     setBusy(false);
     if (r.error) { setErr(r.error); setConfirm(null); return; }
     (confirm.images || []).forEach((u) => removeProductPhoto(bid, u));
-    setConfirm(null); toast.success(`${Noun} removed`); reload();
+    setConfirm(null); toast.success(`${Noun} removed`); reload(); reloadSources();
   }
 
   if (loading && !rows) return <Loading />;
@@ -253,7 +322,7 @@ export default function ProductsPage({
                   <Thumb p={x} />
                   <span style={{ display: "grid", gap: 2, minWidth: 0 }}>
                     <span className="shop-card__title">{x.name}</span>
-                    <span className="shop-card__meta">{x.category?.name || "No category"}</span>
+                    <span className="shop-card__meta">{farm && x.source_kind ? `From ${KIND_LABEL[x.source_kind]}: ${findSrc(`${x.source_kind}:${x.source_id}`)?.name || "your farm"}` : x.category?.name || "No category"}</span>
                     <span className="shop-price">{money(x.price)}{x.compare_at_price ? <s>{money(x.compare_at_price)}</s> : null}</span>
                   </span>
                 </span>
@@ -266,8 +335,10 @@ export default function ProductsPage({
       )}
 
       <FormModal open={Boolean(form)} title={p ? `Edit ${noun}` : addLabel} fields={fields(!p)} onClose={closeForm} onSubmit={submit}
-        initial={p ? { ...p, compare_at_price: p.compare_at_price ?? "", sku: p.sku || "", description: p.description || "", category_id: p.category_id || "", images: p.images || [] }
-          : { name: "", category_id: "", price: "", compare_at_price: "", unit: defaultUnit, sku: "", stock: "", low_stock_level: 5, status: "draft", description: "", images: [] }}
+        initial={p ? { ...p, compare_at_price: p.compare_at_price ?? "", sku: p.sku || "", description: p.description || "", category_id: p.category_id || "", images: p.images || [],
+            source: p.source_kind ? `${p.source_kind}:${p.source_id}` : "", per_unit: p.per_unit ?? 1, list_all: p.list_all !== false, available_until: p.available_until || "" }
+          : { name: form?.prefill?.name || "", category_id: "", price: "", compare_at_price: "", unit: form?.prefill ? (form.prefill.kind === "livestock" ? "head" : form.prefill.unit) : defaultUnit, sku: "", stock: "", store_quantity: "",
+              list_all: true, source: form?.prefill?.key || "", per_unit: 1, available_until: "", low_stock_level: farm ? 0 : 5, status: "draft", description: "", images: [] }}
         danger={p ? { label: "Delete", onClick: () => { setConfirm(p); closeForm(); } } : undefined}
         extra={(vals, set) => <PhotoManager bid={bid} images={vals.images} set={set} onUploaded={(u) => uploaded.current.push(u)} />} />
 

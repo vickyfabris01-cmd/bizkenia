@@ -1,4 +1,4 @@
-// src/pages/shop/shared.jsx — NEW FILE (Phase 5)
+// src/pages/shop/shared.jsx — MODIFIED (FormModal: helper and options can depend on the form, and on/off switches)
 //
 // AIM
 // Small pieces every seller screen of a shop uses: the page heading, tabs, stat tiles, plain-English
@@ -8,7 +8,8 @@
 //
 // FormModal PROPS
 //   open, onClose, title, submitLabel
-//   fields    [{ key, label, type: "text"|"number"|"select"|"textarea", required, options, placeholder, helper,
+//   fields    [{ key, label, type: "text"|"number"|"select"|"textarea"|"switch"|"note", required, options, placeholder, helper,
+//                (helper and options may be functions of the form values),
 //                min, step, show?(values) }]
 //   initial   starting values          onSubmit(values) -> Promise<{ error }>  (error text is shown in the dialog)
 //   danger    optional { label, onClick } shown as a red button on the left (e.g. Delete)
@@ -17,7 +18,7 @@
 import "./Shop.css";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Alert, Badge, Button, Input, SelectInput, Skeleton, TextArea } from "../../components/ui";
+import { Alert, Badge, Button, Input, SelectInput, Skeleton, TextArea, Toggle } from "../../components/ui";
 import { Modal } from "../../components/modals/Modal.jsx";
 import { useBusinessContext } from "../../router/BusinessContext.jsx";
 import { formatKsh } from "../../lib/format.js";
@@ -127,8 +128,10 @@ export function FormModal({ open, onClose, title, submitLabel = "Save", fields, 
       <form id="shop-form" className="shop-form" onSubmit={submit} noValidate>
         {error && <Alert type="error" message={error} />}
         {fields.filter((f) => !f.show || f.show(form)).map((f) => {
-          const common = { label: f.label, required: f.required, helper: f.helper, value: form[f.key] ?? "" };
-          if (f.type === "select") return <SelectInput key={f.key} {...common} options={f.options} placeholder={f.placeholder} onChange={(v) => set(f.key, v)} />;
+          const common = { label: f.label, required: f.required, helper: typeof f.helper === "function" ? f.helper(form) : f.helper, value: form[f.key] ?? "" };
+          if (f.type === "note") return <p key={f.key} className="shop-hint" style={{ margin: 0 }}>{typeof f.text === "function" ? f.text(form) : f.text}</p>;
+          if (f.type === "switch") return <Toggle key={f.key} label={f.label} checked={Boolean(form[f.key])} onChange={(v) => set(f.key, v)} />;
+          if (f.type === "select") return <SelectInput key={f.key} {...common} options={typeof f.options === "function" ? f.options(form) : f.options} placeholder={f.placeholder} onChange={(v) => set(f.key, v)} />;
           if (f.type === "textarea") return <TextArea key={f.key} {...common} rows={3} placeholder={f.placeholder} onChange={(e) => set(f.key, e.target.value)} />;
           return <Input key={f.key} {...common} type={f.type || "text"} min={f.min} step={f.step} placeholder={f.placeholder} onChange={(e) => set(f.key, e.target.value)} />;
         })}

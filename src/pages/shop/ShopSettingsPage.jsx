@@ -1,4 +1,4 @@
-// src/pages/shop/ShopSettingsPage.jsx — MODIFIED (Phase 6: Danger zone — hand over or delete the business)
+// src/pages/shop/ShopSettingsPage.jsx — MODIFIED (Phase 6 Danger zone; the M-Pesa card is exported so farm settings can use it too)
 //
 // AIM
 // /app/:slug/settings (owner only) — how the shop delivers and takes payment: delivery on or off
@@ -19,7 +19,7 @@ import { useToast } from "../../hooks/useNotifications.js";
 import { getShopMpesa, getShopSettings, saveShopMpesa, saveShopSettings } from "../../lib/api/shop.js";
 import { Loading, LoadError, PageHead, useShop } from "./shared.jsx";
 
-function MpesaCard({ bid }) {
+export function MpesaCard({ bid }) {
   const toast = useToast();
   const { data, reload } = useAsync(() => getShopMpesa(bid), [bid]);
   const [code, setCode] = useState("");

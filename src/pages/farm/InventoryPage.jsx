@@ -1,18 +1,22 @@
-// src/pages/farm/InventoryPage.jsx — NEW FILE
+// src/pages/farm/InventoryPage.jsx — MODIFIED (Store and tools: produce, supplies, tools and machinery; put items on sale)
 //
 // AIM
-// /app/:slug/inventory — supplies: seed, fertiliser, chemicals, feed, tools and fuel. Each item has
+// /app/:slug/inventory — everything the farm keeps in store: harvested produce, seed, fertiliser,
+// chemicals, feed, tools, machinery (with serial number and condition) and fuel. Anything here can be
+// put on sale; the Produce screen then offers it and cannot list more than is on hand. Each item has
 // a reorder level; at or below it the item shows a "Low stock" badge. Quantity changes only by
 // recording stock in, stock out or a recount (each one is kept in the item's history), so the
 // numbers can be trusted. Stock out can never go below zero.
 
 import "./Farm.css";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Alert, Badge, Button, Card, CardBody, EmptyState, Input, SelectInput } from "../../components/ui";
 import { ConfirmDialog, Modal } from "../../components/modals/Modal.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { useToast } from "../../hooks/useNotifications.js";
 import { deleteItem, listItems, listMovements, moveStock, saveItem } from "../../lib/api/farm.js";
+import { listSources } from "../../lib/api/shop.js";
 import { formatDateTime } from "../../lib/format.js";
 import { FormModal, ITEM_CATEGORIES, Loading, LoadError, PageHead, Tabs, cap, money, opts, qty, useFarm } from "./shared.jsx";
 
@@ -26,6 +30,9 @@ function itemFields(isNew) {
     ...(isNew ? [{ key: "quantity", label: "How much you have now", type: "number", min: "0", step: "any" }] : []),
     { key: "reorder_level", label: "Reorder level", type: "number", min: "0", step: "any", helper: "Shows Low stock when the amount is at or below this" },
     { key: "unit_cost", label: "Cost per unit (KSh)", type: "number", min: "0", step: "any" },
+    { key: "serial_no", label: "Serial or plate number", show: (v) => v.category === "machinery", placeholder: "KCA 123X" },
+    { key: "condition", label: "Condition", type: "select", show: (v) => ["machinery", "tool"].includes(v.category),
+      options: [{ value: "", label: "Not set" }, { value: "good", label: "Good" }, { value: "fair", label: "Fair" }, { value: "needs_repair", label: "Needs repair" }, { value: "out_of_use", label: "Out of use" }] },
     { key: "notes", label: "Notes", type: "textarea" },
   ];
 }
@@ -39,7 +46,7 @@ function History({ item, onClose }) {
         <ul className="farm-list">
           {data.map((m) => (
             <li key={m.id}>
-              <div className="farm-list__main"><span className="farm-list__title">{m.kind === "in" ? "Stock in" : m.kind === "out" ? "Stock out" : "Recount"} · {qty(m.quantity)} {item.unit}</span>
+              <div className="farm-list__main"><span className="farm-list__title">{({ in: "Stock in", out: "Stock out", adjust: "Recount", sale: "Sold", return: "Returned" })[m.kind] || m.kind} · {qty(m.quantity)} {item.unit}</span>
                 <span className="farm-list__sub">{formatDateTime(m.moved_at)}{m.note ? ` · ${m.note}` : ""}</span></div>
               <span className="farm-amount">{qty(m.balance_after)} left</span>
             </li>
@@ -51,9 +58,10 @@ function History({ item, onClose }) {
 }
 
 export default function InventoryPage() {
-  const { bid } = useFarm();
+  const { bid, base } = useFarm();
   const toast = useToast();
   const { data: items, error, loading, reload } = useAsync(() => listItems(bid), [bid]);
+  const { data: srcs, reload: reloadSrcs } = useAsync(() => listSources(bid), [bid]);
   const [tab, setTab] = useState("all");
   const [form, setForm] = useState(null);       // { item? }
   const [move, setMove] = useState(null);       // item
@@ -66,6 +74,7 @@ export default function InventoryPage() {
 
   if (loading && !items) return <Loading />;
   if (error) return <LoadError error={error} onRetry={reload} />;
+  const offered = (id) => (srcs?.items || []).find((s) => s.id === id)?.listed || 0;
   const isLow = (i) => Number(i.reorder_level) > 0 && Number(i.quantity) <= Number(i.reorder_level);
   const low = items.filter(isLow);
   const shown = tab === "low" ? low : items;
@@ -78,12 +87,12 @@ export default function InventoryPage() {
     const { error: e2 } = await moveStock(move.id, mv.kind, mv.quantity, mv.note);
     setBusy(false);
     if (e2) { setMvErr(e2); return; }
-    toast.success("Stock updated"); setMove(null); reload();
+    toast.success("Stock updated"); setMove(null); reload(); reloadSrcs();
   }
 
   return (
     <div className="farm">
-      <PageHead title="Inventory and supplies" lead={items.length ? `${items.length} item${items.length === 1 ? "" : "s"}${low.length ? ` · ${low.length} low` : ""}` : "Seed, fertiliser, chemicals, feed and tools"}>
+      <PageHead title="Store and tools" lead={items.length ? `${items.length} item${items.length === 1 ? "" : "s"}${low.length ? ` · ${low.length} low` : ""}` : "Produce in store, supplies, tools and machinery"}>
         <Button onClick={() => setForm({})}>Add an item</Button>
       </PageHead>
       {err && <Alert type="error" message={err} />}
@@ -91,7 +100,7 @@ export default function InventoryPage() {
       {items.length > 0 && <Tabs label="Stock" value={tab} onChange={setTab} tabs={[{ value: "all", label: "All items", count: items.length }, { value: "low", label: "Low stock", count: low.length }]} />}
 
       {items.length === 0 ? (
-        <Card><EmptyState icon="file" title="No supplies yet" description="Add what you keep in store and set a reorder level, and the app tells you when to restock." action={<Button onClick={() => setForm({})}>Add an item</Button>} /></Card>
+        <Card><EmptyState icon="file" title="Nothing in the store yet" description="Add produce you have harvested, supplies, tools and machinery. Anything here can be put on sale, and the app keeps the quantities right." action={<Button onClick={() => setForm({})}>Add an item</Button>} /></Card>
       ) : shown.length === 0 ? (
         <Card><EmptyState icon="success" compact title="Nothing is low" description="Every item is above its reorder level." /></Card>
       ) : (
@@ -101,13 +110,15 @@ export default function InventoryPage() {
             return (
               <Card key={i.id}><CardBody>
                 <div className="farm-card__row"><h3 className="farm-card__title">{i.name}</h3>{isLow(i) && <Badge variant="warning">Low stock</Badge>}</div>
-                <p className="farm-card__meta">{cap(i.category)}{i.unit_cost != null ? ` · ${money(i.unit_cost)} per ${i.unit}` : ""}</p>
+                <p className="farm-card__meta">{cap(i.category)}{i.serial_no ? ` · ${i.serial_no}` : ""}{i.condition ? ` · ${cap(i.condition)}` : ""}{i.unit_cost != null ? ` · ${money(i.unit_cost)} per ${i.unit}` : ""}</p>
                 <p className="farm-stat__value" style={{ margin: "var(--space-2) 0" }}>{qty(i.quantity)} <span className="farm-card__meta">{i.unit}</span></p>
                 <div className={`farm-meter${isLow(i) ? " farm-meter--low" : ""}`} role="img" aria-label={`${qty(i.quantity)} ${i.unit} in stock, reorder at ${qty(i.reorder_level)}`}><span style={{ width: `${pct}%` }} /></div>
+                {offered(i.id) > 0 && <p className="farm-card__meta">{qty(offered(i.id))} {i.unit} offered for sale</p>}
                 <p className="farm-card__meta">Reorder at {qty(i.reorder_level)} {i.unit}</p>
                 <div className="farm-split" style={{ marginTop: "var(--space-2)" }}>
                   <Button size="sm" onClick={() => { setMv({ kind: "in", quantity: "", note: "" }); setMvErr(""); setMove(i); }}>Update stock</Button>
                   <Button size="sm" variant="outline" onClick={() => setHistory(i)}>History</Button>
+                  <Button as={Link} size="sm" variant="outline" to={`${base}/produce?source=item:${i.id}`}>Put on sale</Button>
                   <Button size="sm" variant="ghost" onClick={() => setForm({ item: i })}>Edit</Button>
                 </div>
               </CardBody></Card>
@@ -117,9 +128,9 @@ export default function InventoryPage() {
       )}
 
       <FormModal open={Boolean(form)} title={form?.item ? "Edit item" : "Add an item"} fields={itemFields(!form?.item)} onClose={() => setForm(null)}
-        initial={form?.item ? { ...form.item, unit_cost: form.item.unit_cost ?? "", notes: form.item.notes || "" } : { name: "", category: "fertiliser", unit: "kg", quantity: "", reorder_level: "", unit_cost: "", notes: "" }}
+        initial={form?.item ? { ...form.item, unit_cost: form.item.unit_cost ?? "", notes: form.item.notes || "", serial_no: form.item.serial_no || "", condition: form.item.condition || "" } : { name: "", category: "produce", unit: "kg", quantity: "", reorder_level: "", unit_cost: "", notes: "", serial_no: "", condition: "" }}
         danger={form?.item ? { label: "Delete", onClick: () => { setConfirm(form.item); setForm(null); } } : undefined}
-        onSubmit={async (v) => { const r = await saveItem(bid, v); if (!r.error) { toast.success(form?.item ? "Item updated" : "Item added"); reload(); } return r; }} />
+        onSubmit={async (v) => { const r = await saveItem(bid, v); if (!r.error) { toast.success(form?.item ? "Item updated" : "Item added"); reload(); reloadSrcs(); } return r; }} />
 
       <Modal isOpen={Boolean(move)} onClose={() => setMove(null)} title={move ? `Update ${move.name}` : ""} size="sm"
         footer={<><Button variant="secondary" onClick={() => setMove(null)}>Cancel</Button><Button type="submit" form="stock-form" loading={busy}>Save</Button></>}>

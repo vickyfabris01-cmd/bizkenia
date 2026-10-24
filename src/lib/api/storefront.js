@@ -1,4 +1,4 @@
-// src/lib/api/storefront.js — NEW FILE (Phase 5, step 2)
+// src/lib/api/storefront.js — MODIFIED (products also return "available until")
 //
 // AIM
 // Everything a SHOPPER asks of the database: browse a shop's products, read the shop's delivery
@@ -14,7 +14,7 @@ const NOT_CONNECTED = { data: null, error: "The app is not connected to the data
 const guard = (fn) => (...args) => (supabase ? fn(...args) : Promise.resolve(NOT_CONNECTED));
 const clean = (s) => String(s || "").replace(/[%,()]/g, " ").trim();
 
-const PRODUCT_FIELDS = "id, business_id, category_id, name, description, price, compare_at_price, stock, unit, images, status, created_at, category:product_categories(id, name)";
+const PRODUCT_FIELDS = "id, business_id, category_id, name, description, price, compare_at_price, stock, unit, images, status, available_until, created_at, category:product_categories(id, name)";
 
 // ---- browsing (no sign-in needed) --------------------------------------------------------
 export const listShopCategories = guard(async (bid) =>

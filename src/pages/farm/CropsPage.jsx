@@ -1,4 +1,4 @@
-// src/pages/farm/CropsPage.jsx — MODIFIED (acres)
+// src/pages/farm/CropsPage.jsx — MODIFIED (acres; quantity in the field, put on sale, move to store)
 //
 // AIM
 // /app/:slug/crops and /app/:slug/crops/:id — crop management. The list shows every crop with its
@@ -13,7 +13,8 @@ import { Alert, Button, Card, CardBody, CardHeader, EmptyState } from "../../com
 import { ConfirmDialog } from "../../components/modals/Modal.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { useToast } from "../../hooks/useNotifications.js";
-import { addActivity, addHarvest, deleteActivity, deleteCrop, deleteHarvest, getCrop, listActivities, listCrops, listFields, listHarvests, saveCrop, setCropStatus } from "../../lib/api/farm.js";
+import { addActivity, addHarvest, deleteActivity, deleteCrop, deleteHarvest, getCrop, listActivities, listCrops, listFields, listHarvests, listItems, saveCrop, setCropStatus } from "../../lib/api/farm.js";
+import { moveFieldToStore } from "../../lib/api/shop.js";
 import { formatDate } from "../../lib/format.js";
 import { acresToHa, formatAcres, haToAcres } from "../../lib/geo.js";
 import { ACTIVITY_KINDS, CROP_STATUS, FormModal, Loading, LoadError, PageHead, StatusBadge, Tabs, cap, kg, opts, qty, today, useFarm } from "./shared.jsx";
@@ -37,6 +38,8 @@ function cropFields(fields) {
     { key: "variety", label: "Variety", placeholder: "H614" },
     { key: "status", label: "Status", type: "select", options: STATUS_OPTIONS },
     { key: "area_acres", label: "Area used (acres)", type: "number", min: "0", step: "0.01", helper: "Leave empty to use the whole field" },
+    { key: "field_quantity", label: "Quantity in the field (optional)", type: "number", min: "0", step: "any", helper: "How much this crop will give (or has), so it can be put on sale straight from the field. You can change it any time." },
+    { key: "field_unit", label: "Counted in", placeholder: "kg, bags, bundles" },
     { key: "planned_date", label: "Planned planting date", type: "date" },
     { key: "planted_date", label: "Planted on", type: "date" },
     { key: "expected_harvest", label: "Expected harvest", type: "date" },
@@ -86,13 +89,14 @@ function CropList() {
               <div className="farm-card__row"><h3 className="farm-card__title">{c.name}</h3><StatusBadge status={c.status} /></div>
               <p className="farm-card__meta">{c.variety ? `${c.variety} · ` : ""}{c.field?.name || "No field"} · {formatAcres(c.area_ha ?? c.field?.area_ha)}</p>
               <p className="farm-card__meta">{c.expected_harvest ? `Harvest about ${formatDate(c.expected_harvest)}` : c.planted_date ? `Planted ${formatDate(c.planted_date)}` : "Not planted yet"}</p>
+              {c.field_quantity != null && <p className="farm-card__meta">In the field: {qty(c.field_quantity)} {c.field_unit}</p>}
             </Link>
           ))}
         </div>
       )}
 
       <FormModal open={adding} title="Add a crop" submitLabel="Add crop" fields={cropFields(fields)}
-        initial={{ field_id: presetField || "", name: "", variety: "", status: "planned", area_acres: "", planned_date: "", planted_date: "", expected_harvest: "", notes: "" }}
+        initial={{ field_id: presetField || "", name: "", variety: "", status: "planned", area_acres: "", field_quantity: "", field_unit: "kg", planned_date: "", planted_date: "", expected_harvest: "", notes: "" }}
         onClose={() => { setAdding(false); if (presetField) setParams({}, { replace: true }); }}
         onSubmit={async (v) => {
           const res = await saveCrop(bid, withHectares(v));
@@ -117,6 +121,7 @@ function CropDetail({ id }) {
   const [confirm, setConfirm] = useState(null); // { kind, id } | "crop"
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const { data: storeItems } = useAsync(() => listItems(bid), [bid]);
 
   if (loading && !data) return <Loading />;
   if (error) return <LoadError error={error} onRetry={reload} />;
@@ -160,6 +165,24 @@ function CropDetail({ id }) {
             {nextStatus && <Button size="sm" onClick={() => changeStatus(nextStatus)}>Mark as {CROP_STATUS[nextStatus][1].toLowerCase()}</Button>}
           </div>
           {crop.notes && <p style={{ whiteSpace: "pre-line", marginBottom: 0 }}>{crop.notes}</p>}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardBody>
+          <div className="farm-card__row">
+            <div>
+              <span className="farm-card__title">In the field</span>
+              <p className="farm-card__meta" style={{ margin: 0 }}>{crop.field_quantity != null ? `${qty(crop.field_quantity)} ${crop.field_unit}. Sell it from here, or move it to the store when it is harvested.` : "No quantity set. Choose Edit and enter how much you expect, to sell it from the field or move it to the store."}</p>
+            </div>
+            {crop.field_quantity != null && Number(crop.field_quantity) > 0 && (
+              <div className="farm-split">
+                <Button as={Link} size="sm" to={`${base}/produce?source=crop:${id}`}>Put on sale</Button>
+                <Button size="sm" variant="outline" onClick={() => setModal("store")}>Move to store</Button>
+                <Button as={Link} size="sm" variant="ghost" to={`${base}/sales`}>Record a sale</Button>
+              </div>
+            )}
+          </div>
         </CardBody>
       </Card>
 
@@ -228,8 +251,16 @@ function CropDetail({ id }) {
           if (!r.error) { toast.success("Harvest recorded"); reload(); }
           return r;
         }} />
+      <FormModal open={modal === "store"} title="Move to the store" submitLabel="Move" onClose={() => setModal(null)}
+        initial={{ quantity: "", item: "", item_name: crop.name }}
+        fields={[
+          { key: "quantity", label: `How much (${crop.field_unit})`, type: "number", min: "0", step: "any", required: true, helper: `In the field now: ${qty(crop.field_quantity || 0)} ${crop.field_unit}` },
+          { key: "item", label: "Add it to", type: "select", options: [{ value: "", label: "A new store item" }, ...(storeItems || []).filter((i) => i.category === "produce" && i.unit === crop.field_unit).map((i) => ({ value: i.id, label: `${i.name} (${qty(i.quantity)} ${i.unit})` }))] },
+          { key: "item_name", label: "Name of the new store item", show: (v) => !v.item, placeholder: crop.name },
+        ]}
+        onSubmit={async (v) => { const r = await moveFieldToStore(id, v.quantity, v.item, v.item_name); if (!r.error) { toast.success("Moved to the store"); reload(); } return r; }} />
       <FormModal open={modal === "edit"} title="Edit crop" onClose={() => setModal(null)} fields={cropFields(fields)}
-        initial={{ id: crop.id, field_id: crop.field_id, name: crop.name, variety: crop.variety || "", status: crop.status, area_acres: acresText(crop.area_ha), planned_date: crop.planned_date || "", planted_date: crop.planted_date || "", expected_harvest: crop.expected_harvest || "", notes: crop.notes || "" }}
+        initial={{ id: crop.id, field_id: crop.field_id, name: crop.name, variety: crop.variety || "", status: crop.status, area_acres: acresText(crop.area_ha), planned_date: crop.planned_date || "", planted_date: crop.planted_date || "", expected_harvest: crop.expected_harvest || "", field_quantity: crop.field_quantity ?? "", field_unit: crop.field_unit || "kg", notes: crop.notes || "" }}
         onSubmit={async (v) => { const r = await saveCrop(bid, { ...withHectares(v, crop), id }); if (!r.error) { toast.success("Crop updated"); reload(); } return r; }} />
       <ConfirmDialog isOpen={Boolean(confirm)} title={confirm === "crop" ? "Delete this crop?" : "Remove this record?"}
         message={confirm === "crop" ? "Its work and harvest records are deleted too. This cannot be undone." : "This cannot be undone."}

@@ -1,4 +1,4 @@
-// src/pages/storefront/shared.jsx — NEW FILE (Phase 5 step 2)
+// src/pages/storefront/shared.jsx — MODIFIED (Phase 5 step 2; the cart and checkout also serve farms)
 //
 // AIM
 // The pieces every shopper screen uses:
@@ -157,7 +157,8 @@ export function StoreGate({ children }) {
   useBusinessBrand(b, loading ? slug : "");
 
   if (loading) return <div className="pg"><Skeleton height={60} /><div style={{ marginTop: 16 }}><Skeleton height={220} /></div></div>;
-  if (error || !b || b.business_type !== "shop") {
+  const farm = b?.business_type === "agriculture";   // a farm uses the same cart and checkout, paid by M-Pesa and collected
+  if (error || !b || (b.business_type !== "shop" && !farm)) {
     return (
       <div className="pg pg--narrow"><Card><EmptyState icon="search" title={error ? "This page could not be loaded" : "Shop not found"}
         description={error || "It may not be open yet, or the address is wrong."} action={<Button as={Link} to="/explore">Explore businesses</Button>} /></Card></div>
@@ -171,8 +172,10 @@ export function StoreGate({ children }) {
           {b.name}
         </Link>
         <nav className="sf-bar__links" aria-label="Shop">
-          <Button as={Link} to={`/b/${b.slug}/browse`} variant="ghost" size="sm">All products</Button>
-          <Button as={Link} to="/wishlist" variant="ghost" size="sm">Wishlist</Button>
+          {farm
+            ? <Button as={Link} to={`/b/${b.slug}`} variant="ghost" size="sm">Farm page</Button>
+            : <Button as={Link} to={`/b/${b.slug}/browse`} variant="ghost" size="sm">All products</Button>}
+          {!farm && <Button as={Link} to="/wishlist" variant="ghost" size="sm">Wishlist</Button>}
           <Button as={Link} to="/orders" variant="ghost" size="sm">My orders</Button>
           <Button variant="outline" size="sm" className="sf-cartbtn" onClick={() => useCart.getState().openDrawer()} aria-label={`Open cart, ${count} items`}>
             <CartIcon /> <span className="sf-cartbtn__n">{count}</span>

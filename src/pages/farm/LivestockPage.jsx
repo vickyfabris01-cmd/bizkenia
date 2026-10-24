@@ -1,4 +1,4 @@
-// src/pages/farm/LivestockPage.jsx — NEW FILE
+// src/pages/farm/LivestockPage.jsx — MODIFIED (class of animal; put a group on sale)
 //
 // AIM
 // /app/:slug/livestock — groups of animals (a herd, a flock) and what happens to them:
@@ -8,6 +8,7 @@
 
 import "./Farm.css";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Alert, Button, Card, CardBody, CardHeader, EmptyState } from "../../components/ui";
 import { ConfirmDialog } from "../../components/modals/Modal.jsx";
 import useAsync from "../../hooks/useAsync.js";
@@ -17,7 +18,7 @@ import { formatDate } from "../../lib/format.js";
 import { EVENT_KINDS, FormModal, Loading, LoadError, PageHead, SPECIES, cap, money, opts, today, useFarm } from "./shared.jsx";
 
 export default function LivestockPage() {
-  const { bid } = useFarm();
+  const { bid, base } = useFarm();
   const toast = useToast();
   const { data, error, loading, reload } = useAsync(async () => {
     const [g, e] = await Promise.all([listGroups(bid), listEvents(bid, { limit: 20 })]);
@@ -48,10 +49,11 @@ export default function LivestockPage() {
           {groups.map((g) => (
             <Card key={g.id}><CardBody>
               <h3 className="farm-card__title">{g.name}</h3>
-              <p className="farm-card__meta">{cap(g.species)}{g.breed ? ` · ${g.breed}` : ""}</p>
+              <p className="farm-card__meta">{cap(g.species)}{g.breed ? ` · ${g.breed}` : ""}{g.animal_class ? ` · ${g.animal_class}` : ""}</p>
               <p className="farm-stat__value" style={{ margin: "var(--space-2) 0" }}>{g.head_count} <span className="farm-card__meta">animal{g.head_count === 1 ? "" : "s"}</span></p>
               <div className="farm-split">
                 <Button size="sm" onClick={() => setEvent(g)}>Record event</Button>
+                {g.head_count > 0 && <Button as={Link} size="sm" variant="outline" to={`${base}/produce?source=livestock:${g.id}`}>Put on sale</Button>}
                 <Button size="sm" variant="ghost" onClick={() => setForm({ group: g })}>Edit</Button>
               </div>
             </CardBody></Card>
@@ -83,10 +85,11 @@ export default function LivestockPage() {
           { key: "name", label: "Group name", required: true, placeholder: "Dairy cows" },
           { key: "species", label: "Kind of animal", type: "select", options: opts(SPECIES) },
           { key: "breed", label: "Breed", placeholder: "Friesian" },
+          { key: "animal_class", label: "Class (optional)", placeholder: "Bull, cow, heifer, ram, layer", helper: "Keep one kind of animal in each group so you can list exactly what you have, such as 5 bulls." },
           ...(form?.group ? [] : [{ key: "head_count", label: "How many animals", type: "number", min: "0", step: "1", required: true }]),
           { key: "notes", label: "Notes", type: "textarea" },
         ]}
-        initial={form?.group ? { ...form.group, breed: form.group.breed || "", notes: form.group.notes || "" } : { name: "", species: "cattle", breed: "", head_count: "", notes: "" }}
+        initial={form?.group ? { ...form.group, breed: form.group.breed || "", animal_class: form.group.animal_class || "", notes: form.group.notes || "" } : { name: "", species: "cattle", breed: "", animal_class: "", head_count: "", notes: "" }}
         danger={form?.group ? { label: "Delete", onClick: () => { setConfirm(form.group); setForm(null); } } : undefined}
         onSubmit={async (v) => { const r = await saveGroup(bid, v); if (!r.error) { toast.success(form?.group ? "Group updated" : "Livestock added"); reload(); } return r; }} />
 
