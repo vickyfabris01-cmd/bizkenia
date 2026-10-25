@@ -6,7 +6,7 @@
 // Matches the "Avatar menu" in the design system sheet.
 //
 // PROPS
-//   user              { name, email, role, avatarUrl }
+//   user              { name, email, role, avatarUrl, avatarId, avatarDesign }  (the last two draw a designed avatar when there is no photo)
 //   links             extra links [{ to, label, icon }] shown after Profile (Phase 3)
 //   profileTo         link for "Profile" (omit to hide it)
 //   onSwitchBusiness  function; "Switch business" shows only when given
@@ -66,7 +66,7 @@ export default function UserMenu({ user, profileTo, links = [], onSwitchBusiness
         aria-controls={open ? panelId : undefined}
         aria-label={`Account menu for ${user?.name || "you"}`}
       >
-        <Avatar name={user?.name} src={user?.avatarUrl} size="md" />
+        <Avatar name={user?.name} src={user?.avatarUrl} id={user?.avatarId} design={user?.avatarDesign} size="md" />
         <span className="shell-user__who">
           <span className="shell-user__name">{user?.name || "Account"}</span>
           {user?.role && <span className="shell-user__role">{user.role}</span>}
@@ -77,7 +77,7 @@ export default function UserMenu({ user, profileTo, links = [], onSwitchBusiness
       {open && (
         <div id={panelId} className="shell-menu">
           <div className="shell-menu__head">
-            <Avatar name={user?.name} src={user?.avatarUrl} size="lg" />
+            <Avatar name={user?.name} src={user?.avatarUrl} id={user?.avatarId} design={user?.avatarDesign} size="lg" />
             <div className="shell-menu__ident">
               <p className="shell-menu__name">{user?.name || "Account"}</p>
               {user?.email && <p className="shell-menu__email">{user.email}</p>}

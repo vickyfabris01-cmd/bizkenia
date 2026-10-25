@@ -40,7 +40,7 @@ export default function AdminFrame() {
 
   return (
     <AppShell nav={nav} tabs={["/admin", "/admin/businesses", "/admin/users", "/admin/settings"]}
-      user={{ name: profile?.full_name || user?.email, email: user?.email, role: "Super admin", avatarUrl: profile?.avatar_url }}
+      user={{ name: profile?.full_name || user?.email, email: user?.email, role: "Super admin", avatarUrl: profile?.avatar_url, avatarId: user?.id, avatarDesign: profile?.avatar_design }}
       business={{ name: `${brand.name} admin`, subtitle: "Platform" }}
       bellTo="live" profileTo="/account" helpHref={brand.mailto}
       onSwitchBusiness={() => navigate("/businesses")} onSignOut={signOut} />

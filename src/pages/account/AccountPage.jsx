@@ -3,6 +3,8 @@
 // AIM
 // My account: name and phone number (the phone is what allows phone + password sign-in),
 // read-only email, change password, theme, sign out, and delete my account (needs the password).
+// The picture area shows the person's photo, or the avatar drawn from their saved design. "Change
+// avatar" lets them pick another design; a photo, when there is one, still shows first.
 
 import "./Account.css";
 import { useEffect, useState } from "react";
@@ -15,6 +17,8 @@ import { useBusinessStore } from "../../store/businessStore.js";
 import { cleanKenyanPhone } from "../../components/ui/PhoneInput.jsx";
 import { collect, password as vPassword, phone as vPhone, required } from "../../lib/validate.js";
 import DeleteAccountCard from "../../components/lifecycle/DeleteAccountCard.jsx";
+import AvatarPicker from "../../components/brand/AvatarPicker.jsx";
+import { resolveAvatarDesign } from "../../lib/brandStudio/index.js";
 import { uploadFile, publicUrl } from "../../lib/storage.js";
 
 export default function AccountPage() {
@@ -37,6 +41,10 @@ export default function AccountPage() {
   }, [profile]);
 
   const [picBusy, setPicBusy] = useState(false);
+  const [designOpen, setDesignOpen] = useState(false);
+  const [draft, setDraft] = useState(null);
+  const [designBusy, setDesignBusy] = useState(false);
+  const savedDesign = resolveAvatarDesign({ id: user?.id, design: profile?.avatar_design });
   const hasBusiness = useBusinessStore((s) => s.memberships.length > 0);
 
   async function pickPhoto(e) {
@@ -61,6 +69,18 @@ export default function AccountPage() {
     const { error } = await useSession.getState().updateProfile({ avatar_url: null });
     if (error) return setFormError(error);
     toast.success("Profile picture removed.");
+  }
+
+  async function saveDesign() {
+    if (!draft) return;
+    setDesignBusy(true);
+    const { error } = await useSession.getState().updateProfile({ avatar_design: draft });
+    setDesignBusy(false);
+    if (error) return setFormError(error);
+    setFormError("");
+    setDesignOpen(false);
+    setDraft(null);
+    toast.success(profile?.avatar_url ? "Avatar saved. It shows if you remove your photo." : "Avatar saved.");
   }
 
   const google = user?.app_metadata?.provider === "google";
@@ -110,15 +130,23 @@ export default function AccountPage() {
             <form className="acct__form" onSubmit={saveProfile} noValidate>
               {formError && <Alert type="error" message={formError} />}
               <div className="acct__pic">
-                <Avatar name={profile?.full_name || user?.email} src={profile?.avatar_url} size="xl" />
+                <Avatar name={profile?.full_name || user?.email} src={profile?.avatar_url} id={user?.id} design={profile?.avatar_design} size="xl" />
                 <div className="acct__pic-actions">
                   <label className="acct__pic-btn">
                     {picBusy ? "Uploading…" : "Change picture"}
                     <input type="file" accept="image/jpeg,image/png,image/webp" disabled={picBusy} onChange={pickPhoto} aria-label="Change profile picture" />
                   </label>
                   {profile?.avatar_url && <Button type="button" variant="ghost" size="sm" onClick={removePhoto}>Remove</Button>}
+                  <Button type="button" variant="ghost" size="sm" onClick={() => { setDesignOpen((v) => !v); setDraft(null); }}>{designOpen ? "Close" : "Change avatar"}</Button>
                 </div>
               </div>
+              {designOpen && (
+                <>
+                  <AvatarPicker name={profile?.full_name || user?.email} current={savedDesign} value={draft || savedDesign} onChange={setDraft}
+                    autoPick={false} title="Pick an avatar" hint="Choose one you like, then save. Your photo, if you have one, still shows first." />
+                  <div><Button type="button" loading={designBusy} disabled={!draft} onClick={saveDesign}>Save avatar</Button></div>
+                </>
+              )}
               <Input label="Full name" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} autoComplete="name" />
               <Input label="Email" value={profile?.email || user?.email || ""} disabled helper="Your email is used to sign in and cannot be changed here." />
               <PhoneInput label="Phone number" value={phone} onChange={setPhone} error={errors.phone}

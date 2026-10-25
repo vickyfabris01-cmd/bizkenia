@@ -1,4 +1,4 @@
-// src/lib/api/businesses.js — MODIFIED (Phase 6: a business also carries closed_at / closed_from / closed_by_admin)
+// src/lib/api/businesses.js — MODIFIED (a business also carries logo_design, the saved recipe its logo is drawn from)
 //
 // AIM
 // Everything the browser does with businesses (onboarding, owner edits, super-admin review).
@@ -6,8 +6,9 @@
 // by the database; messages from the database functions are plain English and are shown as is.
 
 import { supabase } from "../../config/supabase.js";
+import { normalizeLogoDesign } from "../brandStudio/index.js";
 
-const FULL = "id, name, slug, status, business_type, description, county, address, phone, email, whatsapp, logo_url, cover_url, rejection_reason, submitted_at, approved_at, created_at, owner_user_id, closed_at, closed_from, closed_by_admin";
+const FULL = "id, name, slug, status, business_type, description, county, address, phone, email, whatsapp, logo_url, logo_design, cover_url, rejection_reason, submitted_at, approved_at, created_at, owner_user_id, closed_at, closed_from, closed_by_admin";
 const wrap = ({ data, error }) => ({ data: data ?? null, error: error?.message || null });
 const NOT_CONNECTED = { data: null, error: "The app is not connected to the database yet." };
 
@@ -31,6 +32,11 @@ export async function updateBusiness(id, fields) {
     if (fields[k] !== undefined) patch[k] = fields[k] || null;
   }
   if (patch.name === null) delete patch.name;
+  // the logo recipe: a few small numbers (the logo itself is drawn from them, never stored as a file)
+  if (fields.logo_design !== undefined) {
+    const d = normalizeLogoDesign(fields.logo_design, fields.business_type);
+    patch.logo_design = d ? { v: d.v, s: d.s, i: d.i, p: d.p } : null;
+  }
   return wrap(await supabase.from("businesses").update(patch).eq("id", id).select(FULL).maybeSingle());
 }
 

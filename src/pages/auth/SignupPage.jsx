@@ -4,11 +4,17 @@
 // Create an account with name, email, phone number and password (or Google). The phone number
 // is what lets the person sign in later with phone + password. After sign-up the person is
 // asked to confirm their email (the confirmation page also lets them resend the link).
+//
+// AVATAR
+// The form shows six avatars drawn from the typed name. The first is already chosen, so skipping still
+// gives a proper avatar. The choice (a few small numbers, not a picture) travels with the sign-up and
+// is saved on the profile the first time the person signs in (see sessionStore.js).
 
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Alert, Button, Checkbox, Input, PasswordInput, PhoneInput } from "../../components/ui";
 import GoogleButton from "../../components/auth/GoogleButton.jsx";
+import AvatarPicker from "../../components/brand/AvatarPicker.jsx";
 import AuthLayout from "../../layouts/AuthLayout.jsx";
 import { useSession } from "../../store/sessionStore.js";
 import { collect, email as vEmail, password as vPassword, phone as vPhone, required } from "../../lib/validate.js";
@@ -25,6 +31,7 @@ export default function SignupPage() {
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [avatarDesign, setAvatarDesign] = useState(null);
   const set = (k) => (v) => setF((s) => ({ ...s, [k]: v && v.target ? v.target.value : v }));
 
   if (user) return <AfterSignIn next={params.get("next")} />;
@@ -42,7 +49,7 @@ export default function SignupPage() {
     setFormError("");
     if (Object.keys(errs).length) return;
     setBusy(true);
-    const res = await useSession.getState().signUp({ fullName: f.fullName, email: f.email, phone: f.phone, password: f.password });
+    const res = await useSession.getState().signUp({ fullName: f.fullName, email: f.email, phone: f.phone, password: f.password, avatarDesign });
     setBusy(false);
     if (res.error) return setFormError(res.error);
     if (res.needsConfirmation) return navigate(`/confirm?email=${encodeURIComponent(res.email)}`, { replace: true });
@@ -59,6 +66,7 @@ export default function SignupPage() {
         <PhoneInput label="Phone number" required value={f.phone} onChange={set("phone")} error={errors.phone}
           helper="You can sign in with this number and your password." />
         <PasswordInput label="Password" autoComplete="new-password" required showStrength value={f.password} onChange={set("password")} error={errors.password} />
+        <AvatarPicker compact name={f.fullName} value={avatarDesign} onChange={setAvatarDesign} title="Pick your avatar" hint="You can add a photo later." />
         <div>
           <Checkbox checked={f.agree} onChange={(e) => set("agree")(e.target.checked)}
             label={<>I agree to the <Link to="/terms" target="_blank">terms</Link> and <Link to="/privacy" target="_blank">privacy notice</Link>.</>} />

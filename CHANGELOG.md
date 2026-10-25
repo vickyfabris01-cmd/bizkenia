@@ -1,5 +1,9 @@
 # Changelog
 
+## Brand studio (drawn logos and avatars)
+Built on `8323024`. See `docs/BRAND-STUDIO.md`.
+Every business gets a designed logo and every person a designed avatar, drawn in the browser from a tiny saved recipe instead of a stored picture. Owners pick from six designs when they create a business (or upload their own); people pick an avatar at sign-up. Skipping picks the first design. Existing rows with nothing saved get a stable design worked out from their id. Needs migration `20261025100001_brand_designs.sql`, run **before** deploying the app.
+
 ## Phase 6 step 1 (delete a business, hand over ownership, delete an account)
 Built on `fc723b1`. See `docs/phase-6/STEP-1.md`.
 Delete business with a 60-day freeze and restore, ownership hand-over between owner and manager, delete my account (password required), support close and restore, daily purge job with file clean-up and a day-50 reminder, platform billing records kept after a purge, people removed from records show as "Deleted user" (`p6_01`, `p6_02`).

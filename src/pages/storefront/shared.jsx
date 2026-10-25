@@ -1,4 +1,4 @@
-// src/pages/storefront/shared.jsx — MODIFIED (Phase 5 step 2; the cart and checkout also serve farms)
+// src/pages/storefront/shared.jsx — MODIFIED (the shop bar shows the business logo: its upload, or the logo drawn from its saved design)
 //
 // AIM
 // The pieces every shopper screen uses:
@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button, Card, EmptyState, Skeleton } from "../../components/ui";
 import { Drawer } from "../../components/modals/Modal.jsx";
+import BusinessLogo from "../../components/brand/BusinessLogo.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import useBusinessBrand from "../../hooks/useBusinessBrand.js";
 import { getBusinessBySlug } from "../../lib/api/directory.js";
@@ -168,7 +169,7 @@ export function StoreGate({ children }) {
     <div className="pg sf">
       <div className="sf-bar">
         <Link to={`/b/${b.slug}`} className="sf-bar__name">
-          <span className="sf-bar__logo">{b.logo_url ? <img src={b.logo_url} alt="" width="36" height="36" style={{ borderRadius: "50%", objectFit: "cover" }} /> : b.name.charAt(0).toUpperCase()}</span>
+          <span className="sf-bar__logo"><BusinessLogo business={b} size={36} /></span>
           {b.name}
         </Link>
         <nav className="sf-bar__links" aria-label="Shop">

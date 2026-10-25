@@ -1,4 +1,4 @@
-// src/lib/api/directory.js — MODIFIED (listBusinesses takes an offset and also returns the total count)
+// src/lib/api/directory.js — MODIFIED (cards also carry logo_design so each business logo is drawn the way its owner chose)
 //
 // AIM
 // Public reads: the list of active businesses, one business by slug, subscription plans and
@@ -11,7 +11,7 @@
 
 import { supabase } from "../../config/supabase.js";
 
-const CARD_FIELDS = "id, name, slug, business_type, description, county, address, logo_url, cover_url, phone, email, whatsapp, created_at";
+const CARD_FIELDS = "id, name, slug, business_type, description, county, address, logo_url, logo_design, cover_url, phone, email, whatsapp, created_at";
 const NOT_CONNECTED = { data: null, error: "The app is not connected to the database yet. See .env.example." };
 
 export async function listBusinesses({ search = "", type = "", county = "", limit = 60, offset = 0 } = {}) {

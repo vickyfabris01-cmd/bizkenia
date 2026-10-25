@@ -1,0 +1,58 @@
+/* src/components/brand/BrandPicker.css — NEW FILE
+   Styles for LogoPicker.jsx and AvatarPicker.jsx. Tokens only. */
+
+.bpick { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.bpick__head { display: flex; flex-direction: column; gap: var(--space-1); }
+.bpick__title { margin: 0; font-size: var(--text-base); font-weight: var(--weight-bold); color: var(--color-text); }
+.bpick__hint { margin: 0; font-size: var(--text-sm); color: var(--color-text-muted); }
+
+/* the one that is chosen, shown large */
+.bpick__stage {
+  display: grid; place-items: center;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.bpick__stage img { display: block; width: min(100%, 260px); height: auto; }
+.bpick__stage--round img { width: 112px; height: 112px; border-radius: var(--radius-full); }
+
+/* the choices: two across on a phone, three on wider screens */
+.bpick__grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+@media (min-width: 560px) { .bpick__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+.bpick__tile {
+  appearance: none; width: 100%; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-1);
+  padding: var(--space-2);
+  border: 2px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-surface); color: var(--color-text);
+  font: inherit; font-size: var(--text-xs, 0.75rem);
+  transition: border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+}
+.bpick__tile:hover { border-color: var(--color-primary); }
+.bpick__tile:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.bpick__tile[aria-pressed="true"] { border-color: var(--color-primary); box-shadow: 0 0 0 2px var(--color-primary-soft); }
+.bpick__tile img { display: block; width: 100%; height: auto; }
+.bpick--round .bpick__tile img { width: 64px; height: 64px; border-radius: var(--radius-full); }
+.bpick__caption { color: var(--color-text-muted); text-align: center; line-height: 1.2; }
+
+.bpick__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.bpick__file {
+  display: inline-flex; align-items: center; min-height: 40px; padding: 0 var(--space-3);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-surface); color: var(--color-text);
+  font-size: var(--text-sm); font-weight: var(--weight-semibold); cursor: pointer;
+}
+.bpick__file:focus-within { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.bpick__file input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.bpick__chosen { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: var(--color-text-muted); min-width: 0; }
+.bpick__chosen img { width: 40px; height: 40px; object-fit: contain; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+.bpick__chosen span { min-width: 0; overflow-wrap: anywhere; }
+.bpick__error { margin: 0; font-size: var(--text-sm); color: var(--color-danger-text, var(--color-danger)); }
+
+/* compact: no large preview and no captions, so it fits inside a form */
+.bpick--compact .bpick__stage, .bpick--compact .bpick__caption { display: none; }
+.bpick--compact .bpick__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (min-width: 480px) { .bpick--compact .bpick__grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.bpick--compact .bpick__tile { padding: var(--space-1); }
+.bpick--compact .bpick__tile img { width: 100%; max-width: 56px; height: auto; aspect-ratio: 1 / 1; }

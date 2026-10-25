@@ -17,11 +17,14 @@ export default function useBusinessBrand(business, loadingSlug = "") {
   const id = business?.id;
   const name = business?.name;
   const logo = business?.logo_url || null;
+  const type = business?.business_type || "";
+  // the saved logo recipe, flattened to one text value so the effect only re-runs when it really changes
+  const designKey = business?.logo_design ? JSON.stringify(business.logo_design) : "";
   useLayoutEffect(() => {
     const store = useBusinessBrandStore.getState();
-    if (id) store.set({ id, name, logo_url: logo });
+    if (id) store.set({ id, name, business_type: type, logo_url: logo, logo_design: designKey ? JSON.parse(designKey) : null });
     else if (loadingSlug) store.set({ id: "", name: loadingSlug.replace(/[-_]+/g, " "), logo_url: null, provisional: true });
     else return undefined;
     return () => useBusinessBrandStore.getState().clear();
-  }, [id, name, logo, loadingSlug]);
+  }, [id, name, logo, type, designKey, loadingSlug]);
 }

@@ -73,7 +73,7 @@ export function SiteHeader() {
           {user ? (
             <div className="site-hide-sm">
               <UserMenu
-                user={{ name, email: user.email, avatarUrl: profile?.avatar_url }}
+                user={{ name, email: user.email, avatarUrl: profile?.avatar_url, avatarId: user?.id, avatarDesign: profile?.avatar_design }}
                 profileTo="/account"
                 links={menuLinks}
                 onSignOut={signOut}

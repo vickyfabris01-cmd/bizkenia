@@ -2,7 +2,7 @@
 .sf { display: grid; gap: var(--space-5); padding-bottom: var(--space-8); }
 .sf-bar { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; justify-content: space-between; border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-3); }
 .sf-bar__name { display: flex; align-items: center; gap: var(--space-2); font-weight: var(--weight-bold); font-size: var(--text-lg); color: var(--color-text); text-decoration: none; }
-.sf-bar__logo { width: 36px; height: 36px; border-radius: var(--radius-full); object-fit: cover; background: var(--color-neutral-bg); display: inline-grid; place-items: center; }
+.sf-bar__logo { width: 36px; height: 36px; border-radius: var(--radius-md); overflow: hidden; display: inline-grid; place-items: center; }
 .sf-bar__links { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .sf-cartbtn { position: relative; }
 .sf-cartbtn__n { margin-left: var(--space-2); background: var(--color-primary); color: var(--color-on-primary, #fff); border-radius: var(--radius-full); padding: 0 var(--space-2); font-size: var(--text-xs); min-width: 20px; text-align: center; }

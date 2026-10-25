@@ -1,0 +1,19 @@
+BizKenia - Brand studio (drawn logos and avatars)
+Built directly on origin/main commit 9105004 ("Modify AdminTraffic to include pagination for lists").
+41 files: 18 new, 23 changed, none deleted. Folder paths match the project, so you can unzip over it.
+
+ORDER MATTERS
+1. Database first:   npx supabase db push
+   (runs supabase/migrations/20261025100001_brand_designs.sql, safe to run more than once)
+2. Then deploy the app.
+   The new app asks for the new columns; if it goes out first, listings will error.
+
+EITHER WAY TO APPLY
+A) Unzip over the project folder (overwrites the 23 changed files, adds the 18 new ones), or
+B) git am brand-studio.patch     (a normal git commit on top of 9105004)
+
+If origin/main has moved since 9105004, use (B): git handles it, and none of these files overlap
+the admin Traffic / analytics work that was merged last.
+
+Read docs/BRAND-STUDIO.md for how it works and the one rule to keep:
+the "v1" lists in palettes.js, styles.js and icons/*.js must never be reordered or have items removed.

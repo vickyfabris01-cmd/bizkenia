@@ -1,0 +1,2320 @@
+From 2fec310b1ceac8a5605fdca46848c6068c773ae5 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 25 Oct 2026 15:14:53 +0000
+Subject: [PATCH] Brand studio: drawn logos and avatars from saved recipes
+
+---
+ CHANGELOG.md                                  |   4 +
+ docs/BRAND-STUDIO.md                          |  53 +++++
+ src/components/brand/AvatarPicker.jsx         |  74 +++++++
+ src/components/brand/BrandPicker.css          |  58 ++++++
+ src/components/brand/BusinessLogo.css         |  26 +++
+ src/components/brand/BusinessLogo.jsx         |  56 +++++
+ src/components/brand/LogoPicker.jsx           | 119 +++++++++++
+ src/components/business/BusinessCard.jsx      |   9 +-
+ src/components/business/BusinessLogoCard.jsx  |  88 ++++++--
+ src/components/business/VisitBusiness.jsx     |   5 +-
+ src/components/shell/BrandLogo.jsx            |  32 +--
+ src/components/shell/UserMenu.jsx             |   6 +-
+ src/components/ui/Avatar.css                  |  12 ++
+ src/components/ui/Avatar.jsx                  |  62 +++---
+ src/hooks/useBusinessBrand.js                 |   7 +-
+ src/layouts/AdminFrame.jsx                    |   2 +-
+ src/layouts/BusinessAppFrame.jsx              |   2 +-
+ src/layouts/PublicLayout.jsx                  |   2 +-
+ src/lib/api/businesses.js                     |  10 +-
+ src/lib/api/directory.js                      |   4 +-
+ src/lib/brandStudio/designs.js                |  97 +++++++++
+ src/lib/brandStudio/download.js               |  41 ++++
+ src/lib/brandStudio/icons/agriculture.js      |  85 ++++++++
+ src/lib/brandStudio/icons/index.js            |  17 ++
+ src/lib/brandStudio/icons/rental.js           |  83 ++++++++
+ src/lib/brandStudio/icons/shop.js             |  81 ++++++++
+ src/lib/brandStudio/index.js                  |  17 ++
+ src/lib/brandStudio/palettes.js               |  25 +++
+ src/lib/brandStudio/render.js                 | 192 ++++++++++++++++++
+ src/lib/brandStudio/styles.js                 | 104 ++++++++++
+ src/lib/brandStudio/svgKit.js                 |  59 ++++++
+ src/pages/account/AccountPage.jsx             |  30 ++-
+ src/pages/auth/SignupPage.jsx                 |  10 +-
+ src/pages/onboarding/DetailsPage.jsx          |  27 ++-
+ src/pages/people/MessagesPage.jsx             |   2 +-
+ src/pages/storefront/Storefront.css           |   2 +-
+ src/pages/storefront/shared.jsx               |   5 +-
+ src/store/businessBrandStore.js               |   2 +-
+ src/store/businessStore.js                    |   4 +-
+ src/store/sessionStore.js                     |  25 ++-
+ .../20261025100001_brand_designs.sql          |  59 ++++++
+ 41 files changed, 1497 insertions(+), 101 deletions(-)
+ create mode 100644 docs/BRAND-STUDIO.md
+ create mode 100644 src/components/brand/AvatarPicker.jsx
+ create mode 100644 src/components/brand/BrandPicker.css
+ create mode 100644 src/components/brand/BusinessLogo.css
+ create mode 100644 src/components/brand/BusinessLogo.jsx
+ create mode 100644 src/components/brand/LogoPicker.jsx
+ create mode 100644 src/lib/brandStudio/designs.js
+ create mode 100644 src/lib/brandStudio/download.js
+ create mode 100644 src/lib/brandStudio/icons/agriculture.js
+ create mode 100644 src/lib/brandStudio/icons/index.js
+ create mode 100644 src/lib/brandStudio/icons/rental.js
+ create mode 100644 src/lib/brandStudio/icons/shop.js
+ create mode 100644 src/lib/brandStudio/index.js
+ create mode 100644 src/lib/brandStudio/palettes.js
+ create mode 100644 src/lib/brandStudio/render.js
+ create mode 100644 src/lib/brandStudio/styles.js
+ create mode 100644 src/lib/brandStudio/svgKit.js
+ create mode 100644 supabase/migrations/20261025100001_brand_designs.sql
+
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index fecb124..58bc395 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,9 @@
+ # Changelog
+ 
++## Brand studio (drawn logos and avatars)
++Built on `8323024`. See `docs/BRAND-STUDIO.md`.
++Every business gets a designed logo and every person a designed avatar, drawn in the browser from a tiny saved recipe instead of a stored picture. Owners pick from six designs when they create a business (or upload their own); people pick an avatar at sign-up. Skipping picks the first design. Existing rows with nothing saved get a stable design worked out from their id. Needs migration `20261025100001_brand_designs.sql`, run **before** deploying the app.
++
+ ## Phase 6 step 1 (delete a business, hand over ownership, delete an account)
+ Built on `fc723b1`. See `docs/phase-6/STEP-1.md`.
+ Delete business with a 60-day freeze and restore, ownership hand-over between owner and manager, delete my account (password required), support close and restore, daily purge job with file clean-up and a day-50 reminder, platform billing records kept after a purge, people removed from records show as "Deleted user" (`p6_01`, `p6_02`).
+diff --git a/docs/BRAND-STUDIO.md b/docs/BRAND-STUDIO.md
+new file mode 100644
+index 0000000..dc7a667
+--- /dev/null
++++ b/docs/BRAND-STUDIO.md
+@@ -0,0 +1,53 @@
++# Brand studio: drawn logos and avatars
++
++## What it does
++Every business gets a designed logo and every person a designed avatar. Nothing is stored as a
++picture. A small **recipe** is saved and the picture is **drawn in the browser** whenever it is shown,
++so it appears instantly, even on a slow connection or offline.
++
++| | Recipe (saved) | Where |
++|---|---|---|
++| Business logo | `{"v":1,"s":style 0-9,"i":symbol 0-7,"p":palette 0-11}` | `businesses.logo_design` |
++| Person avatar | `{"v":1,"s":style 0-2,"p":palette 0-11,"b":pattern 0-3}` | `profiles.avatar_design` |
++
++An **uploaded** picture (`logo_url`, `avatar_url`) always shows first. The drawn picture sits underneath,
++so a slow upload fades in over it and a failed upload falls back to it.
++
++## Business types and symbols
++Rental, agriculture and shop have 8 symbols each (house, apartments, bungalow, townhouses, high-rise,
++key, door, compound / leaf, tree, tractor, jembe, maize, seedling, cow, field / bag, trolley, kiosk,
++basket, price tag, storefront, parcel, scale). Any other type uses a neutral star set, so a logo is
++always drawn.
++
++10 styles x 8 symbols x 12 palettes = 960 looks per type. Styles: Signature, Monogram, Heritage seal,
++Modern geometry, Growth mark, Minimal stamp, Inscribed (initial written on the symbol), Knock-out
++(initial cut out of it), Watermark, Two-tone.
++
++## Where it appears
++- **Create a business** (`/start/details`): six designs under the form, the first already chosen, or upload your own.
++- **Sign up**: six avatars under the password; saved on first sign-in (the person is not signed in yet when email confirmation is on).
++- **Settings > Logo** and **My account**: change the design, upload, remove the upload, download a PNG.
++- Everywhere else a logo or avatar shows: `BusinessLogo` and `Avatar` draw it.
++
++## Rows with nothing saved
++No backfill. The design is worked out from the row's `id`, so it is stable and different for different rows
++(about 900 distinct looks per type; no look is used by more than about 0.5% of businesses).
++
++> **The derive pool is frozen as "v1".** `deriveLogoDesign` and `deriveAvatarDesign` use fixed sizes
++> (10 styles, 8 symbols, 12 palettes). New styles, symbols or palettes may be added at the END of the lists
++> and shown in the picker, but must never change what an id derives, or existing logos would shift.
++> Never reorder or remove entries in `palettes.js`, `styles.js` or `icons/*.js`.
++
++## Files
++- `src/lib/brandStudio/`: `svgKit.js`, `palettes.js`, `icons/` (3 types + generic), `styles.js`, `designs.js` (recipes, defaults, picker choices), `render.js` (drawing), `download.js` (optional PNG), `index.js`.
++- `src/components/brand/`: `BusinessLogo`, `LogoPicker`, `AvatarPicker`, `BrandPicker.css`.
++- `supabase/migrations/20261025100001_brand_designs.sql`: two columns, size checks, and `my_conversations` returns the other person's avatar recipe.
++
++## Deploy
++1. `npx supabase db push` (the migration first: the new app asks for the new columns).
++2. Deploy the app.
++
++## Not included (on purpose)
++Link previews (WhatsApp, Facebook) do not show these logos: the app's WhatsApp share is text only, and
++crawlers cannot see browser-drawn pictures. If a logo is ever needed as a real image for previews, add a
++Worker route that draws a PNG from the saved recipe.
+diff --git a/src/components/brand/AvatarPicker.jsx b/src/components/brand/AvatarPicker.jsx
+new file mode 100644
+index 0000000..88a99df
+--- /dev/null
++++ b/src/components/brand/AvatarPicker.jsx
+@@ -0,0 +1,74 @@
++// src/components/brand/AvatarPicker.jsx — NEW FILE
++//
++// AIM
++// Lets a person choose their avatar. Six designs are drawn from their name; the first is already
++// selected, so skipping still gives a proper avatar. "Show more" draws six new ones.
++// Used on the sign-up form and in Account settings. Nothing is uploaded: the parent receives a small
++// recipe through onChange and saves it.
++//
++// PROPS
++//   name        the person's name (the avatars update as it is typed)
++//   value       the chosen recipe
++//   onChange    called with a recipe whenever the choice changes
++//   current     a recipe already saved for this person: shown first, marked "Current"
++//   autoPick    true (default): choose the first design by itself, so skipping works.
++//               false in settings, where the saved design must stay as it is until changed.
++//   compact     true: no large preview, just the six small choices (used on the sign-up form)
++//   title, hint optional heading and help text
++
++import { useEffect, useMemo, useRef, useState } from "react";
++import { avatarCandidates, avatarUri, newSeed, sameDesign } from "../../lib/brandStudio/index.js";
++import "./BrandPicker.css";
++
++const strip = ({ v, s, p, b }) => ({ v, s, p, b });
++
++export default function AvatarPicker({ name, value, onChange, current = null, autoPick = true, compact = false, title = "Your avatar", hint }) {
++  const [seed, setSeed] = useState(newSeed);
++  const picked = useRef(false);
++
++  const list = useMemo(() => {
++    const fresh = avatarCandidates(seed, current ? 5 : 6);
++    return current ? [{ ...current, __current: true }, ...fresh] : fresh;
++  }, [seed, current]);
++
++  useEffect(() => {
++    // only when it actually differs, so a parent that re-renders can never cause a loop
++    if (autoPick && !picked.current && list[0] && !sameDesign(value, list[0])) onChange?.(strip(list[0]));
++  }, [list, autoPick, onChange, value]);
++
++  const pick = (d) => {
++    picked.current = true;
++    onChange?.(strip(d));
++  };
++  const more = () => {
++    picked.current = false;
++    setSeed(newSeed());
++  };
++
++  const shown = value || (autoPick ? list[0] : null);
++  return (
++    <div className={`bpick bpick--round${compact ? " bpick--compact" : ""}`}>
++      <div className="bpick__head">
++        <h3 className="bpick__title">{title}</h3>
++        <p className="bpick__hint">{hint || "Pick the look you like. If you skip, we use the first one. You can add a photo later."}</p>
++      </div>
++
++      <div className="bpick__stage bpick__stage--round"><img src={avatarUri({ name, design: shown })} alt={`Avatar preview for ${name || "you"}`} /></div>
++
++      <ul className="bpick__grid">
++        {list.map((d, k) => (
++          <li key={`${d.s}-${d.p}-${d.b}-${k}`}>
++            <button type="button" className="bpick__tile" aria-pressed={sameDesign(d, shown)} onClick={() => pick(d)}>
++              <img src={avatarUri({ name, design: d })} alt="" loading="lazy" />
++              <span className="bpick__caption">{d.__current ? "Current" : `Style ${k + 1}`}</span>
++            </button>
++          </li>
++        ))}
++      </ul>
++
++      <div className="bpick__actions">
++        <button type="button" className="bpick__file" onClick={more}>Show more</button>
++      </div>
++    </div>
++  );
++}
+diff --git a/src/components/brand/BrandPicker.css b/src/components/brand/BrandPicker.css
+new file mode 100644
+index 0000000..a88edfd
+--- /dev/null
++++ b/src/components/brand/BrandPicker.css
+@@ -0,0 +1,58 @@
++/* src/components/brand/BrandPicker.css — NEW FILE
++   Styles for LogoPicker.jsx and AvatarPicker.jsx. Tokens only. */
++
++.bpick { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
++.bpick__head { display: flex; flex-direction: column; gap: var(--space-1); }
++.bpick__title { margin: 0; font-size: var(--text-base); font-weight: var(--weight-bold); color: var(--color-text); }
++.bpick__hint { margin: 0; font-size: var(--text-sm); color: var(--color-text-muted); }
++
++/* the one that is chosen, shown large */
++.bpick__stage {
++  display: grid; place-items: center;
++  padding: var(--space-4);
++  border: 1px solid var(--color-border); border-radius: var(--radius-lg);
++  background: var(--color-surface);
++}
++.bpick__stage img { display: block; width: min(100%, 260px); height: auto; }
++.bpick__stage--round img { width: 112px; height: 112px; border-radius: var(--radius-full); }
++
++/* the choices: two across on a phone, three on wider screens */
++.bpick__grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
++@media (min-width: 560px) { .bpick__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
++
++.bpick__tile {
++  appearance: none; width: 100%; cursor: pointer;
++  display: flex; flex-direction: column; align-items: center; gap: var(--space-1);
++  padding: var(--space-2);
++  border: 2px solid var(--color-border); border-radius: var(--radius-md);
++  background: var(--color-surface); color: var(--color-text);
++  font: inherit; font-size: var(--text-xs, 0.75rem);
++  transition: border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
++}
++.bpick__tile:hover { border-color: var(--color-primary); }
++.bpick__tile:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
++.bpick__tile[aria-pressed="true"] { border-color: var(--color-primary); box-shadow: 0 0 0 2px var(--color-primary-soft); }
++.bpick__tile img { display: block; width: 100%; height: auto; }
++.bpick--round .bpick__tile img { width: 64px; height: 64px; border-radius: var(--radius-full); }
++.bpick__caption { color: var(--color-text-muted); text-align: center; line-height: 1.2; }
++
++.bpick__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
++.bpick__file {
++  display: inline-flex; align-items: center; min-height: 40px; padding: 0 var(--space-3);
++  border: 1px solid var(--color-border); border-radius: var(--radius-md);
++  background: var(--color-surface); color: var(--color-text);
++  font-size: var(--text-sm); font-weight: var(--weight-semibold); cursor: pointer;
++}
++.bpick__file:focus-within { outline: 2px solid var(--color-primary); outline-offset: 2px; }
++.bpick__file input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
++.bpick__chosen { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: var(--color-text-muted); min-width: 0; }
++.bpick__chosen img { width: 40px; height: 40px; object-fit: contain; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
++.bpick__chosen span { min-width: 0; overflow-wrap: anywhere; }
++.bpick__error { margin: 0; font-size: var(--text-sm); color: var(--color-danger-text, var(--color-danger)); }
++
++/* compact: no large preview and no captions, so it fits inside a form */
++.bpick--compact .bpick__stage, .bpick--compact .bpick__caption { display: none; }
++.bpick--compact .bpick__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
++@media (min-width: 480px) { .bpick--compact .bpick__grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
++.bpick--compact .bpick__tile { padding: var(--space-1); }
++.bpick--compact .bpick__tile img { width: 100%; max-width: 56px; height: auto; aspect-ratio: 1 / 1; }
+diff --git a/src/components/brand/BusinessLogo.css b/src/components/brand/BusinessLogo.css
+new file mode 100644
+index 0000000..d746840
+--- /dev/null
++++ b/src/components/brand/BusinessLogo.css
+@@ -0,0 +1,26 @@
++/* src/components/brand/BusinessLogo.css — NEW FILE
++   Styles for BusinessLogo.jsx. Tokens only. */
++
++.bk-logo {
++  position: relative;
++  display: inline-block;
++  flex: none;
++  overflow: hidden;
++  line-height: 0;
++  vertical-align: middle;
++}
++/* fill the box it is placed in (a card mark, a tile) */
++.bk-logo--fill { width: 100%; height: 100%; }
++
++.bk-logo__img {
++  position: absolute;
++  inset: 0;
++  width: 100%;
++  height: 100%;
++  object-fit: contain;
++  display: block;
++  border-radius: inherit;
++}
++/* an uploaded picture fades in over the drawn logo once it has loaded */
++.bk-logo__img--upload { transition: opacity var(--duration-fast, 150ms) ease; }
++.bk-logo__img--drawn { transition: opacity var(--duration-fast, 150ms) ease; }
+diff --git a/src/components/brand/BusinessLogo.jsx b/src/components/brand/BusinessLogo.jsx
+new file mode 100644
+index 0000000..0da93db
+--- /dev/null
++++ b/src/components/brand/BusinessLogo.jsx
+@@ -0,0 +1,56 @@
++// src/components/brand/BusinessLogo.jsx — NEW FILE
++//
++// AIM
++// Shows a business logo. This is the one place every screen uses, so a logo looks the same in the
++// directory, on the business page, in the dashboard header and in the shop bar.
++//
++// HOW IT CHOOSES
++//   1. The logo the owner uploaded (business.logo_url), when there is one and it loads.
++//   2. Otherwise a logo DRAWN in the browser from the saved recipe (business.logo_design). A business
++//      with no recipe gets one worked out from its id, so nobody is ever left without a logo.
++// The drawn logo is always there underneath, so on a slow connection there is never an empty box:
++// the uploaded picture simply fades in over it once it has arrived, and if it fails the drawn logo stays.
++//
++// PROPS
++//   business   { id, name, business_type, logo_url, logo_design }
++//   size       height in pixels. Leave out to fill the box the logo is placed in.
++//   layout     "icon" (default: the symbol on its own, square) or "wordmark" (symbol + name, twice as
++//              wide as tall; always drawn, since an uploaded picture has no wordmark)
++//   className  added to the wrapper
++//   alt        text for screen readers (default: the business name)
++
++import { useState } from "react";
++import { logoUri } from "../../lib/brandStudio/index.js";
++import "./BusinessLogo.css";
++
++export default function BusinessLogo({ business, size, layout = "icon", className = "", alt }) {
++  const b = business || {};
++  const name = b.name || "";
++  const [state, setState] = useState({ url: "", status: "" }); // status: "loaded" | "failed" for url
++
++  const drawn = logoUri({ id: b.id, name, type: b.business_type, design: b.logo_design, layout });
++  const upload = layout === "icon" && b.logo_url ? b.logo_url : "";
++  const uploadLoaded = upload && state.url === upload && state.status === "loaded";
++  const uploadFailed = upload && state.url === upload && state.status === "failed";
++
++  const style = size ? { width: layout === "wordmark" ? size * 2 : size, height: size } : undefined;
++  return (
++    <span className={`bk-logo${size ? "" : " bk-logo--fill"} ${className}`.trim()} style={style} role="img" aria-label={alt ?? (name || "Business logo")}>
++      <img className="bk-logo__img bk-logo__img--drawn" src={drawn} alt="" aria-hidden="true" decoding="async" style={{ opacity: uploadLoaded ? 0 : 1 }} />
++      {upload && !uploadFailed && (
++        <img
++          key={upload}
++          className="bk-logo__img bk-logo__img--upload"
++          src={upload}
++          alt=""
++          aria-hidden="true"
++          loading="lazy"
++          decoding="async"
++          style={{ opacity: uploadLoaded ? 1 : 0 }}
++          onLoad={() => setState({ url: upload, status: "loaded" })}
++          onError={() => setState({ url: upload, status: "failed" })}
++        />
++      )}
++    </span>
++  );
++}
+diff --git a/src/components/brand/LogoPicker.jsx b/src/components/brand/LogoPicker.jsx
+new file mode 100644
+index 0000000..b0b4b9d
+--- /dev/null
++++ b/src/components/brand/LogoPicker.jsx
+@@ -0,0 +1,119 @@
++// src/components/brand/LogoPicker.jsx — NEW FILE
++//
++// AIM
++// Lets an owner choose a logo. Once the business name and type are known it shows six designs drawn
++// from them. The first is already selected, so an owner who skips ends up with a real logo anyway.
++// "Show more designs" draws six new ones. Optionally the owner can upload their own logo instead.
++// Nothing is uploaded or saved here: the parent receives a small recipe through onChange and saves it.
++//
++// PROPS
++//   name, type     the business name and type (the designs update as the name is typed)
++//   value          the chosen recipe
++//   onChange       called with a recipe whenever the choice changes
++//   current        a recipe already saved for this business: shown first, marked "Current"
++//   autoPick       true (default): choose the first design by itself, so skipping works.
++//                  false in settings, where the saved design must stay as it is until changed.
++//   file, onFile   an uploaded logo chosen on this form (File or null) and its setter. Leave out to hide upload.
++//   title, hint    optional heading and help text
++
++import { useEffect, useMemo, useRef, useState } from "react";
++import { logoCandidates, logoUri, newSeed, sameDesign, STYLES } from "../../lib/brandStudio/index.js";
++import { LOGO_MAX_MB } from "../../lib/api/businessMedia.js";
++import "./BrandPicker.css";
++
++const ACCEPT = "image/jpeg,image/png,image/webp";
++
++export default function LogoPicker({ name, type, value, onChange, current = null, autoPick = true, file = null, onFile = null, title = "Your logo", hint }) {
++  const [seed, setSeed] = useState(newSeed);
++  const [fileError, setFileError] = useState("");
++  const picked = useRef(false);
++
++  const list = useMemo(() => {
++    const fresh = logoCandidates(seed, type, current ? 5 : 6);
++    return current ? [{ ...current, __current: true }, ...fresh] : fresh;
++  }, [seed, type, current]);
++
++  // until the person chooses, the first design stays selected (this is what "skip" saves)
++  useEffect(() => {
++    // only when it actually differs, so a parent that re-renders can never cause a loop
++    if (autoPick && !picked.current && list[0] && !sameDesign(value, list[0])) onChange?.(strip(list[0]));
++  }, [list, autoPick, onChange, value]);
++
++  // a preview of the chosen upload
++  const [previewUrl, setPreviewUrl] = useState("");
++  useEffect(() => {
++    if (!file) return setPreviewUrl("");
++    const url = URL.createObjectURL(file);
++    setPreviewUrl(url);
++    return () => URL.revokeObjectURL(url);
++  }, [file]);
++
++  const pick = (d) => {
++    picked.current = true;
++    onChange?.(strip(d));
++  };
++  const more = () => {
++    picked.current = false; // a new set starts with its first design selected again (when autoPick)
++    setSeed(newSeed());
++  };
++
++  function onPickFile(e) {
++    const f = e.target.files?.[0];
++    e.target.value = "";
++    if (!f) return;
++    if (!ACCEPT.split(",").includes(f.type)) return setFileError("Use a JPG, PNG or WebP picture.");
++    if (f.size > LOGO_MAX_MB * 1024 * 1024) return setFileError(`That picture is over ${LOGO_MAX_MB} MB.`);
++    setFileError("");
++    onFile?.(f);
++  }
++
++  const shown = value || (autoPick ? list[0] : null);
++  const stageUri = logoUri({ name, type, design: shown, layout: "wordmark" });
++
++  return (
++    <div className="bpick">
++      <div className="bpick__head">
++        <h3 className="bpick__title">{title}</h3>
++        <p className="bpick__hint">{hint || "Pick a design below, or upload your own. If you skip, we use the first one."}</p>
++      </div>
++
++      <div className="bpick__stage"><img src={stageUri} alt={`Logo preview for ${name || "your business"}`} /></div>
++
++      <ul className="bpick__grid">
++        {list.map((d, k) => {
++          const on = sameDesign(d, shown);
++          return (
++            <li key={`${d.s}-${d.i}-${d.p}-${k}`}>
++              <button type="button" className="bpick__tile" aria-pressed={on} onClick={() => pick(d)}>
++                <img src={logoUri({ name, type, design: d, layout: "wordmark" })} alt="" loading="lazy" />
++                <span className="bpick__caption">{d.__current ? "Current" : STYLES[d.s].name}</span>
++              </button>
++            </li>
++          );
++        })}
++      </ul>
++
++      <div className="bpick__actions">
++        <button type="button" className="bpick__file" onClick={more}>Show more designs</button>
++        {onFile && (
++          <label className="bpick__file">
++            <span>{file ? "Choose a different logo" : "Upload my own logo"}</span>
++            <input type="file" accept={ACCEPT} onChange={onPickFile} aria-label="Upload your own logo" />
++          </label>
++        )}
++      </div>
++
++      {file && previewUrl && (
++        <div className="bpick__chosen">
++          <img src={previewUrl} alt="" />
++          <span>{file.name}. Your own logo will be used; the design above stays as a backup.</span>
++          <button type="button" className="bpick__file" onClick={() => onFile?.(null)}>Remove</button>
++        </div>
++      )}
++      {fileError && <p className="bpick__error" role="alert">{fileError}</p>}
++    </div>
++  );
++}
++
++// only the saved fields, without display-only flags
++const strip = ({ v, s, i, p }) => ({ v, s, i, p });
+diff --git a/src/components/business/BusinessCard.jsx b/src/components/business/BusinessCard.jsx
+index ce50118..20b2cb2 100644
+--- a/src/components/business/BusinessCard.jsx
++++ b/src/components/business/BusinessCard.jsx
+@@ -1,4 +1,4 @@
+-// src/components/business/BusinessCard.jsx — MODIFIED (square card: cover 65%, text 35%, no description)
++// src/components/business/BusinessCard.jsx — MODIFIED (the logo mark is always shown: the upload, or the logo drawn from the saved design)
+ //
+ // AIM
+ // One business in a list (home page, explore). A square. The cover picture (or a coloured
+@@ -12,6 +12,7 @@ import "./BusinessCard.css";
+ import { Link } from "react-router-dom";
+ import { Badge, Icon, Skeleton } from "../ui";
+ import { typeLabel } from "../../config/counties.js";
++import BusinessLogo from "../brand/BusinessLogo.jsx";
+ 
+ export default function BusinessCard({ business }) {
+   const b = business;
+@@ -19,11 +20,7 @@ export default function BusinessCard({ business }) {
+     <Link to={`/b/${b.slug}`} className="bcard">
+       <div className="bcard__cover" style={b.cover_url ? { backgroundImage: `url("${b.cover_url}")` } : undefined}>
+         {!b.cover_url && <span aria-hidden="true">{b.name.charAt(0).toUpperCase()}</span>}
+-        {(b.logo_url || b.cover_url) && (
+-          <span className="bcard__mark" aria-hidden="true">
+-            {b.logo_url ? <img src={b.logo_url} alt="" loading="lazy" /> : b.name.charAt(0).toUpperCase()}
+-          </span>
+-        )}
++        <span className="bcard__mark" aria-hidden="true"><BusinessLogo business={b} /></span>
+         <Badge variant="brand" size="sm" className="bcard__type">{typeLabel(b.business_type)}</Badge>
+       </div>
+       <div className="bcard__body">
+diff --git a/src/components/business/BusinessLogoCard.jsx b/src/components/business/BusinessLogoCard.jsx
+index 7393669..5bbd9cc 100644
+--- a/src/components/business/BusinessLogoCard.jsx
++++ b/src/components/business/BusinessLogoCard.jsx
+@@ -1,17 +1,28 @@
+-// src/components/business/BusinessLogoCard.jsx — MOVED (shared by every business type)
++// src/components/business/BusinessLogoCard.jsx — MODIFIED (a designed logo is drawn when nothing is uploaded)
+ //
+ // AIM
+-// Lets the owner upload, replace or remove the business logo. The logo shows on the top left of
+-// the business card in the public list, replaces the BizKenia logo in the header of the business
+-// page, and replaces it in the sidebar and top bar of this business's dashboard. Without a logo,
+-// the first letter of the business name is shown on green instead.
+-// Shared: used in the owner's Settings page of rental and agriculture businesses.
++// Where the owner manages the business logo. The logo shows on the top left of the business card in
++// the public list, in the header of the business page, and in the sidebar and top bar of this
++// business's dashboard.
++//
++// HOW THE LOGO WORKS
++//   * By default the logo is DRAWN from the business name, type and a small saved recipe. Nothing is
++//     stored as a picture, so it appears instantly even on a slow connection.
++//   * The owner can change the design here at any time ("Change design").
++//   * The owner can also upload their own logo. An uploaded logo always shows first; remove it and the
++//     drawn design shows again.
++//   * "Download PNG" saves the drawn logo to the owner's device (symbol only, or symbol + name).
++// Shared: used in the owner's Settings page of every business type.
+ 
+ import "./BusinessImageCards.css";
+ import { useState } from "react";
+ import { Button, Card, CardBody, CardHeader } from "../ui";
++import BusinessLogo from "../brand/BusinessLogo.jsx";
++import LogoPicker from "../brand/LogoPicker.jsx";
+ import { useToast } from "../../hooks/useNotifications.js";
++import { updateBusiness } from "../../lib/api/businesses.js";
+ import { LOGO_MAX_MB, removeBusinessLogo, uploadBusinessLogo } from "../../lib/api/businessMedia.js";
++import { downloadSvgAsPng, logoSvg, resolveLogoDesign, safeFileName } from "../../lib/brandStudio/index.js";
+ import { useBusinessStore } from "../../store/businessStore.js";
+ import { useSession } from "../../store/sessionStore.js";
+ 
+@@ -21,7 +32,10 @@ export default function BusinessLogoCard({ business }) {
+   const toast = useToast();
+   const user = useSession((s) => s.user);
+   const [busy, setBusy] = useState("");
++  const [editing, setEditing] = useState(false);
++  const [draft, setDraft] = useState(null);
+   const logo = business.logo_url || "";
++  const saved = resolveLogoDesign({ id: business.id, type: business.business_type, design: business.logo_design });
+ 
+   // reload the person's businesses so the new logo shows everywhere
+   const refresh = () => useBusinessStore.getState().load(user?.id, true);
+@@ -44,28 +58,74 @@ export default function BusinessLogoCard({ business }) {
+     const { error } = await removeBusinessLogo(business.id, logo);
+     setBusy("");
+     if (error) return toast.error(error);
+-    toast.success("Logo removed.");
++    toast.success("Uploaded logo removed. Your design is showing again.");
+     refresh();
+   }
+ 
++  async function onSaveDesign() {
++    if (!draft) return;
++    setBusy("design");
++    const { error } = await updateBusiness(business.id, { logo_design: draft, business_type: business.business_type });
++    setBusy("");
++    if (error) return toast.error(error);
++    toast.success("Logo design saved.");
++    setEditing(false);
++    refresh();
++  }
++
++  async function onDownload(layout) {
++    setBusy(`png-${layout}`);
++    const svg = logoSvg({ id: business.id, name: business.name, type: business.business_type, design: saved, layout });
++    const { error } = await downloadSvgAsPng(svg, `${safeFileName(business.name)}-logo-${layout}.png`, 512, layout === "icon" ? 512 : 256);
++    setBusy("");
++    if (error) toast.error(error);
++  }
++
+   return (
+     <Card>
+       <CardHeader title="Logo" subtitle="Shown on your listing card, on your business page and across your dashboard" />
+       <CardBody>
+         <div className="bcov">
+-          <div className={`bcov__logo${logo ? "" : " bcov__logo--letter"}`}>
+-            {logo ? <img src={logo} alt="" /> : <span aria-hidden="true">{(business.name || "?").charAt(0).toUpperCase()}</span>}
+-          </div>
++          <div className="bcov__logo"><BusinessLogo business={business} /></div>
+           <div className="bcov__actions">
+             <label className="bcov__file">
+-              <span>{busy === "upload" ? "Uploading..." : logo ? "Replace logo" : "Choose a logo"}</span>
++              <span>{busy === "upload" ? "Uploading..." : logo ? "Replace logo" : "Upload my own logo"}</span>
+               <input type="file" accept={ACCEPT} disabled={busy !== ""} onChange={onPick} aria-label="Upload a logo" />
+             </label>
+-            {logo && <Button variant="ghost" loading={busy === "remove"} disabled={busy === "upload"} onClick={onRemove}>Remove logo</Button>}
++            {logo && <Button variant="ghost" loading={busy === "remove"} disabled={busy === "upload"} onClick={onRemove}>Remove uploaded logo</Button>}
++            <Button variant="outline" onClick={() => { setEditing((v) => !v); setDraft(null); }}>{editing ? "Close" : "Change design"}</Button>
++          </div>
++          <p className="bcov__hint">
++            {logo
++              ? "Your uploaded logo is showing. If you remove it, the design below shows instead."
++              : "Your logo is drawn from your business name and type, so it always looks sharp and loads fast."}
++            {" "}Uploads: JPG, PNG or WebP, up to {LOGO_MAX_MB} MB, square on a plain or transparent background works best.
++          </p>
++
++          {editing && (
++            <>
++              <LogoPicker
++                name={business.name}
++                type={business.business_type}
++                current={saved}
++                value={draft || saved}
++                onChange={setDraft}
++                autoPick={false}
++                title="Pick a design"
++                hint="Choose one you like, then save. Your design is only changed when you save."
++              />
++              <div className="bcov__actions">
++                <Button loading={busy === "design"} disabled={!draft} onClick={onSaveDesign}>Save design</Button>
++              </div>
++            </>
++          )}
++
++          <div className="bcov__actions">
++            <Button variant="ghost" size="sm" loading={busy === "png-icon"} onClick={() => onDownload("icon")}>Download symbol (PNG)</Button>
++            <Button variant="ghost" size="sm" loading={busy === "png-wordmark"} onClick={() => onDownload("wordmark")}>Download with name (PNG)</Button>
+           </div>
+-          <p className="bcov__hint">JPG, PNG or WebP, up to {LOGO_MAX_MB} MB. A square logo on a plain or transparent background looks best. Without a logo we show the first letter of your business name. A new logo replaces the old one.</p>
+         </div>
+       </CardBody>
+     </Card>
+   );
+-}
+\ No newline at end of file
++}
+diff --git a/src/components/business/VisitBusiness.jsx b/src/components/business/VisitBusiness.jsx
+index 53fae5d..ed797cc 100644
+--- a/src/components/business/VisitBusiness.jsx
++++ b/src/components/business/VisitBusiness.jsx
+@@ -3,18 +3,19 @@
+ // AIM
+ // A small card on an item's page (product, produce, room type) that says which business it is
+ // listed by and links to that business's page, so someone who wants to see more can go there.
+-// Pass the business as loaded by getBusinessBySlug: { slug, name, logo_url, county, business_type }.
++// Pass the business as loaded by getBusinessBySlug: { id, slug, name, logo_url, logo_design, county, business_type }.
+ 
+ import { Link } from "react-router-dom";
+ import { Button, Card } from "../ui";
+ import { typeLabel } from "../../config/counties.js";
++import BusinessLogo from "../brand/BusinessLogo.jsx";
+ 
+ export default function VisitBusiness({ business: b, label }) {
+   const where = [typeLabel(b.business_type), b.county].filter(Boolean).join(" · ");
+   return (
+     <Card className="visit-biz" style={{ padding: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-3)", flexWrap: "wrap" }}>
+       <span aria-hidden="true" style={{ flex: "none", width: 44, height: 44, borderRadius: "var(--radius-md)", overflow: "hidden", display: "grid", placeItems: "center", background: "var(--color-primary-soft)", color: "var(--color-on-primary-soft)", fontWeight: "var(--weight-bold)" }}>
+-        {b.logo_url ? <img src={b.logo_url} alt="" width="44" height="44" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : b.name.charAt(0).toUpperCase()}
++        <BusinessLogo business={b} />
+       </span>
+       <div style={{ flex: "1 1 160px", minWidth: 0 }}>
+         <div style={{ fontSize: "var(--text-sm)", color: "var(--color-text-muted)" }}>{label || "Listed by"}</div>
+diff --git a/src/components/shell/BrandLogo.jsx b/src/components/shell/BrandLogo.jsx
+index 8788474..a20a06b 100644
+--- a/src/components/shell/BrandLogo.jsx
++++ b/src/components/shell/BrandLogo.jsx
+@@ -1,4 +1,4 @@
+-// src/components/shell/BrandLogo.jsx — MODIFIED (real BizKenia logo; contextual business logo)
++// src/components/shell/BrandLogo.jsx — MODIFIED (inside a business the logo is its upload, or the logo drawn from its saved design)
+ //
+ // AIM
+ // The product logo in one place (header, sidebar, top bar, footer, sign-in pages, 404).
+@@ -12,7 +12,7 @@
+ //
+ // With `contextual`, and while a screen has told the business brand store which business it is
+ // about (business page, room request, /app/:slug), the mark and name become that business's logo
+-// (or its first letter on green when it has no logo) and its name. While that business is still
++// (its upload, or the logo drawn from its saved design) and its name. While that business is still
+ // loading, only its first letter shows. Inside a business the BizKenia logo is never the fallback.
+ // Without `contextual`, such as in the footer, it is always the platform logo.
+ //
+@@ -23,9 +23,9 @@
+ //   contextual   use the current business instead of the platform (default false)
+ //   className
+ 
+-import { useState } from "react";
+ import useBrand from "../../hooks/useBrand.js";
+ import useBusinessBrandStore from "../../store/businessBrandStore.js";
++import BusinessLogo from "../brand/BusinessLogo.jsx";
+ import markSrc from "../../assets/bizkenia-mark.png";
+ import fullSrc from "../../assets/bizkenia-logo.png";
+ import "./BrandLogo.css";
+@@ -34,31 +34,17 @@ const MARK_RATIO = 282 / 160; // width / height of bizkenia-mark.png
+ const FULL_RATIO = 560 / 447; // width / height of bizkenia-logo.png
+ 
+ function BusinessMark({ business, showName, size, className }) {
+-  const [failedUrl, setFailedUrl] = useState("");
+   const name = business.name || "";
+-  const showImg = !business.provisional && business.logo_url && failedUrl !== business.logo_url;
+-  const withName = showName && !business.provisional; // still loading: the letter only
++  const withName = showName && !business.provisional; // still loading: the first letter only
+   return (
+     <span className={`shell-logo ${className}`.trim()}>
+-      {showImg ? (
+-        <img
+-          className="shell-logo__img"
+-          src={business.logo_url}
+-          alt={withName ? "" : name}
+-          width={size}
+-          height={size}
+-          onError={() => setFailedUrl(business.logo_url)}
+-        />
+-      ) : (
+-        <span
+-          className="shell-logo__letter"
+-          style={{ width: size, height: size }}
+-          role={withName ? undefined : "img"}
+-          aria-label={withName ? undefined : name}
+-          aria-hidden={withName ? "true" : undefined}
+-        >
++      {business.provisional ? (
++        <span className="shell-logo__letter" style={{ width: size, height: size }} role="img" aria-label={name}>
+           {(name.trim().charAt(0) || "?").toUpperCase()}
+         </span>
++      ) : (
++        // the uploaded logo if there is one, otherwise the logo drawn from the saved design
++        <BusinessLogo business={business} size={size} className="shell-logo__img" alt={withName ? "" : name} />
+       )}
+       {withName && <span className="shell-logo__name shell-logo__name--business">{name}</span>}
+     </span>
+diff --git a/src/components/shell/UserMenu.jsx b/src/components/shell/UserMenu.jsx
+index adf2c7f..81d6870 100644
+--- a/src/components/shell/UserMenu.jsx
++++ b/src/components/shell/UserMenu.jsx
+@@ -6,7 +6,7 @@
+ // Matches the "Avatar menu" in the design system sheet.
+ //
+ // PROPS
+-//   user              { name, email, role, avatarUrl }
++//   user              { name, email, role, avatarUrl, avatarId, avatarDesign }  (the last two draw a designed avatar when there is no photo)
+ //   links             extra links [{ to, label, icon }] shown after Profile (Phase 3)
+ //   profileTo         link for "Profile" (omit to hide it)
+ //   onSwitchBusiness  function; "Switch business" shows only when given
+@@ -66,7 +66,7 @@ export default function UserMenu({ user, profileTo, links = [], onSwitchBusiness
+         aria-controls={open ? panelId : undefined}
+         aria-label={`Account menu for ${user?.name || "you"}`}
+       >
+-        <Avatar name={user?.name} src={user?.avatarUrl} size="md" />
++        <Avatar name={user?.name} src={user?.avatarUrl} id={user?.avatarId} design={user?.avatarDesign} size="md" />
+         <span className="shell-user__who">
+           <span className="shell-user__name">{user?.name || "Account"}</span>
+           {user?.role && <span className="shell-user__role">{user.role}</span>}
+@@ -77,7 +77,7 @@ export default function UserMenu({ user, profileTo, links = [], onSwitchBusiness
+       {open && (
+         <div id={panelId} className="shell-menu">
+           <div className="shell-menu__head">
+-            <Avatar name={user?.name} src={user?.avatarUrl} size="lg" />
++            <Avatar name={user?.name} src={user?.avatarUrl} id={user?.avatarId} design={user?.avatarDesign} size="lg" />
+             <div className="shell-menu__ident">
+               <p className="shell-menu__name">{user?.name || "Account"}</p>
+               {user?.email && <p className="shell-menu__email">{user.email}</p>}
+diff --git a/src/components/ui/Avatar.css b/src/components/ui/Avatar.css
+index 7ffca8c..783d774 100644
+--- a/src/components/ui/Avatar.css
++++ b/src/components/ui/Avatar.css
+@@ -15,6 +15,18 @@
+   user-select: none;
+ }
+ 
++/* A drawn avatar: the picture and the uploaded photo are stacked, same size */
++.ui-avatar--drawn { position: relative; display: inline-block; vertical-align: middle; }
++.ui-avatar__img {
++  position: absolute;
++  inset: 0;
++  width: 100%;
++  height: 100%;
++  object-fit: cover;
++  display: block;
++  transition: opacity var(--duration-fast, 150ms) ease;
++}
++
+ .ui-avatar--initials {
+   background: var(--color-neutral-bg);
+   color: var(--color-neutral-text);
+diff --git a/src/components/ui/Avatar.jsx b/src/components/ui/Avatar.jsx
+index 19b67b7..edb4b5b 100644
+--- a/src/components/ui/Avatar.jsx
++++ b/src/components/ui/Avatar.jsx
+@@ -1,8 +1,9 @@
+-// src/components/ui/Avatar.jsx — MODIFIED FILE (rebuilt on design tokens; old props still work)
++// src/components/ui/Avatar.jsx — MODIFIED FILE (now draws a designed avatar when there is no picture)
+ //
+ // AIM
+-// A round profile picture, or the person's initials when there is no picture (or it fails
+-// to load).
++// A round profile picture. When the person has no picture (or it fails to load), an avatar is DRAWN
++// from their saved recipe (avatar_design), or one worked out from their id, so nobody is left with a
++// grey circle. The drawn avatar sits underneath, so a slow picture fades in over it, never an empty box.
+ //
+ // FIXES
+ // The old sizes were in rem and the "sm" avatar came out 128px wide. Sizes are now pixels.
+@@ -10,13 +11,16 @@
+ // PROPS
+ //   name       used for the initials and the image alt text
+ //   src        picture URL (optional)
++//   id         the person's id: picks a stable look when no recipe is saved (falls back to the name)
++//   design     the saved recipe (profiles.avatar_design), optional
+ //   size       "xs" 24px | "sm" 32px (default) | "md" 40px | "lg" 56px | "xl" 80px | a number of pixels
+ //   className
+ //
+ // AvatarGroup shows a row of overlapping avatars with a "+N" chip for the rest:
+-//   <AvatarGroup people={[{ name: "Amina W", src: url }, ...]} max={4} size="sm" />
++//   <AvatarGroup people={[{ id, name: "Amina W", src: url, design }, ...]} max={4} size="sm" />
+ 
+ import { useState } from "react";
++import { avatarUri } from "../../lib/brandStudio/index.js";
+ import "./Avatar.css";
+ 
+ const SIZES = { xs: 24, sm: 32, md: 40, lg: 56, xl: 80 };
+@@ -34,35 +38,33 @@ export function getInitials(name) {
+   return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
+ }
+ 
+-function AvatarImage({ src, name, className, style }) {
+-  const [failed, setFailed] = useState(false);
+-
+-  if (!src || failed) {
+-    return (
+-      <span
+-        className={`ui-avatar ui-avatar--initials ${className}`.trim()}
+-        style={style}
+-        role="img"
+-        aria-label={name || "Avatar"}
+-      >
+-        <span aria-hidden="true">{getInitials(name)}</span>
+-      </span>
+-    );
+-  }
++function AvatarImage({ src, name, id, design, className, style }) {
++  const [status, setStatus] = useState(""); // "loaded" | "failed" for the uploaded picture
++  const drawn = avatarUri({ id: id || name, name, design });
++  const showPicture = Boolean(src) && status !== "failed";
++  const loaded = showPicture && status === "loaded";
+ 
+   return (
+-    <img
+-      className={`ui-avatar ${className}`.trim()}
+-      style={style}
+-      src={src}
+-      alt={name || "Avatar"}
+-      loading="lazy"
+-      onError={() => setFailed(true)}
+-    />
++    <span className={`ui-avatar ui-avatar--drawn ${className}`.trim()} style={style} role="img" aria-label={name || "Avatar"}>
++      <img className="ui-avatar__img" src={drawn} alt="" aria-hidden="true" decoding="async" style={{ opacity: loaded ? 0 : 1 }} />
++      {showPicture && (
++        <img
++          className="ui-avatar__img ui-avatar__img--picture"
++          src={src}
++          alt=""
++          aria-hidden="true"
++          loading="lazy"
++          decoding="async"
++          style={{ opacity: loaded ? 1 : 0 }}
++          onLoad={() => setStatus("loaded")}
++          onError={() => setStatus("failed")}
++        />
++      )}
++    </span>
+   );
+ }
+ 
+-export default function Avatar({ name, src, size = "sm", className = "" }) {
++export default function Avatar({ name, src, id, design, size = "sm", className = "" }) {
+   const px = resolveSize(size);
+   const style = {
+     width: px,
+@@ -71,7 +73,7 @@ export default function Avatar({ name, src, size = "sm", className = "" }) {
+     fontSize: Math.max(12, Math.round(px * 0.4)),
+   };
+   // key on src so a new picture gets a fresh "failed to load" state
+-  return <AvatarImage key={src || "none"} src={src} name={name} className={className} style={style} />;
++  return <AvatarImage key={src || "none"} src={src} name={name} id={id} design={design} className={className} style={style} />;
+ }
+ 
+ export function AvatarGroup({ people = [], max = 4, size = "sm", className = "" }) {
+@@ -86,6 +88,8 @@ export function AvatarGroup({ people = [], max = 4, size = "sm", className = ""
+           key={person.id ?? `${person.name}-${index}`}
+           name={person.name}
+           src={person.src}
++          id={person.id}
++          design={person.design}
+           size={size}
+           className="ui-avatar-group__item"
+         />
+diff --git a/src/hooks/useBusinessBrand.js b/src/hooks/useBusinessBrand.js
+index 63c8eda..c3e7438 100644
+--- a/src/hooks/useBusinessBrand.js
++++ b/src/hooks/useBusinessBrand.js
+@@ -17,11 +17,14 @@ export default function useBusinessBrand(business, loadingSlug = "") {
+   const id = business?.id;
+   const name = business?.name;
+   const logo = business?.logo_url || null;
++  const type = business?.business_type || "";
++  // the saved logo recipe, flattened to one text value so the effect only re-runs when it really changes
++  const designKey = business?.logo_design ? JSON.stringify(business.logo_design) : "";
+   useLayoutEffect(() => {
+     const store = useBusinessBrandStore.getState();
+-    if (id) store.set({ id, name, logo_url: logo });
++    if (id) store.set({ id, name, business_type: type, logo_url: logo, logo_design: designKey ? JSON.parse(designKey) : null });
+     else if (loadingSlug) store.set({ id: "", name: loadingSlug.replace(/[-_]+/g, " "), logo_url: null, provisional: true });
+     else return undefined;
+     return () => useBusinessBrandStore.getState().clear();
+-  }, [id, name, logo, loadingSlug]);
++  }, [id, name, logo, type, designKey, loadingSlug]);
+ }
+diff --git a/src/layouts/AdminFrame.jsx b/src/layouts/AdminFrame.jsx
+index 8b39e11..ced0866 100644
+--- a/src/layouts/AdminFrame.jsx
++++ b/src/layouts/AdminFrame.jsx
+@@ -40,7 +40,7 @@ export default function AdminFrame() {
+ 
+   return (
+     <AppShell nav={nav} tabs={["/admin", "/admin/businesses", "/admin/users", "/admin/settings"]}
+-      user={{ name: profile?.full_name || user?.email, email: user?.email, role: "Super admin", avatarUrl: profile?.avatar_url }}
++      user={{ name: profile?.full_name || user?.email, email: user?.email, role: "Super admin", avatarUrl: profile?.avatar_url, avatarId: user?.id, avatarDesign: profile?.avatar_design }}
+       business={{ name: `${brand.name} admin`, subtitle: "Platform" }}
+       bellTo="live" profileTo="/account" helpHref={brand.mailto}
+       onSwitchBusiness={() => navigate("/businesses")} onSignOut={signOut} />
+diff --git a/src/layouts/BusinessAppFrame.jsx b/src/layouts/BusinessAppFrame.jsx
+index 65f77b9..3df8b83 100644
+--- a/src/layouts/BusinessAppFrame.jsx
++++ b/src/layouts/BusinessAppFrame.jsx
+@@ -72,7 +72,7 @@ export default function BusinessAppFrame() {
+   return (
+     <AppShell
+       nav={nav}
+-      user={{ name: profile?.full_name || user?.email, email: user?.email, role: ROLE_LABEL[role] || role, avatarUrl: profile?.avatar_url }}
++      user={{ name: profile?.full_name || user?.email, email: user?.email, role: ROLE_LABEL[role] || role, avatarUrl: profile?.avatar_url, avatarId: user?.id, avatarDesign: profile?.avatar_design }}
+       business={{ name: business.name, subtitle: `${typeLabel(business.business_type)} business` }}
+       bellTo="live"
+       profileTo="/account"
+diff --git a/src/layouts/PublicLayout.jsx b/src/layouts/PublicLayout.jsx
+index 4c3344c..f666168 100644
+--- a/src/layouts/PublicLayout.jsx
++++ b/src/layouts/PublicLayout.jsx
+@@ -73,7 +73,7 @@ export function SiteHeader() {
+           {user ? (
+             <div className="site-hide-sm">
+               <UserMenu
+-                user={{ name, email: user.email, avatarUrl: profile?.avatar_url }}
++                user={{ name, email: user.email, avatarUrl: profile?.avatar_url, avatarId: user?.id, avatarDesign: profile?.avatar_design }}
+                 profileTo="/account"
+                 links={menuLinks}
+                 onSignOut={signOut}
+diff --git a/src/lib/api/businesses.js b/src/lib/api/businesses.js
+index db416ea..6db85e8 100644
+--- a/src/lib/api/businesses.js
++++ b/src/lib/api/businesses.js
+@@ -1,4 +1,4 @@
+-// src/lib/api/businesses.js — MODIFIED (Phase 6: a business also carries closed_at / closed_from / closed_by_admin)
++// src/lib/api/businesses.js — MODIFIED (a business also carries logo_design, the saved recipe its logo is drawn from)
+ //
+ // AIM
+ // Everything the browser does with businesses (onboarding, owner edits, super-admin review).
+@@ -6,8 +6,9 @@
+ // by the database; messages from the database functions are plain English and are shown as is.
+ 
+ import { supabase } from "../../config/supabase.js";
++import { normalizeLogoDesign } from "../brandStudio/index.js";
+ 
+-const FULL = "id, name, slug, status, business_type, description, county, address, phone, email, whatsapp, logo_url, cover_url, rejection_reason, submitted_at, approved_at, created_at, owner_user_id, closed_at, closed_from, closed_by_admin";
++const FULL = "id, name, slug, status, business_type, description, county, address, phone, email, whatsapp, logo_url, logo_design, cover_url, rejection_reason, submitted_at, approved_at, created_at, owner_user_id, closed_at, closed_from, closed_by_admin";
+ const wrap = ({ data, error }) => ({ data: data ?? null, error: error?.message || null });
+ const NOT_CONNECTED = { data: null, error: "The app is not connected to the database yet." };
+ 
+@@ -31,6 +32,11 @@ export async function updateBusiness(id, fields) {
+     if (fields[k] !== undefined) patch[k] = fields[k] || null;
+   }
+   if (patch.name === null) delete patch.name;
++  // the logo recipe: a few small numbers (the logo itself is drawn from them, never stored as a file)
++  if (fields.logo_design !== undefined) {
++    const d = normalizeLogoDesign(fields.logo_design, fields.business_type);
++    patch.logo_design = d ? { v: d.v, s: d.s, i: d.i, p: d.p } : null;
++  }
+   return wrap(await supabase.from("businesses").update(patch).eq("id", id).select(FULL).maybeSingle());
+ }
+ 
+diff --git a/src/lib/api/directory.js b/src/lib/api/directory.js
+index a58a790..a5a9fb2 100644
+--- a/src/lib/api/directory.js
++++ b/src/lib/api/directory.js
+@@ -1,4 +1,4 @@
+-// src/lib/api/directory.js — MODIFIED (listBusinesses takes an offset and also returns the total count)
++// src/lib/api/directory.js — MODIFIED (cards also carry logo_design so each business logo is drawn the way its owner chose)
+ //
+ // AIM
+ // Public reads: the list of active businesses, one business by slug, subscription plans and
+@@ -11,7 +11,7 @@
+ 
+ import { supabase } from "../../config/supabase.js";
+ 
+-const CARD_FIELDS = "id, name, slug, business_type, description, county, address, logo_url, cover_url, phone, email, whatsapp, created_at";
++const CARD_FIELDS = "id, name, slug, business_type, description, county, address, logo_url, logo_design, cover_url, phone, email, whatsapp, created_at";
+ const NOT_CONNECTED = { data: null, error: "The app is not connected to the database yet. See .env.example." };
+ 
+ export async function listBusinesses({ search = "", type = "", county = "", limit = 60, offset = 0 } = {}) {
+diff --git a/src/lib/brandStudio/designs.js b/src/lib/brandStudio/designs.js
+new file mode 100644
+index 0000000..91be118
+--- /dev/null
++++ b/src/lib/brandStudio/designs.js
+@@ -0,0 +1,97 @@
++// src/lib/brandStudio/designs.js — NEW FILE
++//
++// AIM
++// The "recipe" for a logo or an avatar: a few small numbers that are saved in the database
++// (businesses.logo_design and profiles.avatar_design). Nothing is stored as a picture; the picture
++// is drawn from the recipe wherever it is needed.
++//
++//   logo recipe    { v: 1, s: style 0-9, i: symbol 0-7, p: palette 0-11 }
++//   avatar recipe  { v: 1, s: style 0-2, p: palette 0-11, b: pattern 0-3 }
++//
++// This file also works out:
++//   * a recipe from a person's or business's id when none is saved (deriveLogoDesign / deriveAvatarDesign)
++//     so existing rows get a stable, different-looking design with no database change;
++//   * the six choices shown in the picker (logoCandidates / avatarCandidates). The first one is
++//     what is saved when the person skips choosing.
++//
++// The "derive" numbers below are the frozen v1 pool. Adding new styles, symbols or palettes later
++// must never change what a given id derives, so these constants do not follow the list lengths.
++
++import { hash, isInt, mod, rng, shuffle } from "./svgKit.js";
++import { PALETTES } from "./palettes.js";
++import { STYLES, STYLE_COUNT } from "./styles.js";
++import { ICON_COUNT, iconSet } from "./icons/index.js";
++
++export const DESIGN_VERSION = 1;
++export const AVATAR_STYLE_COUNT = 3;
++export const AVATAR_PATTERN_COUNT = 4;
++
++const V1 = { styles: 10, icons: 8, palettes: 12, avatarStyles: 3, avatarPatterns: 4 };
++
++/** A fresh random number for "show me more designs". */
++export const newSeed = () => Math.floor(Math.random() * 4294967296);
++
++/** Styles that write a letter on the symbol need a symbol with room for it. */
++function fixIcon(type, style, icon) {
++  if (!STYLES[style].needsSlot) return icon;
++  const set = iconSet(type);
++  for (let k = 0; k < ICON_COUNT; k++) {
++    const j = (icon + k) % ICON_COUNT;
++    if (set[j].slot) return j;
++  }
++  return icon;
++}
++
++// ── Business logos ──────────────────────────────────────────────────────────
++/** Clean up a saved recipe (or anything that came from the database). Returns null if unusable. */
++export function normalizeLogoDesign(d, type) {
++  if (!d || typeof d !== "object") return null;
++  if (![d.s, d.i, d.p].every(isInt)) return null;
++  const s = mod(d.s, STYLE_COUNT);
++  return { v: DESIGN_VERSION, s, i: fixIcon(type, s, mod(d.i, ICON_COUNT)), p: mod(d.p, PALETTES.length) };
++}
++
++/** The recipe for a business with none saved: always the same for the same id. */
++export function deriveLogoDesign(id, type) {
++  const h = hash(`${id || "x"}|logo|v1`);
++  const s = h % V1.styles;
++  return { v: DESIGN_VERSION, s, i: fixIcon(type, s, (h >>> 8) % V1.icons), p: (h >>> 16) % V1.palettes };
++}
++
++/** What to draw: the saved recipe if it is valid, otherwise one worked out from the id. */
++export const resolveLogoDesign = ({ id, type, design }) => normalizeLogoDesign(design, type) || deriveLogoDesign(id, type);
++
++/** Six different looks: six styles, six symbols, six palettes, all different from each other. */
++export function logoCandidates(seed, type, count = 6) {
++  const random = rng(seed);
++  const styles = shuffle(Array.from({ length: STYLE_COUNT }, (_, k) => k), random).slice(0, count);
++  const icons = shuffle(Array.from({ length: ICON_COUNT }, (_, k) => k), random);
++  const palettes = shuffle(Array.from({ length: PALETTES.length }, (_, k) => k), random);
++  return styles.map((s, k) => ({ v: DESIGN_VERSION, s, i: fixIcon(type, s, icons[k % ICON_COUNT]), p: palettes[k % PALETTES.length] }));
++}
++
++// ── Profile avatars ─────────────────────────────────────────────────────────
++export function normalizeAvatarDesign(d) {
++  if (!d || typeof d !== "object") return null;
++  if (![d.s, d.p].every(isInt)) return null;
++  return { v: DESIGN_VERSION, s: mod(d.s, AVATAR_STYLE_COUNT), p: mod(d.p, PALETTES.length), b: isInt(d.b) ? mod(d.b, AVATAR_PATTERN_COUNT) : 0 };
++}
++
++export function deriveAvatarDesign(id) {
++  const h = hash(`${id || "x"}|avatar|v1`);
++  return { v: DESIGN_VERSION, s: h % V1.avatarStyles, p: (h >>> 4) % V1.palettes, b: (h >>> 12) % V1.avatarPatterns };
++}
++
++export const resolveAvatarDesign = ({ id, design }) => normalizeAvatarDesign(design) || deriveAvatarDesign(id);
++
++export function avatarCandidates(seed, count = 6) {
++  const random = rng(seed);
++  const styles = shuffle([0, 1, 2], random).concat(shuffle([0, 1, 2], random));
++  const palettes = shuffle(Array.from({ length: PALETTES.length }, (_, k) => k), random);
++  return Array.from({ length: count }, (_, k) => ({
++    v: DESIGN_VERSION, s: styles[k % styles.length], p: palettes[k % PALETTES.length], b: Math.floor(random() * AVATAR_PATTERN_COUNT),
++  }));
++}
++
++/** True when two recipes draw the same picture. */
++export const sameDesign = (a, b) => Boolean(a && b) && ["s", "i", "p", "b"].every((k) => (a[k] ?? 0) === (b[k] ?? 0));
+diff --git a/src/lib/brandStudio/download.js b/src/lib/brandStudio/download.js
+new file mode 100644
+index 0000000..16e57b8
+--- /dev/null
++++ b/src/lib/brandStudio/download.js
+@@ -0,0 +1,41 @@
++// src/lib/brandStudio/download.js — NEW FILE
++//
++// AIM
++// Optional "Download PNG" for a logo or avatar. This is the only part that needs a browser (it
++// draws the SVG on a canvas). Nothing is uploaded: the file is made on the person's own device.
++// The PNG has a transparent background and the same size as the picture (512 wide).
++
++import { svgToUri } from "./render.js";
++
++/** Make a PNG from an SVG string and save it. Returns { error } and never throws. */
++export function downloadSvgAsPng(svg, filename, width = 512, height = 512) {
++  return new Promise((resolve) => {
++    const img = new Image();
++    img.onload = () => {
++      try {
++        const canvas = document.createElement("canvas");
++        canvas.width = width;
++        canvas.height = height;
++        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
++        canvas.toBlob((blob) => {
++          if (!blob) return resolve({ error: "Could not make the picture in this browser." });
++          const url = URL.createObjectURL(blob);
++          const a = document.createElement("a");
++          a.href = url;
++          a.download = filename;
++          a.click();
++          setTimeout(() => URL.revokeObjectURL(url), 1500);
++          resolve({ error: null });
++        }, "image/png");
++      } catch {
++        resolve({ error: "Could not make the picture in this browser." });
++      }
++    };
++    img.onerror = () => resolve({ error: "Could not make the picture in this browser." });
++    img.src = svgToUri(svg);
++  });
++}
++
++/** A safe file name from a business or person name. */
++export const safeFileName = (s, fallback = "bizkenia") =>
++  String(s || fallback).normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || fallback;
+diff --git a/src/lib/brandStudio/icons/agriculture.js b/src/lib/brandStudio/icons/agriculture.js
+new file mode 100644
+index 0000000..1be19e4
+--- /dev/null
++++ b/src/lib/brandStudio/icons/agriculture.js
+@@ -0,0 +1,85 @@
++// src/lib/brandStudio/icons/agriculture.js — NEW FILE
++//
++// AIM
++// Eight farm symbols. Each is drawn in a 60 x 60 box centred on 0,0 (so -30 to 30).
++//   draw(c, plain)  returns SVG. c = { fill, cut, acc }: fill is the symbol colour, cut is the colour
++//                   of the thin detail lines (it should match what the symbol sits on), acc is an accent.
++//                   plain = true leaves out the detail lines, so a letter can sit on the symbol.
++//   slot            where an initial can be written on the symbol: { x, y, s } (s = font size), or null.
++// Order is part of the v1 pool: never reorder or remove, only add at the end.
++
++import { circle, solid, stroke, dots } from "../svgKit.js";
++
++export const AGRICULTURE = [
++  {
++    name: "Leaf",
++    slot: { x: 1, y: -2, s: 17 },
++    draw: (c, plain) =>
++      solid(c.fill, "M-25 21C-30-10-8-30 26-27C28 4 8 27-25 21Z") +
++      (plain ? "" : stroke(c.cut, "M-22 19Q-3 3 17-18M-9 8L-11-5M3-3L15 0", 3)),
++  },
++  {
++    name: "Tree",
++    slot: { x: 0, y: -8, s: 20 },
++    draw: (c, plain) =>
++      solid(c.fill, "M0-29C-15-29-26-18-23-6C-29 2-21 14-9 14L-9 29H9L9 14C21 14 29 2 23-6C26-18 15-29 0-29Z") +
++      (plain ? "" : stroke(c.cut, "M0 14V1M0 8L-8-1M0 4L8-5", 3)),
++  },
++  {
++    name: "Tractor",
++    slot: { x: 12, y: 5, s: 13 },
++    draw: (c, plain) =>
++      solid(c.fill, circle(-14, 12, 15)) +
++      solid(c.fill, circle(20, 19, 9)) +
++      solid(c.fill, "M-27 0V-24H-4V0Z") +
++      solid(c.fill, "M-6-2H28V12H-6Z") +
++      solid(c.fill, "M14-22H19V-2H14Z") +
++      (plain ? "" : dots(c.cut, [[-14, 12]], 7) + dots(c.cut, [[20, 19]], 4.5) + stroke(c.cut, "M-22-19H-9V-8H-22Z", 2.5)),
++  },
++  {
++    name: "Jembe",
++    slot: null,
++    draw: (c, plain) =>
++      solid(c.fill, "M8-13L13-8L-22.5 27.5L-27.5 22.5Z") +
++      solid(c.fill, "M6-31L31-6L23 2L-2-23Z") +
++      (plain ? "" : stroke(c.cut, "M9-22L22-9", 2.5)),
++  },
++  {
++    name: "Maize",
++    slot: { x: 0, y: 1, s: 17 },
++    draw: (c, plain) =>
++      solid(c.fill, "M0-29C10-29 14-12 14 2C14 18 8 26 0 28C-8 26-14 18-14 2C-14-12-10-29 0-29Z") +
++      solid(c.fill, "M-2 30C-18 25-27 10-25-9C-14-1-8 12-2 30Z") +
++      solid(c.fill, "M2 30C18 25 27 10 25-9C14-1 8 12 2 30Z") +
++      (plain ? "" : dots(c.cut, [[-4, -17], [4, -17], [-5, -9], [0, -9], [5, -9], [-5, -1], [0, -1], [5, -1], [-4, 7], [4, 7]], 3.2)),
++  },
++  {
++    name: "Seedling",
++    slot: null,
++    draw: (c, plain) =>
++      solid(c.fill, "M-2.2 30H2.2V5H-2.2Z") +
++      solid(c.fill, "M-2 11C-24 13-31-8-28-21C-10-21-2-9-2 11Z") +
++      solid(c.fill, "M2 5C22 7 31-12 27-27C10-27 2-15 2 5Z") +
++      solid(c.fill, "M-20 30Q0 19 20 30Z") +
++      (plain ? "" : stroke(c.cut, "M-23-16L-9 0M22-22L9-4", 2.5)),
++  },
++  {
++    name: "Cow",
++    slot: { x: 0, y: 4, s: 15 },
++    draw: (c, plain) =>
++      solid(c.fill, "M-15-12C-15-20-8-23 0-23C8-23 15-20 15-12L19 14C19 24 10 29 0 29C-10 29-19 24-19 14Z") +
++      solid(c.fill, "M-15-9L-30-14L-28-3L-16 1Z") +
++      solid(c.fill, "M15-9L30-14L28-3L16 1Z") +
++      solid(c.fill, "M-11-21C-16-29-23-29-27-24C-22-24-18-21-11-15Z") +
++      solid(c.fill, "M11-21C16-29 23-29 27-24C22-24 18-21 11-15Z") +
++      (plain ? "" : dots(c.cut, [[-8, -4], [8, -4]], 4) + dots(c.cut, [[-4, 20], [4, 20]], 3.2) + stroke(c.cut, "M-10 14Q0 24 10 14", 2.4)),
++  },
++  {
++    name: "Field",
++    slot: { x: 0, y: 18, s: 13 },
++    draw: (c, plain) =>
++      solid(c.fill, circle(0, -14, 9)) +
++      solid(c.fill, "M-31 29L-23 4H23L31 29Z") +
++      (plain ? "" : stroke(c.cut, "M-11 29L-8 4M11 29L8 4M0 29V4M-27 17H27", 2.6)),
++  },
++];
+diff --git a/src/lib/brandStudio/icons/index.js b/src/lib/brandStudio/icons/index.js
+new file mode 100644
+index 0000000..6f4a3e9
+--- /dev/null
++++ b/src/lib/brandStudio/icons/index.js
+@@ -0,0 +1,17 @@
++// src/lib/brandStudio/icons/index.js — NEW FILE
++//
++// AIM
++// The symbol set for each business type. Types that are not listed (a future type, or bad data)
++// use the neutral GENERIC set, so a logo can always be drawn.
++
++import { solid } from "../svgKit.js";
++import { AGRICULTURE } from "./agriculture.js";
++import { RENTAL } from "./rental.js";
++import { SHOP } from "./shop.js";
++
++const star = (c) => solid(c.fill, "M0-30L9-10L31-9L14 6L20 29L0 17L-20 29L-14 6L-31-9L-9-10Z");
++const GENERIC = Array.from({ length: 8 }, () => ({ name: "Star", slot: { x: 0, y: 3, s: 16 }, draw: star }));
++
++export const ICON_SETS = { rental: RENTAL, agriculture: AGRICULTURE, shop: SHOP };
++export const ICON_COUNT = 8;
++export const iconSet = (type) => ICON_SETS[type] || GENERIC;
+diff --git a/src/lib/brandStudio/icons/rental.js b/src/lib/brandStudio/icons/rental.js
+new file mode 100644
+index 0000000..6259db8
+--- /dev/null
++++ b/src/lib/brandStudio/icons/rental.js
+@@ -0,0 +1,83 @@
++// src/lib/brandStudio/icons/rental.js — NEW FILE
++//
++// AIM
++// Eight property symbols, each a different kind of home or building. Same rules as agriculture.js:
++// drawn in a 60 x 60 box centred on 0,0, with draw(c, plain) and an optional letter slot.
++// Order is part of the v1 pool: never reorder or remove, only add at the end.
++
++import { circle, solid, stroke, dots } from "../svgKit.js";
++
++// window dashes laid out in a grid (used by the apartment block and the high-rise)
++const windows = (cols, rows, len = 5) =>
++  rows.map((y) => cols.map((x) => `M${x} ${y}h${len}`).join("")).join("");
++
++export const RENTAL = [
++  {
++    name: "House",
++    slot: { x: 0, y: 3, s: 21 },
++    draw: (c, plain) =>
++      solid(c.fill, "M-31-2L0-29L31-2H23V28H-23V-2Z") + (plain ? "" : stroke(c.cut, "M-6 28V14H6V28", 3) + stroke(c.cut, "M-15 3h6M9 3h6", 3.5)),
++  },
++  {
++    name: "Apartments",
++    slot: { x: 0, y: -1, s: 23 },
++    draw: (c, plain) =>
++      solid(c.fill, "M-19-29H19V29H-19Z") +
++      (plain ? "" : stroke(c.cut, windows([-11, 4], [-21, -11, -1, 9]), 4.5) + stroke(c.cut, "M-4 29V19H4V29", 3)),
++  },
++  {
++    name: "Bungalow",
++    slot: { x: 0, y: 12, s: 18 },
++    draw: (c, plain) =>
++      solid(c.fill, "M-31-3L-22-17H22L31-3Z") +
++      solid(c.fill, "M-25-3H25V26H-25Z") +
++      (plain ? "" : stroke(c.cut, "M-13-15L-15-5M0-15V-5M13-15L15-5", 2.4) + stroke(c.cut, "M-4 26V10H4V26", 3) + stroke(c.cut, "M-19 7h7M12 7h7", 4)),
++  },
++  {
++    name: "Townhouses",
++    slot: { x: 0, y: 7, s: 17 },
++    draw: (c, plain) =>
++      solid(c.fill, "M-31 29V0L-21.5-9L-12 0V29Z") +
++      solid(c.fill, "M-10 29V-8L0-26L10-8V29Z") +
++      solid(c.fill, "M12 29V0L21.5-9L31 0V29Z") +
++      (plain ? "" : dots(c.cut, [[-21.5, 8], [0, -3], [21.5, 8]], 4.5) + stroke(c.cut, "M-25 29V20H-18V29M-3.5 29V19H3.5V29M18 29V20H25V29", 2.6)),
++  },
++  {
++    name: "High-rise",
++    slot: { x: -7, y: -4, s: 20 },
++    draw: (c, plain) =>
++      solid(c.fill, "M-17-30H3V29H-17Z") +
++      solid(c.fill, "M5-8H23V29H5Z") +
++      (plain ? "" : stroke(c.cut, windows([-12, -4], [-22, -12, -2, 8, 18], 4), 3.6) + stroke(c.cut, windows([10, 16], [0, 10, 20], 3), 3.6)),
++  },
++  {
++    name: "Key",
++    slot: { x: -14, y: 1, s: 19 },
++    draw: (c, plain) =>
++      solid(c.fill, circle(-14, 0, 14)) +
++      solid(c.fill, "M-2-3.5H30V3.5H-2Z") +
++      solid(c.fill, "M18 3H23V14H18Z") +
++      solid(c.fill, "M25 3H30V11H25Z") +
++      (plain ? "" : dots(c.cut, [[-14, 0]], 12)),
++  },
++  {
++    name: "Door",
++    slot: { x: 0, y: -4, s: 22 },
++    draw: (c, plain) =>
++      solid(c.fill, "M-18 29V-9Q-18-29 0-29Q18-29 18-9V29Z") +
++      (plain ? "" : stroke(c.cut, "M-10 29V-7Q-10-20 0-20Q10-20 10-7V29", 2.4) + dots(c.cut, [[7, 11]], 5)),
++  },
++  {
++    name: "Compound",
++    slot: null,
++    draw: (c, plain) =>
++      solid(c.fill, "M-31 29V-8H-19V29Z") +
++      solid(c.fill, "M19 29V-8H31V29Z") +
++      solid(c.fill, "M-33-8H-17V-14H-33Z") +
++      solid(c.fill, "M17-8H33V-14H17Z") +
++      solid(c.fill, "M-14-4L0-20L14-4Z") +
++      solid(c.fill, "M-11-4H11V14H-11Z") +
++      stroke(c.fill, "M-14 29V17M-7 29V17M0 29V17M7 29V17M14 29V17", 3) +
++      (plain ? "" : stroke(c.cut, "M-3 14V4H3V14", 2.6)),
++  },
++];
+diff --git a/src/lib/brandStudio/icons/shop.js b/src/lib/brandStudio/icons/shop.js
+new file mode 100644
+index 0000000..2229f3e
+--- /dev/null
++++ b/src/lib/brandStudio/icons/shop.js
+@@ -0,0 +1,81 @@
++// src/lib/brandStudio/icons/shop.js — NEW FILE
++//
++// AIM
++// Eight shopping symbols: a bag, trolley, kiosk, basket, price tag, storefront, parcel and market
++// scale. Same rules as agriculture.js: drawn in a 60 x 60 box centred on 0,0, with
++// draw(c, plain) and an optional letter slot.
++// Order is part of the v1 pool: never reorder or remove, only add at the end.
++
++import { circle, solid, stroke } from "../svgKit.js";
++
++export const SHOP = [
++  {
++    name: "Bag",
++    slot: { x: 0, y: 10, s: 20 },
++    draw: (c, plain) =>
++      solid(c.fill, "M-24-10H24L20 29H-20Z") +
++      stroke(c.fill, "M-10-10V-17A10 10 0 0 1 10-17V-10", 4.5) +
++      (plain ? "" : stroke(c.cut, "M-8 6Q0 14 8 6", 3)),
++  },
++  {
++    name: "Trolley",
++    slot: { x: 5, y: -1, s: 15 },
++    draw: (c, plain) =>
++      solid(c.fill, "M-20-14H30L24 10H-14Z") +
++      stroke(c.fill, "M-31-24H-23L-13 16H22", 4.5) +
++      solid(c.fill, circle(-8, 24, 4.5)) +
++      solid(c.fill, circle(16, 24, 4.5)) +
++      (plain ? "" : stroke(c.cut, "M-6-14L-4 10M7-14V10M20-14L18 10", 2.4)),
++  },
++  {
++    name: "Kiosk",
++    slot: { x: 0, y: 8, s: 16 },
++    draw: (c, plain) =>
++      solid(c.fill, "M-30-8L-20-27H20L30-8Q22-1 15-8Q7.5-1 0-8Q-7.5-1-15-8Q-22-1-30-8Z") +
++      solid(c.fill, "M-22-4V29H22V-4Z") +
++      solid(c.fill, "M-28 15H28V21H-28Z") +
++      (plain ? "" : stroke(c.cut, "M-14 2H14V11H-14Z", 2.8) + stroke(c.cut, "M-10-24L-13-12M0-24V-12M10-24L13-12", 2.2)),
++  },
++  {
++    name: "Basket",
++    slot: { x: 0, y: 13, s: 16 },
++    draw: (c, plain) =>
++      solid(c.fill, "M-27-2H27L21 27H-21Z") +
++      stroke(c.fill, "M-19-2C-19-26 19-26 19-2", 4.5) +
++      (plain ? "" : stroke(c.cut, "M-24 8H24M-20 18H20M-9-2V27M9-2V27", 2.4)),
++  },
++  {
++    name: "Price tag",
++    slot: { x: 0, y: 0, s: 19 },
++    draw: (c, plain) =>
++      solid(c.fill, "M-29-24H9L31 0L9 24H-29Z") +
++      stroke(c.cut, "M-20 0h.01", 7),
++  },
++  {
++    name: "Storefront",
++    slot: { x: 0, y: 12, s: 17 },
++    draw: (c, plain) =>
++      solid(c.fill, "M-31-6L-24-25H24L31-6Z") +
++      solid(c.fill, "M-26-6V29H26V-6Z") +
++      (plain ? "" : stroke(c.cut, "M-12-25L-14-6M0-25V-6M12-25L14-6", 2.4) + stroke(c.cut, "M-16 29V10H-4V29", 3) + stroke(c.cut, "M5 11H21V20H5Z", 2.8)),
++  },
++  {
++    name: "Parcel",
++    slot: null,
++    draw: (c, plain) =>
++      solid(c.fill, "M0-29L27-15V15L0 29L-27 15V-15Z") +
++      (plain ? "" : stroke(c.cut, "M-27-15L0 0L27-15M0 0V29", 3)),
++  },
++  {
++    name: "Scale",
++    slot: null,
++    draw: (c) =>
++      solid(c.fill, "M-2.5-22H2.5V24H-2.5Z") +
++      solid(c.fill, "M-14 29H14L10 23H-10Z") +
++      solid(c.fill, "M-29-17H29V-12H-29Z") +
++      solid(c.fill, circle(0, -25, 4.5)) +
++      solid(c.fill, "M-33 5H-11Q-13 15-22 15Q-31 15-33 5Z") +
++      solid(c.fill, "M11 5H33Q31 15 22 15Q13 15 11 5Z") +
++      stroke(c.fill, "M-29-14L-33 5M-29-14L-11 5M29-14L11 5M29-14L33 5", 2),
++  },
++];
+diff --git a/src/lib/brandStudio/index.js b/src/lib/brandStudio/index.js
+new file mode 100644
+index 0000000..212b600
+--- /dev/null
++++ b/src/lib/brandStudio/index.js
+@@ -0,0 +1,17 @@
++// src/lib/brandStudio/index.js — NEW FILE
++//
++// AIM
++// The one place the app imports the logo and avatar maker from.
++// A logo or avatar is never saved as a picture. A small recipe is saved (see designs.js) and the
++// picture is drawn from it whenever it is shown (see render.js).
++
++export { PALETTES } from "./palettes.js";
++export { STYLES, STYLE_COUNT } from "./styles.js";
++export { iconSet, ICON_COUNT } from "./icons/index.js";
++export {
++  DESIGN_VERSION, newSeed, sameDesign,
++  normalizeLogoDesign, deriveLogoDesign, resolveLogoDesign, logoCandidates,
++  normalizeAvatarDesign, deriveAvatarDesign, resolveAvatarDesign, avatarCandidates,
++} from "./designs.js";
++export { businessInitials, personInitials, logoSvg, avatarSvg, logoUri, avatarUri, svgToUri, typeCaption } from "./render.js";
++export { downloadSvgAsPng, safeFileName } from "./download.js";
+diff --git a/src/lib/brandStudio/palettes.js b/src/lib/brandStudio/palettes.js
+new file mode 100644
+index 0000000..943eb00
+--- /dev/null
++++ b/src/lib/brandStudio/palettes.js
+@@ -0,0 +1,25 @@
++// src/lib/brandStudio/palettes.js — NEW FILE
++//
++// AIM
++// The colour sets used by logos and avatars. Every palette keeps white text readable on `a`.
++//   a    main colour (blocks, frames)         b    accent
++//   c    soft background tint                 ink  dark text colour
++//
++// IMPORTANT: this is the "v1" pool. A business or person with no saved design gets one worked out
++// from their id using this exact list, so NEVER reorder or remove entries. Add new palettes only
++// at the end, and only offer them through the picker (see designs.js, DERIVE_POOL).
++
++export const PALETTES = [
++  { name: "Forest & brass", a: "#15583D", b: "#D1A34A", c: "#EAF2E8", ink: "#173C2D" },
++  { name: "Deep ocean", a: "#174B63", b: "#5CC4B1", c: "#E5F3F3", ink: "#173B4A" },
++  { name: "Plum & sand", a: "#603B65", b: "#D9B68B", c: "#F4EDE7", ink: "#392A3E" },
++  { name: "Cobalt & sky", a: "#244CA2", b: "#76B9E8", c: "#EAF1FB", ink: "#1D3260" },
++  { name: "Terracotta", a: "#A4472F", b: "#E6B66D", c: "#F8EEE5", ink: "#542D25" },
++  { name: "Charcoal & lime", a: "#29362F", b: "#B5CE59", c: "#EFF3E5", ink: "#222D27" },
++  { name: "Burgundy & rose", a: "#7A2336", b: "#E8A5A0", c: "#F8ECEA", ink: "#4A1521" },
++  { name: "Teal & coral", a: "#0F6B6B", b: "#F28B66", c: "#E6F4F2", ink: "#0F3F3F" },
++  { name: "Indigo & gold", a: "#2F3A8C", b: "#F2C14E", c: "#ECEEFA", ink: "#1E2559" },
++  { name: "Olive & cream", a: "#55612B", b: "#E3D08A", c: "#F3F1E3", ink: "#333B19" },
++  { name: "Slate & orange", a: "#364B5F", b: "#F2994A", c: "#ECF0F4", ink: "#222F3C" },
++  { name: "Emerald & mint", a: "#0B6E4F", b: "#7FD8B0", c: "#E4F5EC", ink: "#08432F" },
++];
+diff --git a/src/lib/brandStudio/render.js b/src/lib/brandStudio/render.js
+new file mode 100644
+index 0000000..d7ea9a5
+--- /dev/null
++++ b/src/lib/brandStudio/render.js
+@@ -0,0 +1,192 @@
++// src/lib/brandStudio/render.js — NEW FILE
++//
++// AIM
++// Turns a recipe into a picture. Everything here returns an SVG string (or a data address that an
++// <img> can show), drawn in the browser from code that is already loaded: no file is fetched, so a
++// logo or avatar appears instantly, even on a slow connection or offline.
++//
++//   logoSvg({ name, type, design, layout })   layout "wordmark" = 512 x 256 (symbol + name)
++//                                              layout "icon"     = 512 x 512 (symbol only)
++//   avatarSvg({ name, design })               512 x 512
++//   logoUri / avatarUri                       the same, as a data address for <img src>, remembered so a
++//                                              long list does not redraw the same logo again and again
++//
++// Names are escaped before they go into the drawing, and the picture is shown through <img>, where
++// scripts never run, so an odd business name cannot cause harm.
++
++import { esc } from "./svgKit.js";
++import { PALETTES } from "./palettes.js";
++import { FONT_SANS, FONT_SERIF, STYLES } from "./styles.js";
++import { iconSet } from "./icons/index.js";
++import { resolveAvatarDesign, resolveLogoDesign } from "./designs.js";
++
++export const TYPE_LABEL = { rental: "Rentals", agriculture: "Agriculture", shop: "Shop" };
++export const typeCaption = (type) => TYPE_LABEL[type] || "Business";
++
++const NOISE = new Set(["and", "the", "of", "for", "a", "an", "by", "limited", "ltd", "company", "co", "enterprises", "enterprise", "services", "service", "kenya", "kenyan"]);
++const wordsOf = (s) => (String(s || "").trim().match(/[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)?/gu) || []);
++const first = (w) => Array.from(w)[0] || "";
++
++/** One or two capital letters for a business: "Lakeview Rentals" gives LR. */
++export function businessInitials(name) {
++  const ws = wordsOf(name).filter((w) => !NOISE.has(w.toLowerCase()));
++  if (!ws.length) return "B";
++  if (ws.length === 1) return Array.from(ws[0]).slice(0, 2).join("").toUpperCase();
++  return (first(ws[0]) + first(ws[1])).toUpperCase();
++}
++
++/** Initials for a person: first and last name, so "Victor Kamau Onyango" gives VO. */
++export function personInitials(name) {
++  const ws = wordsOf(name);
++  if (!ws.length) return "?";
++  if (ws.length === 1) return first(ws[0]).toUpperCase();
++  return (first(ws[0]) + first(ws[ws.length - 1])).toUpperCase();
++}
++
++// ── text fitting ───────────────────────────────────────────────────────────
++// Width of a letter is about k x the font size. If the name is too long it drops to two lines, and
++// as a last resort textLength squeezes it so it can never run outside the picture.
++function fit(text, maxW, k, max, min) {
++  const one = Math.min(max, maxW / (Math.max(text.length, 1) * k));
++  if (one >= min) return { lines: [text], size: one, k };
++  const ws = text.split(" ");
++  if (ws.length > 1) {
++    let best = null;
++    for (let cut = 1; cut < ws.length; cut++) {
++      const a = ws.slice(0, cut).join(" "), b = ws.slice(cut).join(" ");
++      const worst = Math.max(a.length, b.length);
++      if (!best || worst < best.worst) best = { a, b, worst };
++    }
++    const size = Math.max(16, Math.min(max, maxW / (best.worst * k)));
++    return { lines: [best.a, best.b], size, k };
++  }
++  return { lines: [text], size: Math.max(16, one), k };
++}
++
++const textEl = (line, x, y, size, k, maxW, attrs) => {
++  const squeeze = line.length * size * k > maxW ? ` textLength="${maxW}" lengthAdjust="spacingAndGlyphs"` : "";
++  return `<text x="${x}" y="${y.toFixed(1)}" ${attrs} font-size="${size.toFixed(1)}"${squeeze}>${esc(line)}</text>`;
++};
++
++// ── business logo ──────────────────────────────────────────────────────────
++export function logoSvg({ id, name, type, design, layout = "wordmark" }) {
++  const d = resolveLogoDesign({ id, type, design });
++  const p = PALETTES[d.p];
++  const icon = iconSet(type)[d.i];
++  const display = String(name || "").trim() || "Your Business";
++  const initials = businessInitials(display);
++  const mark = STYLES[d.s].draw({ p, icon, letter: initials.charAt(0), initials });
++  const title = `${esc(display)} logo`;
++
++  if (layout === "icon") {
++    return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="${title}"><title>${title}</title><g transform="translate(256 256) scale(4.6)">${mark}</g></svg>`;
++  }
++
++  const X = 190, MAXW = 306, caption = typeCaption(type).toUpperCase();
++  const flavour = d.s % 3; // 0 bold, 1 serif, 2 spaced capitals
++  let body;
++  if (flavour === 1) {
++    const f = fit(display, MAXW, 0.64, 46, 26);
++    const lh = f.size * 1.12, H = f.lines.length * lh + 12 + 14 + 14;
++    const top = 128 - H / 2;
++    const attrs = `font-family='${FONT_SERIF}' font-weight="700" fill="${p.ink}"`;
++    body = f.lines.map((l, n) => textEl(l, X, top + f.size * 0.82 + n * lh, f.size, f.k, MAXW, attrs)).join("");
++    const yL = top + f.lines.length * lh + 22;
++    body += `<text x="${X}" y="${yL.toFixed(1)}" font-family='${FONT_SANS}' font-size="14" font-weight="700" letter-spacing="4" fill="${p.a}">${esc(caption)}</text>`;
++    body += `<path d="M${X} ${(yL + 12).toFixed(1)}H${X + 230}M${X} ${(yL + 19).toFixed(1)}H${X + 140}" stroke="${p.b}" stroke-width="2"/>`;
++  } else if (flavour === 2) {
++    const up = display.toUpperCase();
++    const f = fit(up, MAXW, 0.8, 38, 22);
++    const lh = f.size * 1.2, H = f.lines.length * lh + 14 + 16;
++    const top = 128 - H / 2;
++    const attrs = `font-family='${FONT_SANS}' font-weight="700" letter-spacing="1.5" fill="${p.ink}"`;
++    body = f.lines.map((l, n) => textEl(l, X, top + f.size * 0.85 + n * lh, f.size, f.k, MAXW, attrs)).join("");
++    const yL = top + f.lines.length * lh + 26;
++    body += `<path d="M${X} ${(yL - 5).toFixed(1)}h22" stroke="${p.b}" stroke-width="4" stroke-linecap="round"/>`;
++    body += `<text x="${X + 32}" y="${yL.toFixed(1)}" font-family='${FONT_SANS}' font-size="14" font-weight="700" letter-spacing="3" fill="${p.a}">${esc(caption)}</text>`;
++  } else {
++    const f = fit(display, MAXW, 0.62, 48, 26);
++    const lh = f.size * 1.1, H = f.lines.length * lh + 16 + 5 + 10 + 15;
++    const top = 128 - H / 2;
++    const attrs = `font-family='${FONT_SANS}' font-weight="800" letter-spacing="-1" fill="${p.ink}"`;
++    body = f.lines.map((l, n) => textEl(l, X, top + f.size * 0.82 + n * lh, f.size, f.k, MAXW, attrs)).join("");
++    const yB = top + f.lines.length * lh + 6;
++    body += `<rect x="${X}" y="${yB.toFixed(1)}" width="56" height="5" rx="2.5" fill="${p.b}"/>`;
++    body += `<text x="${X}" y="${(yB + 28).toFixed(1)}" font-family='${FONT_SANS}' font-size="15" font-weight="700" letter-spacing="3" fill="${p.a}">${esc(caption)}</text>`;
++  }
++
++  return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="256" viewBox="0 0 512 256" role="img" aria-label="${title}"><title>${title}</title><g transform="translate(96 128) scale(1.46)">${mark}</g>${body}</svg>`;
++}
++
++// ── profile avatar ─────────────────────────────────────────────────────────
++export function avatarSvg({ id, name, design }) {
++  const d = resolveAvatarDesign({ id, design });
++  const p = PALETTES[d.p];
++  const ini = personInitials(String(name || "").trim());
++  const fs = ini.length > 1 ? 168 : 216;
++  const y = 256 + fs * 0.36;
++  const text = (fill) =>
++    `<text x="256" y="${y.toFixed(1)}" text-anchor="middle" font-family='${FONT_SANS}' font-size="${fs}" font-weight="850" letter-spacing="-5" fill="${fill}">${esc(ini)}</text>`;
++
++  const light = d.s === 1; // the seal style is a light background
++  const tone = light ? p.a : "#fff";
++  const op = light ? ".1" : ".16";
++  let pattern = "";
++  if (d.b === 1) {
++    for (let x = 48; x <= 480; x += 64) for (let yy = 48; yy <= 480; yy += 64) pattern += `<circle cx="${x}" cy="${yy}" r="5" fill="${tone}" opacity="${op}"/>`;
++  } else if (d.b === 2) {
++    let ln = "";
++    for (let k = 0; k <= 16; k++) ln += `M${k * 64 - 512} 512L${k * 64} 0`;
++    pattern = `<path d="${ln}" stroke="${tone}" stroke-width="16" opacity="${op}" fill="none"/>`;
++  } else if (d.b === 3) {
++    pattern = [90, 165, 240, 315].map((r) => `<circle cx="256" cy="256" r="${r}" fill="none" stroke="${tone}" stroke-width="7" opacity="${op}"/>`).join("");
++  }
++
++  let inner;
++  if (d.s === 1) {
++    inner =
++      `<rect width="512" height="512" fill="${p.c}"/>` + pattern +
++      `<circle cx="256" cy="256" r="222" fill="none" stroke="${p.a}" stroke-width="9"/><circle cx="256" cy="256" r="190" fill="none" stroke="${p.b}" stroke-width="4"/>` +
++      (d.b === 0 ? `<path d="M150 130Q256 76 362 130" fill="none" stroke="${p.b}" stroke-width="10" stroke-linecap="round"/><circle cx="256" cy="388" r="8" fill="${p.b}"/>` : "") +
++      text(p.a);
++  } else if (d.s === 2) {
++    inner =
++      `<rect width="512" height="512" fill="${p.a}"/>` + pattern +
++      `<path d="M0 372Q128 282 256 360T512 330V512H0Z" fill="${p.b}" opacity=".92"/>` +
++      (d.b === 0 ? `<circle cx="404" cy="112" r="52" fill="${p.c}" opacity=".18"/>` : "") +
++      text("#fff");
++  } else {
++    inner =
++      `<rect width="512" height="512" fill="${p.a}"/>` + pattern +
++      (d.b === 0
++        ? `<circle cx="256" cy="256" r="196" fill="none" stroke="${p.b}" stroke-width="4" stroke-dasharray="2 15" stroke-linecap="round"/>` +
++          `<path d="M70 340Q125 100 290 78T440 230" fill="none" stroke="${p.c}" stroke-width="30" stroke-linecap="round" opacity=".16"/>` +
++          `<circle cx="394" cy="120" r="38" fill="${p.b}"/><circle cx="394" cy="120" r="13" fill="${p.c}"/>`
++        : "") +
++      text("#fff");
++  }
++  const label = esc(String(name || "").trim() || "Profile");
++  return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="${label} avatar"><title>${label} avatar</title>${inner}</svg>`;
++}
++
++// ── data addresses (what an <img> shows) ───────────────────────────────────
++export const svgToUri = (svg) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
++
++const cache = new Map();
++function remember(key, make) {
++  if (cache.has(key)) return cache.get(key);
++  const uri = svgToUri(make());
++  if (cache.size >= 400) cache.delete(cache.keys().next().value); // forget the oldest
++  cache.set(key, uri);
++  return uri;
++}
++
++export function logoUri({ id, name, type, design, layout = "wordmark" }) {
++  const d = resolveLogoDesign({ id, type, design });
++  return remember(`L|${layout}|${type}|${d.s}.${d.i}.${d.p}|${name}`, () => logoSvg({ id, name, type, design: d, layout }));
++}
++
++export function avatarUri({ id, name, design }) {
++  const d = resolveAvatarDesign({ id, design });
++  return remember(`A|${d.s}.${d.p}.${d.b}|${name}`, () => avatarSvg({ id, name, design: d }));
++}
+diff --git a/src/lib/brandStudio/styles.js b/src/lib/brandStudio/styles.js
+new file mode 100644
+index 0000000..3de2a0d
+--- /dev/null
++++ b/src/lib/brandStudio/styles.js
+@@ -0,0 +1,104 @@
++// src/lib/brandStudio/styles.js — NEW FILE
++//
++// AIM
++// The ten logo mark styles. Each draws one mark inside a 100 x 100 box centred on 0,0 (-50 to 50).
++// A style gets { p, icon, letter, initials }: the colour set, the business-type symbol, the first
++// letter of the business and its one or two initials.
++//   needsSlot  true when the style writes the letter ON the symbol, so only symbols that have a
++//              letter slot can be used with it.
++// Order is part of the v1 pool: never reorder or remove, only add at the end.
++
++import { esc } from "./svgKit.js";
++
++export const FONT_SANS = 'ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
++export const FONT_SERIF = 'Georgia,"Times New Roman",serif';
++
++/** The symbol, scaled and moved. `plain` leaves out its detail lines (used under letters). */
++const glyph = (icon, colors, { scale = 1, x = 0, y = 0, plain = false } = {}) =>
++  `<g transform="translate(${x} ${y}) scale(${scale})">${icon.draw(colors, plain)}</g>`;
++
++/** Centred text; y is the middle of the letters (the baseline is worked out from the size). */
++const label = (text, x, y, size, fill, weight = 900, extra = "") =>
++  `<text x="${x}" y="${(y + size * 0.36).toFixed(1)}" text-anchor="middle" font-family='${FONT_SANS}' font-size="${size}" font-weight="${weight}" fill="${fill}"${extra}>${esc(text)}</text>`;
++
++/** A letter written on a symbol at its slot. */
++const slotLetter = (icon, scale, letter, fill) => {
++  const s = icon.slot;
++  return label(letter, +(s.x * scale).toFixed(1), +(s.y * scale).toFixed(1), +(s.s * scale).toFixed(1), fill);
++};
++
++export const STYLES = [
++  {
++    name: "Signature", desc: "A balanced symbol in a soft badge.", needsSlot: false,
++    draw: ({ p, icon }) =>
++      `<circle r="48" fill="${p.c}"/><circle r="41" fill="none" stroke="${p.a}" stroke-width="3"/>` +
++      glyph(icon, { fill: p.a, cut: p.c, acc: p.b }, { scale: 0.95 }) +
++      `<circle cx="31" cy="-31" r="6.5" fill="${p.b}"/>`,
++  },
++  {
++    name: "Monogram", desc: "Bold initials in a rounded block.", needsSlot: false,
++    draw: ({ p, initials }) =>
++      `<rect x="-46" y="-46" width="92" height="92" rx="24" fill="${p.a}"/>` +
++      label(initials, 0, -3, initials.length > 1 ? 40 : 54, "#fff", 900, ' letter-spacing="-2"') +
++      `<path d="M-14 28H14" stroke="${p.b}" stroke-width="5" stroke-linecap="round"/>`,
++  },
++  {
++    name: "Heritage seal", desc: "A double-ring emblem with a settled feel.", needsSlot: false,
++    draw: ({ p, icon }) =>
++      `<circle r="47" fill="${p.c}" stroke="${p.a}" stroke-width="4"/><circle r="38" fill="none" stroke="${p.b}" stroke-width="2"/>` +
++      glyph(icon, { fill: p.a, cut: p.c, acc: p.b }, { scale: 0.82 }),
++  },
++  {
++    name: "Modern geometry", desc: "A crisp hexagon frame.", needsSlot: false,
++    draw: ({ p, icon }) =>
++      `<path d="M0-48L42-24V24L0 48L-42 24V-24Z" fill="${p.c}" stroke="${p.a}" stroke-width="4" stroke-linejoin="round"/>` +
++      glyph(icon, { fill: p.a, cut: p.c, acc: p.b }, { scale: 0.88 }),
++  },
++  {
++    name: "Growth mark", desc: "A rising block that points up.", needsSlot: false,
++    draw: ({ p, icon }) =>
++      `<path d="M-42 36V-14L0-45L42-14V36Z" fill="${p.a}" stroke="${p.a}" stroke-width="6" stroke-linejoin="round"/>` +
++      glyph(icon, { fill: "#fff", cut: p.a, acc: p.b }, { scale: 0.78, y: 5 }) +
++      `<path d="M-24 47H24" stroke="${p.b}" stroke-width="5" stroke-linecap="round"/>`,
++  },
++  {
++    name: "Minimal stamp", desc: "A simple square that stays clear when small.", needsSlot: false,
++    draw: ({ p, icon }) =>
++      `<rect x="-44" y="-44" width="88" height="88" rx="8" fill="${p.a}"/>` +
++      `<rect x="-37" y="-37" width="74" height="74" rx="4" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="2"/>` +
++      glyph(icon, { fill: "#fff", cut: p.a, acc: p.b }, { scale: 0.85 }),
++  },
++  {
++    name: "Inscribed", desc: "Your initial written on the symbol.", needsSlot: true,
++    draw: ({ p, icon, letter }) =>
++      glyph(icon, { fill: p.a, cut: p.a, acc: p.b }, { scale: 1.55, plain: true }) + slotLetter(icon, 1.55, letter, "#fff"),
++  },
++  {
++    name: "Knock-out", desc: "Your initial cut out of the symbol.", needsSlot: true,
++    draw: ({ p, icon, letter }) => {
++      const s = icon.slot, k = 1.55;
++      const cutLetter = label(letter, +(s.x * k).toFixed(1), +(s.y * k).toFixed(1), +(s.s * k).toFixed(1), "#000");
++      return (
++        `<defs><mask id="k" maskUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120"><rect x="-60" y="-60" width="120" height="120" fill="#fff"/>${cutLetter}</mask></defs>` +
++        `<g mask="url(#k)">${glyph(icon, { fill: p.a, cut: p.a, acc: p.b }, { scale: k, plain: true })}</g>`
++      );
++    },
++  },
++  {
++    name: "Watermark", desc: "A big initial over a faded symbol.", needsSlot: false,
++    draw: ({ p, icon, letter }) =>
++      `<rect x="-46" y="-46" width="92" height="92" rx="22" fill="${p.c}" stroke="${p.a}" stroke-width="3"/>` +
++      `<g opacity=".16">${glyph(icon, { fill: p.a, cut: p.c, acc: p.b }, { scale: 1.4, plain: true })}</g>` +
++      label(letter, 0, -3, 68, p.a) +
++      `<path d="M-14 33H14" stroke="${p.b}" stroke-width="5" stroke-linecap="round"/>`,
++  },
++  {
++    name: "Two-tone", desc: "A split disc with the symbol in both colours.", needsSlot: false,
++    draw: ({ p, icon }) =>
++      `<defs><clipPath id="l"><rect x="-50" y="-50" width="50.6" height="100"/></clipPath><clipPath id="r"><rect x="0" y="-50" width="50" height="100"/></clipPath></defs>` +
++      `<g clip-path="url(#l)"><circle r="47" fill="${p.a}"/>${glyph(icon, { fill: "#fff", cut: p.a, acc: p.b }, { scale: 0.98, plain: true })}</g>` +
++      `<g clip-path="url(#r)"><circle r="47" fill="${p.b}"/>${glyph(icon, { fill: p.a, cut: p.b, acc: p.a }, { scale: 0.98, plain: true })}</g>`,
++  },
++];
++
++export const STYLE_COUNT = STYLES.length;
+diff --git a/src/lib/brandStudio/svgKit.js b/src/lib/brandStudio/svgKit.js
+new file mode 100644
+index 0000000..f67ac63
+--- /dev/null
++++ b/src/lib/brandStudio/svgKit.js
+@@ -0,0 +1,59 @@
++// src/lib/brandStudio/svgKit.js — NEW FILE
++//
++// AIM
++// Tiny helpers shared by the logo and avatar drawing code: text escaping, a stable hash, a seeded
++// random-number generator (so "show more designs" is repeatable), and path builders.
++// Nothing here touches the browser, so the same code can run in tests or on a server.
++
++/** Escape text so a business name can never break out of an SVG attribute or element. */
++export const esc = (s) =>
++  String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[c]));
++
++/** Stable 32-bit hash (FNV-1a). The same text always gives the same number. */
++export function hash(str) {
++  let h = 2166136261;
++  for (const ch of String(str)) {
++    h ^= ch.codePointAt(0);
++    h = Math.imul(h, 16777619);
++  }
++  return h >>> 0;
++}
++
++/** Seeded random numbers (mulberry32): rng(seed)() returns 0 <= n < 1. */
++export function rng(seed) {
++  let a = seed >>> 0;
++  return () => {
++    a = (a + 0x6d2b79f5) >>> 0;
++    let t = a;
++    t = Math.imul(t ^ (t >>> 15), t | 1);
++    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
++    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
++  };
++}
++
++/** A new shuffled copy of the list, using the given random function. */
++export function shuffle(list, random) {
++  const a = list.slice();
++  for (let i = a.length - 1; i > 0; i--) {
++    const j = Math.floor(random() * (i + 1));
++    [a[i], a[j]] = [a[j], a[i]];
++  }
++  return a;
++}
++
++export const mod = (n, m) => ((Math.trunc(n) % m) + m) % m;
++export const isInt = (n) => typeof n === "number" && Number.isFinite(n);
++
++/** Path data for a full circle. */
++export const circle = (cx, cy, r) => `M${cx - r} ${cy}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0Z`;
++
++/** A filled shape. */
++export const solid = (color, d, extra = "") => `<path d="${d}" fill="${color}"${extra}/>`;
++
++/** A line (not filled). */
++export const stroke = (color, d, w = 3, extra = "") =>
++  `<path d="${d}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"${extra}/>`;
++
++/** Round dots at the given points. */
++export const dots = (color, points, w = 4.5) =>
++  stroke(color, points.map(([x, y]) => `M${x} ${y}h.01`).join(""), w);
+diff --git a/src/pages/account/AccountPage.jsx b/src/pages/account/AccountPage.jsx
+index c71c222..0195b3f 100644
+--- a/src/pages/account/AccountPage.jsx
++++ b/src/pages/account/AccountPage.jsx
+@@ -3,6 +3,8 @@
+ // AIM
+ // My account: name and phone number (the phone is what allows phone + password sign-in),
+ // read-only email, change password, theme, sign out, and delete my account (needs the password).
++// The picture area shows the person's photo, or the avatar drawn from their saved design. "Change
++// avatar" lets them pick another design; a photo, when there is one, still shows first.
+ 
+ import "./Account.css";
+ import { useEffect, useState } from "react";
+@@ -15,6 +17,8 @@ import { useBusinessStore } from "../../store/businessStore.js";
+ import { cleanKenyanPhone } from "../../components/ui/PhoneInput.jsx";
+ import { collect, password as vPassword, phone as vPhone, required } from "../../lib/validate.js";
+ import DeleteAccountCard from "../../components/lifecycle/DeleteAccountCard.jsx";
++import AvatarPicker from "../../components/brand/AvatarPicker.jsx";
++import { resolveAvatarDesign } from "../../lib/brandStudio/index.js";
+ import { uploadFile, publicUrl } from "../../lib/storage.js";
+ 
+ export default function AccountPage() {
+@@ -37,6 +41,10 @@ export default function AccountPage() {
+   }, [profile]);
+ 
+   const [picBusy, setPicBusy] = useState(false);
++  const [designOpen, setDesignOpen] = useState(false);
++  const [draft, setDraft] = useState(null);
++  const [designBusy, setDesignBusy] = useState(false);
++  const savedDesign = resolveAvatarDesign({ id: user?.id, design: profile?.avatar_design });
+   const hasBusiness = useBusinessStore((s) => s.memberships.length > 0);
+ 
+   async function pickPhoto(e) {
+@@ -63,6 +71,18 @@ export default function AccountPage() {
+     toast.success("Profile picture removed.");
+   }
+ 
++  async function saveDesign() {
++    if (!draft) return;
++    setDesignBusy(true);
++    const { error } = await useSession.getState().updateProfile({ avatar_design: draft });
++    setDesignBusy(false);
++    if (error) return setFormError(error);
++    setFormError("");
++    setDesignOpen(false);
++    setDraft(null);
++    toast.success(profile?.avatar_url ? "Avatar saved. It shows if you remove your photo." : "Avatar saved.");
++  }
++
+   const google = user?.app_metadata?.provider === "google";
+ 
+   async function saveProfile(e) {
+@@ -110,15 +130,23 @@ export default function AccountPage() {
+             <form className="acct__form" onSubmit={saveProfile} noValidate>
+               {formError && <Alert type="error" message={formError} />}
+               <div className="acct__pic">
+-                <Avatar name={profile?.full_name || user?.email} src={profile?.avatar_url} size="xl" />
++                <Avatar name={profile?.full_name || user?.email} src={profile?.avatar_url} id={user?.id} design={profile?.avatar_design} size="xl" />
+                 <div className="acct__pic-actions">
+                   <label className="acct__pic-btn">
+                     {picBusy ? "Uploading…" : "Change picture"}
+                     <input type="file" accept="image/jpeg,image/png,image/webp" disabled={picBusy} onChange={pickPhoto} aria-label="Change profile picture" />
+                   </label>
+                   {profile?.avatar_url && <Button type="button" variant="ghost" size="sm" onClick={removePhoto}>Remove</Button>}
++                  <Button type="button" variant="ghost" size="sm" onClick={() => { setDesignOpen((v) => !v); setDraft(null); }}>{designOpen ? "Close" : "Change avatar"}</Button>
+                 </div>
+               </div>
++              {designOpen && (
++                <>
++                  <AvatarPicker name={profile?.full_name || user?.email} current={savedDesign} value={draft || savedDesign} onChange={setDraft}
++                    autoPick={false} title="Pick an avatar" hint="Choose one you like, then save. Your photo, if you have one, still shows first." />
++                  <div><Button type="button" loading={designBusy} disabled={!draft} onClick={saveDesign}>Save avatar</Button></div>
++                </>
++              )}
+               <Input label="Full name" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} autoComplete="name" />
+               <Input label="Email" value={profile?.email || user?.email || ""} disabled helper="Your email is used to sign in and cannot be changed here." />
+               <PhoneInput label="Phone number" value={phone} onChange={setPhone} error={errors.phone}
+diff --git a/src/pages/auth/SignupPage.jsx b/src/pages/auth/SignupPage.jsx
+index f7485b5..f2afa2b 100644
+--- a/src/pages/auth/SignupPage.jsx
++++ b/src/pages/auth/SignupPage.jsx
+@@ -4,11 +4,17 @@
+ // Create an account with name, email, phone number and password (or Google). The phone number
+ // is what lets the person sign in later with phone + password. After sign-up the person is
+ // asked to confirm their email (the confirmation page also lets them resend the link).
++//
++// AVATAR
++// The form shows six avatars drawn from the typed name. The first is already chosen, so skipping still
++// gives a proper avatar. The choice (a few small numbers, not a picture) travels with the sign-up and
++// is saved on the profile the first time the person signs in (see sessionStore.js).
+ 
+ import { useState } from "react";
+ import { Link, useNavigate, useSearchParams } from "react-router-dom";
+ import { Alert, Button, Checkbox, Input, PasswordInput, PhoneInput } from "../../components/ui";
+ import GoogleButton from "../../components/auth/GoogleButton.jsx";
++import AvatarPicker from "../../components/brand/AvatarPicker.jsx";
+ import AuthLayout from "../../layouts/AuthLayout.jsx";
+ import { useSession } from "../../store/sessionStore.js";
+ import { collect, email as vEmail, password as vPassword, phone as vPhone, required } from "../../lib/validate.js";
+@@ -25,6 +31,7 @@ export default function SignupPage() {
+   const [errors, setErrors] = useState({});
+   const [formError, setFormError] = useState("");
+   const [busy, setBusy] = useState(false);
++  const [avatarDesign, setAvatarDesign] = useState(null);
+   const set = (k) => (v) => setF((s) => ({ ...s, [k]: v && v.target ? v.target.value : v }));
+ 
+   if (user) return <AfterSignIn next={params.get("next")} />;
+@@ -42,7 +49,7 @@ export default function SignupPage() {
+     setFormError("");
+     if (Object.keys(errs).length) return;
+     setBusy(true);
+-    const res = await useSession.getState().signUp({ fullName: f.fullName, email: f.email, phone: f.phone, password: f.password });
++    const res = await useSession.getState().signUp({ fullName: f.fullName, email: f.email, phone: f.phone, password: f.password, avatarDesign });
+     setBusy(false);
+     if (res.error) return setFormError(res.error);
+     if (res.needsConfirmation) return navigate(`/confirm?email=${encodeURIComponent(res.email)}`, { replace: true });
+@@ -59,6 +66,7 @@ export default function SignupPage() {
+         <PhoneInput label="Phone number" required value={f.phone} onChange={set("phone")} error={errors.phone}
+           helper="You can sign in with this number and your password." />
+         <PasswordInput label="Password" autoComplete="new-password" required showStrength value={f.password} onChange={set("password")} error={errors.password} />
++        <AvatarPicker compact name={f.fullName} value={avatarDesign} onChange={setAvatarDesign} title="Pick your avatar" hint="You can add a photo later." />
+         <div>
+           <Checkbox checked={f.agree} onChange={(e) => set("agree")(e.target.checked)}
+             label={<>I agree to the <Link to="/terms" target="_blank">terms</Link> and <Link to="/privacy" target="_blank">privacy notice</Link>.</>} />
+diff --git a/src/pages/onboarding/DetailsPage.jsx b/src/pages/onboarding/DetailsPage.jsx
+index 993bd23..a0fc24c 100644
+--- a/src/pages/onboarding/DetailsPage.jsx
++++ b/src/pages/onboarding/DetailsPage.jsx
+@@ -5,14 +5,22 @@
+ //   /start/details?type=rental       creates the business (status "awaiting payment") and moves on
+ //   /start/details?business=<slug>   edits an existing business (used after a rejection)
+ // Rules: name, county and a description of at least 20 characters are required.
++//
++// LOGO (new businesses only)
++// At the bottom of the form the owner sees six logo designs drawn from the business name and type, and
++// can pick one or upload their own logo. The first design is already selected, so skipping still gives
++// the business a real logo. After the business is created, the chosen design (a few small numbers, not
++// a picture) is saved on it, and an uploaded logo, if any, is uploaded. Neither failing stops the sign-up.
+ 
+ import "./Onboarding.css";
+ import { useEffect, useState } from "react";
+ import { Link, useNavigate, useSearchParams } from "react-router-dom";
+ import { Alert, Button, Input, PhoneInput, SelectInput, Skeleton, TextArea } from "../../components/ui";
+ import Stepper from "./Stepper.jsx";
++import LogoPicker from "../../components/brand/LogoPicker.jsx";
+ import { COUNTIES, typeLabel } from "../../config/counties.js";
+ import { createBusiness, getMyBusiness, updateBusiness } from "../../lib/api/businesses.js";
++import { uploadBusinessLogo } from "../../lib/api/businessMedia.js";
+ import { collect, email as vEmail, phone as vPhone, required } from "../../lib/validate.js";
+ import { toE164 } from "../../lib/phone.js";
+ import { cleanKenyanPhone } from "../../components/ui/PhoneInput.jsx";
+@@ -37,6 +45,8 @@ export default function DetailsPage() {
+   const [errors, setErrors] = useState({});
+   const [formError, setFormError] = useState("");
+   const [busy, setBusy] = useState(false);
++  const [logoDesign, setLogoDesign] = useState(null); // the chosen logo recipe (the first design unless the owner picks another)
++  const [logoFile, setLogoFile] = useState(null); // a logo the owner uploaded on this form, if any
+   const set = (k) => (v) => setF((s) => ({ ...s, [k]: v && v.target ? v.target.value : v }));
+ 
+   useEffect(() => {
+@@ -79,8 +89,20 @@ export default function DetailsPage() {
+       return navigate(`/start/status?business=${biz.slug}`);
+     }
+     const { data, error } = await createBusiness({ ...fields, type });
++    if (error) { setBusy(false); return setFormError(error); }
++    // Save the logo choice. A problem here never blocks the sign-up: the logo is still drawn from the
++    // business id, and the owner can change it later in Settings.
++    const failed = [];
++    if (logoDesign) {
++      const r = await updateBusiness(data.id, { logo_design: logoDesign, business_type: type });
++      if (r.error) failed.push("logo design");
++    }
++    if (logoFile) {
++      const r = await uploadBusinessLogo(data.id, logoFile, "");
++      if (r.error || r.notice) failed.push("uploaded logo");
++    }
+     setBusy(false);
+-    if (error) return setFormError(error);
++    if (failed.length) toast.info(`Your business was created, but the ${failed.join(" and ")} could not be saved. You can set it again in Settings.`);
+     await useBusinessStore.getState().load(user.id, true);
+     navigate(`/start/subscribe?business=${data.slug}`);
+   }
+@@ -119,6 +141,9 @@ export default function DetailsPage() {
+             <PhoneInput label="WhatsApp (optional)" value={f.whatsapp} onChange={set("whatsapp")} error={errors.whatsapp} />
+           </div>
+           <Input label="Business email (optional)" type="email" value={f.email} onChange={set("email")} error={errors.email} />
++          {!editing && (
++            <LogoPicker name={f.name} type={type} value={logoDesign} onChange={setLogoDesign} file={logoFile} onFile={setLogoFile} />
++          )}
+           <div className="onb__actions">
+             <Button type="button" variant="ghost" onClick={() => navigate(editing ? `/start/status?business=${slug}` : "/start")}>Back</Button>
+             <Button type="submit" size="lg" loading={busy}>{editing ? "Save changes" : "Continue to subscription"}</Button>
+diff --git a/src/pages/people/MessagesPage.jsx b/src/pages/people/MessagesPage.jsx
+index 17adc22..a5336ca 100644
+--- a/src/pages/people/MessagesPage.jsx
++++ b/src/pages/people/MessagesPage.jsx
+@@ -81,7 +81,7 @@ export default function MessagesPage() {
+               {convs.data.map((c) => (
+                 <li key={c.id}>
+                   <button type="button" className="rent-conv" aria-current={c.id === current} onClick={() => open(c.id)}>
+-                    <Avatar name={c.other_name} src={c.other_avatar} size="md" />
++                    <Avatar name={c.other_name} src={c.other_avatar} id={c.other_id} design={c.other_avatar_design} size="md" />
+                     <span className="rent-conv__main"><span className="rent-strong">{c.other_name} <small>{ROLE[c.other_role] || ""}</small></span>
+                       <small>{c.last_message_preview || "No messages yet"}</small></span>
+                     {c.unread > 0 && <Badge variant="brand">{c.unread}</Badge>}
+diff --git a/src/pages/storefront/Storefront.css b/src/pages/storefront/Storefront.css
+index df07819..020675e 100644
+--- a/src/pages/storefront/Storefront.css
++++ b/src/pages/storefront/Storefront.css
+@@ -2,7 +2,7 @@
+ .sf { display: grid; gap: var(--space-5); padding-bottom: var(--space-8); }
+ .sf-bar { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; justify-content: space-between; border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-3); }
+ .sf-bar__name { display: flex; align-items: center; gap: var(--space-2); font-weight: var(--weight-bold); font-size: var(--text-lg); color: var(--color-text); text-decoration: none; }
+-.sf-bar__logo { width: 36px; height: 36px; border-radius: var(--radius-full); object-fit: cover; background: var(--color-neutral-bg); display: inline-grid; place-items: center; }
++.sf-bar__logo { width: 36px; height: 36px; border-radius: var(--radius-md); overflow: hidden; display: inline-grid; place-items: center; }
+ .sf-bar__links { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+ .sf-cartbtn { position: relative; }
+ .sf-cartbtn__n { margin-left: var(--space-2); background: var(--color-primary); color: var(--color-on-primary, #fff); border-radius: var(--radius-full); padding: 0 var(--space-2); font-size: var(--text-xs); min-width: 20px; text-align: center; }
+diff --git a/src/pages/storefront/shared.jsx b/src/pages/storefront/shared.jsx
+index 4ad5219..db3f3bd 100644
+--- a/src/pages/storefront/shared.jsx
++++ b/src/pages/storefront/shared.jsx
+@@ -1,4 +1,4 @@
+-// src/pages/storefront/shared.jsx — MODIFIED (Phase 5 step 2; the cart and checkout also serve farms)
++// src/pages/storefront/shared.jsx — MODIFIED (the shop bar shows the business logo: its upload, or the logo drawn from its saved design)
+ //
+ // AIM
+ // The pieces every shopper screen uses:
+@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
+ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+ import { Button, Card, EmptyState, Skeleton } from "../../components/ui";
+ import { Drawer } from "../../components/modals/Modal.jsx";
++import BusinessLogo from "../../components/brand/BusinessLogo.jsx";
+ import useAsync from "../../hooks/useAsync.js";
+ import useBusinessBrand from "../../hooks/useBusinessBrand.js";
+ import { getBusinessBySlug } from "../../lib/api/directory.js";
+@@ -168,7 +169,7 @@ export function StoreGate({ children }) {
+     <div className="pg sf">
+       <div className="sf-bar">
+         <Link to={`/b/${b.slug}`} className="sf-bar__name">
+-          <span className="sf-bar__logo">{b.logo_url ? <img src={b.logo_url} alt="" width="36" height="36" style={{ borderRadius: "50%", objectFit: "cover" }} /> : b.name.charAt(0).toUpperCase()}</span>
++          <span className="sf-bar__logo"><BusinessLogo business={b} size={36} /></span>
+           {b.name}
+         </Link>
+         <nav className="sf-bar__links" aria-label="Shop">
+diff --git a/src/store/businessBrandStore.js b/src/store/businessBrandStore.js
+index 73a733b..a5eb362 100644
+--- a/src/store/businessBrandStore.js
++++ b/src/store/businessBrandStore.js
+@@ -6,7 +6,7 @@
+ // `contextual` prop then draws that business's logo (or its first letter) in place of the
+ // BizKenia mark. Footers and sign-in pages do not use `contextual`, so they keep the platform logo.
+ //
+-// business: { id, name, logo_url, provisional? }  provisional = true while the business is still
++// business: { id, name, business_type, logo_url, logo_design, provisional? }  provisional = true while the business is still
+ // loading: only its first letter (taken from the address) is shown, never the BizKenia logo.
+ 
+ import { create } from "zustand";
+diff --git a/src/store/businessStore.js b/src/store/businessStore.js
+index 2f40373..059c8dc 100644
+--- a/src/store/businessStore.js
++++ b/src/store/businessStore.js
+@@ -1,4 +1,4 @@
+-// src/store/businessStore.js — MODIFIED (Phase 6: also loads closed_at / closed_from / closed_by_admin for deleted businesses)
++// src/store/businessStore.js — MODIFIED (also loads logo_design, the saved recipe the business logo is drawn from)
+ //
+ // AIM
+ // The businesses the signed-in person belongs to (as owner or manager) and the role in each.
+@@ -12,7 +12,7 @@ import { create } from "zustand";
+ import { supabase } from "../config/supabase.js";
+ 
+ const BUSINESS_FIELDS =
+-  "id, name, slug, status, business_type, description, county, address, phone, email, whatsapp, logo_url, cover_url, rejection_reason, submitted_at, approved_at, created_at, closed_at, closed_from, closed_by_admin";
++  "id, name, slug, status, business_type, description, county, address, phone, email, whatsapp, logo_url, logo_design, cover_url, rejection_reason, submitted_at, approved_at, created_at, closed_at, closed_from, closed_by_admin";
+ 
+ export const useBusinessStore = create((set, get) => ({
+   memberships: [],
+diff --git a/src/store/sessionStore.js b/src/store/sessionStore.js
+index 0ec21b8..e5af635 100644
+--- a/src/store/sessionStore.js
++++ b/src/store/sessionStore.js
+@@ -1,4 +1,4 @@
+-// src/store/sessionStore.js — NEW FILE
++// src/store/sessionStore.js — MODIFIED (the profile also carries avatar_design, the saved recipe the avatar is drawn from)
+ //
+ // AIM
+ // The signed-in person: Supabase session, profile row, and every sign-in method (email,
+@@ -13,8 +13,9 @@
+ import { create } from "zustand";
+ import { supabase, isSupabaseConfigured } from "../config/supabase.js";
+ import { looksLikePhone, toE164 } from "../lib/phone.js";
++import { normalizeAvatarDesign } from "../lib/brandStudio/index.js";
+ 
+-const PROFILE_FIELDS = "id, role, tenant_id, full_name, avatar_url, phone, email, is_active, created_at";
++const PROFILE_FIELDS = "id, role, tenant_id, full_name, avatar_url, avatar_design, phone, email, is_active, created_at";
+ 
+ export const LOCKED_MESSAGE = "This account has been switched off. Please contact support.";
+ 
+@@ -68,7 +69,16 @@ export const useSession = create((set, get) => ({
+   async _apply(session) {
+     if (!session?.user) return set({ session: null, user: null, profile: null, loading: false });
+     set({ session, user: session.user });
+-    const profile = await get().fetchProfile(session.user.id);
++    let profile = await get().fetchProfile(session.user.id);
++    // An avatar chosen on the sign-up form travels in the sign-up data (the person was not signed in yet,
++    // so it could not be saved then). Save it once, the first time the profile is loaded.
++    if (profile && !profile.avatar_design) {
++      const chosen = normalizeAvatarDesign(session.user.user_metadata?.avatar_design);
++      if (chosen) {
++        const { error } = await supabase.from("profiles").update({ avatar_design: chosen }).eq("id", profile.id);
++        if (!error) profile = { ...profile, avatar_design: chosen };
++      }
++    }
+     // A switched-off account is signed out straight away (the database also refuses it).
+     if (profile && profile.is_active === false) {
+       await supabase.auth.signOut();
+@@ -129,7 +139,7 @@ export const useSession = create((set, get) => ({
+     return { error: friendly(error) };
+   },
+ 
+-  async signUp({ fullName, email, phone, password }) {
++  async signUp({ fullName, email, phone, password, avatarDesign }) {
+     if (!isSupabaseConfigured) return { error: "The app is not connected to the database yet." };
+     const e164 = toE164(phone);
+     if (e164) {
+@@ -140,7 +150,11 @@ export const useSession = create((set, get) => ({
+       email: email.trim(),
+       password,
+       options: {
+-        data: { full_name: fullName.trim(), phone: e164 ? `0${e164.slice(3)}` : "" },
++        data: {
++          full_name: fullName.trim(), phone: e164 ? `0${e164.slice(3)}` : "",
++          // the avatar picked on the form (a few small numbers), saved to the profile on first sign-in
++          ...(normalizeAvatarDesign(avatarDesign) ? { avatar_design: normalizeAvatarDesign(avatarDesign) } : {}),
++        },
+         emailRedirectTo: `${window.location.origin}/auth/callback`,
+       },
+     });
+@@ -189,6 +203,7 @@ export const useSession = create((set, get) => ({
+       patch.phone = e164 ? `0${e164.slice(3)}` : null;
+     }
+     if (fields.avatar_url !== undefined) patch.avatar_url = fields.avatar_url;
++    if (fields.avatar_design !== undefined) patch.avatar_design = normalizeAvatarDesign(fields.avatar_design);
+     const { error } = await supabase.from("profiles").update(patch).eq("id", id);
+     if (error) {
+       const taken = /profiles_phone_norm_uq|duplicate key/i.test(error.message);
+diff --git a/supabase/migrations/20261025100001_brand_designs.sql b/supabase/migrations/20261025100001_brand_designs.sql
+new file mode 100644
+index 0000000..041d8a5
+--- /dev/null
++++ b/supabase/migrations/20261025100001_brand_designs.sql
+@@ -0,0 +1,59 @@
++-- 20261025100001_brand_designs.sql
++--
++-- AIM
++-- Logos and avatars are drawn by the app from a small saved "recipe" instead of being stored as
++-- picture files. This migration adds the two places the recipes are kept:
++--   businesses.logo_design   e.g. {"v":1,"s":3,"i":5,"p":8}   (style, symbol, palette)
++--   profiles.avatar_design   e.g. {"v":1,"s":2,"p":4,"b":1}   (style, palette, pattern)
++-- A row with no recipe is fine: the app works one out from the row's id, so no data is changed here.
++-- Uploaded pictures (logo_url, avatar_url) are untouched and still win when they exist.
++--
++-- It also changes my_conversations so the chat list can draw the other person's chosen avatar.
++--
++-- SAFE TO RUN ONCE OR MANY TIMES. Run it BEFORE deploying the new app version
++-- (npx supabase db push), because the new app asks for these columns.
++
++-- 1. the two recipe columns (nullable, so existing rows are untouched)
++alter table public.businesses add column if not exists logo_design jsonb;
++alter table public.profiles   add column if not exists avatar_design jsonb;
++
++-- 2. keep them small and the right shape: a JSON object under 200 characters
++do $$
++begin
++  if not exists (select 1 from pg_constraint where conname = 'businesses_logo_design_shape') then
++    alter table public.businesses add constraint businesses_logo_design_shape
++      check (logo_design is null or (jsonb_typeof(logo_design) = 'object' and length(logo_design::text) <= 200));
++  end if;
++  if not exists (select 1 from pg_constraint where conname = 'profiles_avatar_design_shape') then
++    alter table public.profiles add constraint profiles_avatar_design_shape
++      check (avatar_design is null or (jsonb_typeof(avatar_design) = 'object' and length(avatar_design::text) <= 200));
++  end if;
++end $$;
++
++comment on column public.businesses.logo_design is 'Saved logo recipe {v,s,i,p}; the app draws the logo from it. Null = derived from the id.';
++comment on column public.profiles.avatar_design is 'Saved avatar recipe {v,s,p,b}; the app draws the avatar from it. Null = derived from the id.';
++
++-- 3. owners and people can already change their own row (existing row rules); this only makes sure
++--    the new columns are allowed if column-level privileges are in use.
++grant update (logo_design) on public.businesses to authenticated;
++grant update (avatar_design) on public.profiles to authenticated;
++
++-- 4. chat list: also return the other person's avatar recipe.
++--    The return shape changes, so the old version is dropped first, then created again and re-granted.
++drop function if exists public.my_conversations(uuid);
++create function public.my_conversations(p_business uuid)
++returns table (id uuid, other_id uuid, other_name text, other_role text, other_avatar text, other_avatar_design jsonb,
++               last_message_at timestamptz, last_message_preview text, unread integer)
++language sql stable security definer set search_path = public as $$
++  select c.id, o.user_id, coalesce(p.full_name, p.email), m.role, p.avatar_url, p.avatar_design, c.last_message_at, c.last_message_preview,
++         (select count(*)::int from messages x where x.conversation_id = c.id and x.sender_id <> auth.uid() and x.created_at > me.last_read_at)
++    from conversations c
++    join conversation_members me on me.conversation_id = c.id and me.user_id = auth.uid()
++    join conversation_members o on o.conversation_id = c.id and o.user_id <> auth.uid()
++    join profiles p on p.id = o.user_id
++    left join business_members m on m.business_id = c.business_id and m.user_id = o.user_id
++   where c.business_id = p_business
++   order by c.last_message_at desc;
++$$;
++revoke all on function public.my_conversations(uuid) from public, anon;
++grant execute on function public.my_conversations(uuid) to authenticated;
+-- 
+2.43.0
+

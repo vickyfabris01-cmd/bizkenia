@@ -5,14 +5,22 @@
 //   /start/details?type=rental       creates the business (status "awaiting payment") and moves on
 //   /start/details?business=<slug>   edits an existing business (used after a rejection)
 // Rules: name, county and a description of at least 20 characters are required.
+//
+// LOGO (new businesses only)
+// At the bottom of the form the owner sees six logo designs drawn from the business name and type, and
+// can pick one or upload their own logo. The first design is already selected, so skipping still gives
+// the business a real logo. After the business is created, the chosen design (a few small numbers, not
+// a picture) is saved on it, and an uploaded logo, if any, is uploaded. Neither failing stops the sign-up.
 
 import "./Onboarding.css";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Alert, Button, Input, PhoneInput, SelectInput, Skeleton, TextArea } from "../../components/ui";
 import Stepper from "./Stepper.jsx";
+import LogoPicker from "../../components/brand/LogoPicker.jsx";
 import { COUNTIES, typeLabel } from "../../config/counties.js";
 import { createBusiness, getMyBusiness, updateBusiness } from "../../lib/api/businesses.js";
+import { uploadBusinessLogo } from "../../lib/api/businessMedia.js";
 import { collect, email as vEmail, phone as vPhone, required } from "../../lib/validate.js";
 import { toE164 } from "../../lib/phone.js";
 import { cleanKenyanPhone } from "../../components/ui/PhoneInput.jsx";
@@ -37,6 +45,8 @@ export default function DetailsPage() {
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [logoDesign, setLogoDesign] = useState(null); // the chosen logo recipe (the first design unless the owner picks another)
+  const [logoFile, setLogoFile] = useState(null); // a logo the owner uploaded on this form, if any
   const set = (k) => (v) => setF((s) => ({ ...s, [k]: v && v.target ? v.target.value : v }));
 
   useEffect(() => {
@@ -79,8 +89,20 @@ export default function DetailsPage() {
       return navigate(`/start/status?business=${biz.slug}`);
     }
     const { data, error } = await createBusiness({ ...fields, type });
+    if (error) { setBusy(false); return setFormError(error); }
+    // Save the logo choice. A problem here never blocks the sign-up: the logo is still drawn from the
+    // business id, and the owner can change it later in Settings.
+    const failed = [];
+    if (logoDesign) {
+      const r = await updateBusiness(data.id, { logo_design: logoDesign, business_type: type });
+      if (r.error) failed.push("logo design");
+    }
+    if (logoFile) {
+      const r = await uploadBusinessLogo(data.id, logoFile, "");
+      if (r.error || r.notice) failed.push("uploaded logo");
+    }
     setBusy(false);
-    if (error) return setFormError(error);
+    if (failed.length) toast.info(`Your business was created, but the ${failed.join(" and ")} could not be saved. You can set it again in Settings.`);
     await useBusinessStore.getState().load(user.id, true);
     navigate(`/start/subscribe?business=${data.slug}`);
   }
@@ -119,6 +141,9 @@ export default function DetailsPage() {
             <PhoneInput label="WhatsApp (optional)" value={f.whatsapp} onChange={set("whatsapp")} error={errors.whatsapp} />
           </div>
           <Input label="Business email (optional)" type="email" value={f.email} onChange={set("email")} error={errors.email} />
+          {!editing && (
+            <LogoPicker name={f.name} type={type} value={logoDesign} onChange={setLogoDesign} file={logoFile} onFile={setLogoFile} />
+          )}
           <div className="onb__actions">
             <Button type="button" variant="ghost" onClick={() => navigate(editing ? `/start/status?business=${slug}` : "/start")}>Back</Button>
             <Button type="submit" size="lg" loading={busy}>{editing ? "Save changes" : "Continue to subscription"}</Button>

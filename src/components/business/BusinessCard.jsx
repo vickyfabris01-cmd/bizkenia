@@ -1,4 +1,4 @@
-// src/components/business/BusinessCard.jsx — MODIFIED (square card: cover 65%, text 35%, no description)
+// src/components/business/BusinessCard.jsx — MODIFIED (the logo mark is always shown: the upload, or the logo drawn from the saved design)
 //
 // AIM
 // One business in a list (home page, explore). A square. The cover picture (or a coloured
@@ -12,6 +12,7 @@ import "./BusinessCard.css";
 import { Link } from "react-router-dom";
 import { Badge, Icon, Skeleton } from "../ui";
 import { typeLabel } from "../../config/counties.js";
+import BusinessLogo from "../brand/BusinessLogo.jsx";
 
 export default function BusinessCard({ business }) {
   const b = business;
@@ -19,11 +20,7 @@ export default function BusinessCard({ business }) {
     <Link to={`/b/${b.slug}`} className="bcard">
       <div className="bcard__cover" style={b.cover_url ? { backgroundImage: `url("${b.cover_url}")` } : undefined}>
         {!b.cover_url && <span aria-hidden="true">{b.name.charAt(0).toUpperCase()}</span>}
-        {(b.logo_url || b.cover_url) && (
-          <span className="bcard__mark" aria-hidden="true">
-            {b.logo_url ? <img src={b.logo_url} alt="" loading="lazy" /> : b.name.charAt(0).toUpperCase()}
-          </span>
-        )}
+        <span className="bcard__mark" aria-hidden="true"><BusinessLogo business={b} /></span>
         <Badge variant="brand" size="sm" className="bcard__type">{typeLabel(b.business_type)}</Badge>
       </div>
       <div className="bcard__body">

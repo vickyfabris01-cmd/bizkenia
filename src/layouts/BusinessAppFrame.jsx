@@ -72,7 +72,7 @@ export default function BusinessAppFrame() {
   return (
     <AppShell
       nav={nav}
-      user={{ name: profile?.full_name || user?.email, email: user?.email, role: ROLE_LABEL[role] || role, avatarUrl: profile?.avatar_url }}
+      user={{ name: profile?.full_name || user?.email, email: user?.email, role: ROLE_LABEL[role] || role, avatarUrl: profile?.avatar_url, avatarId: user?.id, avatarDesign: profile?.avatar_design }}
       business={{ name: business.name, subtitle: `${typeLabel(business.business_type)} business` }}
       bellTo="live"
       profileTo="/account"

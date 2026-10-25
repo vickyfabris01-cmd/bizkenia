@@ -1,0 +1,26 @@
+/* src/components/brand/BusinessLogo.css — NEW FILE
+   Styles for BusinessLogo.jsx. Tokens only. */
+
+.bk-logo {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  overflow: hidden;
+  line-height: 0;
+  vertical-align: middle;
+}
+/* fill the box it is placed in (a card mark, a tile) */
+.bk-logo--fill { width: 100%; height: 100%; }
+
+.bk-logo__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  border-radius: inherit;
+}
+/* an uploaded picture fades in over the drawn logo once it has loaded */
+.bk-logo__img--upload { transition: opacity var(--duration-fast, 150ms) ease; }
+.bk-logo__img--drawn { transition: opacity var(--duration-fast, 150ms) ease; }

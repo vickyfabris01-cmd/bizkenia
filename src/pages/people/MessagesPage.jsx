@@ -81,7 +81,7 @@ export default function MessagesPage() {
               {convs.data.map((c) => (
                 <li key={c.id}>
                   <button type="button" className="rent-conv" aria-current={c.id === current} onClick={() => open(c.id)}>
-                    <Avatar name={c.other_name} src={c.other_avatar} size="md" />
+                    <Avatar name={c.other_name} src={c.other_avatar} id={c.other_id} design={c.other_avatar_design} size="md" />
                     <span className="rent-conv__main"><span className="rent-strong">{c.other_name} <small>{ROLE[c.other_role] || ""}</small></span>
                       <small>{c.last_message_preview || "No messages yet"}</small></span>
                     {c.unread > 0 && <Badge variant="brand">{c.unread}</Badge>}

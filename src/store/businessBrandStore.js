@@ -6,7 +6,7 @@
 // `contextual` prop then draws that business's logo (or its first letter) in place of the
 // BizKenia mark. Footers and sign-in pages do not use `contextual`, so they keep the platform logo.
 //
-// business: { id, name, logo_url, provisional? }  provisional = true while the business is still
+// business: { id, name, business_type, logo_url, logo_design, provisional? }  provisional = true while the business is still
 // loading: only its first letter (taken from the address) is shown, never the BizKenia logo.
 
 import { create } from "zustand";

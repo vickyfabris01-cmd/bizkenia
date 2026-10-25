@@ -35,20 +35,36 @@ async function* walk(bucket, prefix = "") {
   }
 }
 
+// retries a flaky network call a few times before giving up
+async function retry(label, fn, tries = 5) {
+  for (let i = 1; ; i++) {
+    try { return await fn(); } catch (e) {
+      if (i >= tries) throw e;
+      console.log(`  network hiccup on ${label}, retrying (${i}/${tries - 1})...`);
+      await new Promise((r) => setTimeout(r, 1500 * i));
+    }
+  }
+}
+
 const stats = { copied: 0, skipped: 0, failed: 0 };
 for (const bucket of BUCKETS) {
   for await (const path of walk(bucket)) {
     if (dry) { console.log("would copy", bucket, path); stats.copied++; continue; }
-    const { data: blob, error } = await admin.storage.from(bucket).download(path);
-    if (error) { console.error("FAILED download", bucket, path, error.message); stats.failed++; continue; }
-    const res = await fetch(`${FILES_ADMIN_URL.replace(/\/+$/, "")}/${bucket}/${path.split("/").map(encodeURIComponent).join("/")}`, {
-      method: "PUT",
-      headers: { "X-Admin-Secret": FILES_ADMIN_SECRET, "Content-Type": blob.type || "application/octet-stream" },
-      body: Buffer.from(await blob.arrayBuffer()),
-    });
-    if (res.status === 201) { stats.copied++; console.log("copied ", bucket, path); }
-    else if (res.status === 409) stats.skipped++;
-    else { stats.failed++; console.error("FAILED upload", bucket, path, res.status, await res.text()); }
+    try {
+      const { data: blob, error } = await retry(`download ${path}`, () => admin.storage.from(bucket).download(path));
+      if (error) { console.error("FAILED download", bucket, path, error.message); stats.failed++; continue; }
+      const body = Buffer.from(await blob.arrayBuffer());
+      const res = await retry(`upload ${path}`, () => fetch(`${FILES_ADMIN_URL.replace(/\/+$/, "")}/${bucket}/${path.split("/").map(encodeURIComponent).join("/")}`, {
+        method: "PUT",
+        headers: { "X-Admin-Secret": FILES_ADMIN_SECRET, "Content-Type": blob.type || "application/octet-stream" },
+        body,
+      }));
+      if (res.status === 201) { stats.copied++; console.log("copied ", bucket, path); }
+      else if (res.status === 409) stats.skipped++;
+      else { stats.failed++; console.error("FAILED upload", bucket, path, res.status, await res.text()); }
+    } catch (e) {
+      stats.failed++; console.error("FAILED (network)", bucket, path, e.cause?.code || e.message);
+    }
   }
 }
 console.log(dry ? "\nDry run." : "\nDone.", stats);

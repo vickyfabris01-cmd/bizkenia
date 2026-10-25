@@ -1,4 +1,4 @@
-// src/store/sessionStore.js — NEW FILE
+// src/store/sessionStore.js — MODIFIED (the profile also carries avatar_design, the saved recipe the avatar is drawn from)
 //
 // AIM
 // The signed-in person: Supabase session, profile row, and every sign-in method (email,
@@ -13,8 +13,9 @@
 import { create } from "zustand";
 import { supabase, isSupabaseConfigured } from "../config/supabase.js";
 import { looksLikePhone, toE164 } from "../lib/phone.js";
+import { normalizeAvatarDesign } from "../lib/brandStudio/index.js";
 
-const PROFILE_FIELDS = "id, role, tenant_id, full_name, avatar_url, phone, email, is_active, created_at";
+const PROFILE_FIELDS = "id, role, tenant_id, full_name, avatar_url, avatar_design, phone, email, is_active, created_at";
 
 export const LOCKED_MESSAGE = "This account has been switched off. Please contact support.";
 
@@ -68,7 +69,16 @@ export const useSession = create((set, get) => ({
   async _apply(session) {
     if (!session?.user) return set({ session: null, user: null, profile: null, loading: false });
     set({ session, user: session.user });
-    const profile = await get().fetchProfile(session.user.id);
+    let profile = await get().fetchProfile(session.user.id);
+    // An avatar chosen on the sign-up form travels in the sign-up data (the person was not signed in yet,
+    // so it could not be saved then). Save it once, the first time the profile is loaded.
+    if (profile && !profile.avatar_design) {
+      const chosen = normalizeAvatarDesign(session.user.user_metadata?.avatar_design);
+      if (chosen) {
+        const { error } = await supabase.from("profiles").update({ avatar_design: chosen }).eq("id", profile.id);
+        if (!error) profile = { ...profile, avatar_design: chosen };
+      }
+    }
     // A switched-off account is signed out straight away (the database also refuses it).
     if (profile && profile.is_active === false) {
       await supabase.auth.signOut();
@@ -129,7 +139,7 @@ export const useSession = create((set, get) => ({
     return { error: friendly(error) };
   },
 
-  async signUp({ fullName, email, phone, password }) {
+  async signUp({ fullName, email, phone, password, avatarDesign }) {
     if (!isSupabaseConfigured) return { error: "The app is not connected to the database yet." };
     const e164 = toE164(phone);
     if (e164) {
@@ -140,7 +150,11 @@ export const useSession = create((set, get) => ({
       email: email.trim(),
       password,
       options: {
-        data: { full_name: fullName.trim(), phone: e164 ? `0${e164.slice(3)}` : "" },
+        data: {
+          full_name: fullName.trim(), phone: e164 ? `0${e164.slice(3)}` : "",
+          // the avatar picked on the form (a few small numbers), saved to the profile on first sign-in
+          ...(normalizeAvatarDesign(avatarDesign) ? { avatar_design: normalizeAvatarDesign(avatarDesign) } : {}),
+        },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
@@ -189,6 +203,7 @@ export const useSession = create((set, get) => ({
       patch.phone = e164 ? `0${e164.slice(3)}` : null;
     }
     if (fields.avatar_url !== undefined) patch.avatar_url = fields.avatar_url;
+    if (fields.avatar_design !== undefined) patch.avatar_design = normalizeAvatarDesign(fields.avatar_design);
     const { error } = await supabase.from("profiles").update(patch).eq("id", id);
     if (error) {
       const taken = /profiles_phone_norm_uq|duplicate key/i.test(error.message);
