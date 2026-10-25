@@ -6,8 +6,8 @@
   "assets": {
     "directory": "./dist",
     "not_found_handling": "single-page-application",
-    // only file and admin-stats requests wake the Worker; the site itself is still served as free static assets
-    "run_worker_first": ["/api/files/*", "/api/admin/*"]
+    // only file, admin-stats and share-link requests wake the Worker; the site itself is still served as free static assets
+    "run_worker_first": ["/api/files/*", "/api/admin/*", "/share/*"]
   },
   "r2_buckets": [
     { "binding": "BIZKENIA_FILES", "bucket_name": "bizkenia-files" }

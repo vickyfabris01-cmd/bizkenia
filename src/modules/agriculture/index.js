@@ -20,6 +20,7 @@ registerModule({
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "", end: true, phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/FarmDashboard.jsx")) },
     { id: "crops", label: "Crops", icon: "home", path: "crops", phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/CropsPage.jsx")) },
     { id: "produce", label: "Produce for sale", icon: "megaphone", path: "produce", phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/ProducePage.jsx")) },
+    { id: "share", label: "Share and promote", icon: "megaphone", path: "share", phase: 6, roles: BOTH, element: lazy(() => import("../../pages/shared/MarketingPage.jsx")) },
     { id: "sales", label: "Sales", icon: "card", path: "sales", phase: 5, roles: BOTH, element: lazy(() => import("../../pages/farm/FarmSalesPage.jsx")) },
     { id: "orders", label: "Orders", icon: "file", path: "orders", phase: 5, roles: BOTH, element: lazy(() => import("../../pages/farm/FarmOrdersPage.jsx")) },
     { id: "fields", label: "Fields and land", icon: "building", path: "fields", phase: 4, roles: BOTH, element: lazy(() => import("../../pages/farm/FieldsPage.jsx")) },

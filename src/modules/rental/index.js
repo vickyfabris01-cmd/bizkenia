@@ -31,6 +31,7 @@ registerModule({
     { id: "transfers", label: "Room transfers", icon: "swap", path: "transfers", phase: 3, roles: BOTH, element: lazy(() => import("../../pages/people/TransfersPage.jsx")) },
     { id: "workforce", label: "Workforce", icon: "user", path: "workforce", phase: 3, roles: BOTH, element: lazy(() => import("../../pages/people/WorkforcePage.jsx")) },
     { id: "announcements", label: "Announcements", icon: "megaphone", path: "announcements", phase: 3, roles: BOTH, element: lazy(() => import("../../pages/people/AnnouncementsPage.jsx")) },
+    { id: "share", label: "Share and promote", icon: "megaphone", path: "share", phase: 6, roles: BOTH, element: lazy(() => import("../../pages/shared/MarketingPage.jsx")) },
     { id: "messages", label: "Messages", icon: "user", path: "messages", phase: 3, roles: ALL, element: lazy(() => import("../../pages/people/MessagesPage.jsx")) },
     { id: "reports", label: "Reports", icon: "chart", path: "reports", phase: 4, roles: OWNER, element: lazy(() => import("../../pages/reports/ReportsPage.jsx")) },
     { id: "managers", label: "Managers", icon: "users", path: "managers", phase: 2, roles: OWNER, element: lazy(() => import("../../pages/rental/ManagersPage.jsx")) },

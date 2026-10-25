@@ -20,6 +20,7 @@ registerModule({
     { id: "sales", label: "Sales", icon: "card", path: "sales", phase: 5, roles: BOTH, element: lazy(() => import("../../pages/shop/SalesPage.jsx")) },
     { id: "inventory", label: "Inventory", icon: "building", path: "inventory", phase: 5, roles: BOTH, element: lazy(() => import("../../pages/shop/InventoryPage.jsx")) },
     { id: "customers", label: "Customers", icon: "users", path: "customers", phase: 5, roles: BOTH, element: lazy(() => import("../../pages/shop/CustomersPage.jsx")) },
+    { id: "share", label: "Share and promote", icon: "megaphone", path: "share", phase: 6, roles: BOTH, element: lazy(() => import("../../pages/shared/MarketingPage.jsx")) },
     { id: "reports", label: "Reports", icon: "chart", path: "reports", phase: 5, roles: OWNER, element: lazy(() => import("../../pages/shop/ShopReportsPage.jsx")) },
     { id: "settings", label: "Settings", icon: "settings", path: "settings", phase: 5, roles: OWNER, element: lazy(() => import("../../pages/shop/ShopSettingsPage.jsx")) },
   ],
