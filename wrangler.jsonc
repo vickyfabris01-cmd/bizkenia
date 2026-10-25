@@ -1,21 +1,25 @@
+// wrangler.jsonc — MODIFIED (main, run_worker_first, three new vars)
 {
   "name": "bizkenia",
-  "main": "worker/index.js",
+  "main": "worker/entry.js",
   "compatibility_date": "2026-10-01",
   "assets": {
     "directory": "./dist",
     "not_found_handling": "single-page-application",
-    // only file requests wake the Worker; the site itself is still served as free static assets
-    "run_worker_first": ["/api/files/*"]
+    // only file and admin-stats requests wake the Worker; the site itself is still served as free static assets
+    "run_worker_first": ["/api/files/*", "/api/admin/*"]
   },
   "r2_buckets": [
     { "binding": "BIZKENIA_FILES", "bucket_name": "bizkenia-files" }
   ],
-  // These two are public values (the same ones the site already ships in VITE_*). Fill them in.
-  // The admin secret is NOT here: set it with `npx wrangler secret put FILES_ADMIN_SECRET`.
+  // These are public values (the same ones the site already ships in VITE_*). Fill them in.
+  // Secrets are NOT here: FILES_ADMIN_SECRET and CF_API_TOKEN are set with `npx wrangler secret put <NAME>`.
   "vars": {
     "SUPABASE_URL": "https://vhjptjbonpzpohdqydrt.supabase.co",
     "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoanB0amJvbnB6cG9oZHF5ZHJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MTM1MjAsImV4cCI6MjA4OTA4OTUyMH0.yJqHOeJ6E6ldx-gcPU9isATbYiiF8hQnO22zlmFjeAk",
-    "ALLOWED_ORIGINS": "http://localhost:5173"
+    "ALLOWED_ORIGINS": "http://localhost:5173",
+    "CF_ACCOUNT_ID": "70bc605390d7d33c212e93aef6db9b1d",
+    "CF_SITE_TAG": "a1a722c343ea4f4f9cdbc2cd300836ee",
+    "R2_BUCKET_NAME": "bizkenia-files"
   }
 }
