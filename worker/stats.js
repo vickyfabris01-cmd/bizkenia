@@ -1,4 +1,4 @@
-// worker/stats.js — NEW FILE
+// worker/stats.js — MODIFIED (storage query now also selects datetime)
 // GET /api/admin/stats?from=YYYY-MM-DD&to=YYYY-MM-DD  (super admin only)
 // Needs: secret CF_API_TOKEN; vars CF_ACCOUNT_ID, CF_SITE_TAG, optional R2_BUCKET_NAME.
 
@@ -81,7 +81,7 @@ async function traffic(env, fromMs, toMs) {
 
 const ops = (geq, end) => `(limit:10000,filter:{bucketName:$bucket,datetime_geq:${geq},datetime_${end}}){sum{requests} dimensions{actionType}}`;
 const R2Q = `query($acc:String!,$bucket:String!,$since:Time!,$until:Time!,$month:Time!,$now:Time!,$recent:Time!){viewer{accounts(filter:{accountTag:$acc}){
-  storage:r2StorageAdaptiveGroups(limit:1,orderBy:[datetime_DESC],filter:{bucketName:$bucket,datetime_geq:$recent,datetime_leq:$now}){max{objectCount payloadSize metadataSize}}
+  storage:r2StorageAdaptiveGroups(limit:1,orderBy:[datetime_DESC],filter:{bucketName:$bucket,datetime_geq:$recent,datetime_leq:$now}){max{objectCount payloadSize metadataSize} dimensions{datetime}}
   rangeOps:r2OperationsAdaptiveGroups${ops("$since", "lt:$until")}
   monthOps:r2OperationsAdaptiveGroups${ops("$month", "leq:$now")}
 }}}`;
@@ -146,4 +146,4 @@ export async function handleStats(request, env) {
     r2: r.status === "fulfilled" ? r.value : null,
     r2Error: r.status === "rejected" ? String(r.reason && r.reason.message) : null,
   });
-}
+                                                                                                            }
