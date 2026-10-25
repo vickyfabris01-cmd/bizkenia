@@ -1,4 +1,4 @@
-// wrangler.jsonc — MODIFIED (main, run_worker_first, three new vars)
+// wrangler.jsonc — MODIFIED (CF_SITE_TAG corrected to the real Web Analytics site tag)
 {
   "name": "bizkenia",
   "main": "worker/entry.js",
@@ -12,14 +12,14 @@
   "r2_buckets": [
     { "binding": "BIZKENIA_FILES", "bucket_name": "bizkenia-files" }
   ],
-  // These are public values (the same ones the site already ships in VITE_*). Fill them in.
+  // These two are public values (the same ones the site already ships in VITE_*). Fill them in.
   // Secrets are NOT here: FILES_ADMIN_SECRET and CF_API_TOKEN are set with `npx wrangler secret put <NAME>`.
   "vars": {
     "SUPABASE_URL": "https://vhjptjbonpzpohdqydrt.supabase.co",
     "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoanB0amJvbnB6cG9oZHF5ZHJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MTM1MjAsImV4cCI6MjA4OTA4OTUyMH0.yJqHOeJ6E6ldx-gcPU9isATbYiiF8hQnO22zlmFjeAk",
     "ALLOWED_ORIGINS": "http://localhost:5173",
     "CF_ACCOUNT_ID": "70bc605390d7d33c212e93aef6db9b1d",
-    "CF_SITE_TAG": "a1a722c343ea4f4f9cdbc2cd300836ee",
+    "CF_SITE_TAG": "f1e668995a994869b286d81608ac5d94",
     "R2_BUCKET_NAME": "bizkenia-files"
   }
 }
