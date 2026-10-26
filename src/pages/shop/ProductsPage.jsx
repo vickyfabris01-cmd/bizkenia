@@ -1,4 +1,4 @@
-// src/pages/shop/ProductsPage.jsx — MODIFIED (stock comes from what you hold; farms list from their store, field or livestock)
+// src/pages/shop/ProductsPage.jsx — MODIFIED (share prompt after an item is put on sale, and a Share button when editing an item on sale)
 //
 // AIM
 // /app/:slug/products — the shop's catalogue. Search, filter by status and category, add a
@@ -25,6 +25,8 @@ import { useSearchParams } from "react-router-dom";
 import { Alert, Badge, Button, Card, CardBody, EmptyState, Input, SelectInput } from "../../components/ui";
 import { ConfirmDialog, Modal } from "../../components/modals/Modal.jsx";
 import ImageUploadButton from "../../components/ui/ImageUploadButton.jsx";
+import ShareMenu from "../../components/share/ShareMenu.jsx";
+import { productTarget } from "../../lib/share.js";
 import useAsync from "../../hooks/useAsync.js";
 import { useToast } from "../../hooks/useNotifications.js";
 import {
@@ -172,7 +174,7 @@ export default function ProductsPage({
   farm = false,
 }) {
   const Noun = noun.charAt(0).toUpperCase() + noun.slice(1);
-  const { bid } = useShop();
+  const { bid, business } = useShop();
   const toast = useToast();
   const [search, setSearch] = useState("");
   const [term, setTerm] = useState("");
@@ -184,6 +186,7 @@ export default function ProductsPage({
   const [confirm, setConfirm] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [shareItem, setShareItem] = useState(null); // the item whose share dialog is open
   const uploaded = useRef([]);
   const saved = useRef(false);
   const [params, setParams] = useSearchParams();
@@ -276,6 +279,10 @@ export default function ProductsPage({
     [...before.filter((u) => !after.includes(u)), ...uploaded.current.filter((u) => !after.includes(u))].forEach((u) => removeProductPhoto(bid, u));
     toast.success(form?.product ? `${Noun} updated` : `${Noun} added`);
     reload(); reloadSources();
+    // Listed successfully and visible to buyers: offer the share card straight away (once the form has closed).
+    const row = r.data;
+    if (row?.status === "active" && form?.product?.status !== "active") setTimeout(() => setShareItem({ ...row, images: row.images?.length ? row.images : (v.images || []) }), 300);
+    else if (!form?.product) toast.info("Set it to On sale when it is ready, then you can share it.");
     return r;
   }
 
@@ -340,8 +347,14 @@ export default function ProductsPage({
           : { name: form?.prefill?.name || "", category_id: "", price: "", compare_at_price: "", unit: form?.prefill ? (form.prefill.kind === "livestock" ? "head" : form.prefill.unit) : defaultUnit, sku: "", stock: "", store_quantity: "",
               list_all: true, source: form?.prefill?.key || "", per_unit: 1, available_until: "", low_stock_level: farm ? 0 : 5, status: "draft", description: "", images: [] }}
         danger={p ? { label: "Delete", onClick: () => { setConfirm(p); closeForm(); } } : undefined}
-        extra={(vals, set) => <PhotoManager bid={bid} images={vals.images} set={set} onUploaded={(u) => uploaded.current.push(u)} />} />
+        extra={(vals, set) => (
+          <>
+            <PhotoManager bid={bid} images={vals.images} set={set} onUploaded={(u) => uploaded.current.push(u)} />
+            {p && p.status === "active" && <Button type="button" variant="outline" onClick={() => setShareItem(p)}>Share this {noun}</Button>}
+          </>
+        )} />
 
+      {shareItem && <ShareMenu open target={productTarget(business, shareItem, { farm })} onClose={() => setShareItem(null)} />}
       {cats && <Categories bid={bid} onClose={() => setCats(false)} onChanged={reloadCats} />}
       <ConfirmDialog isOpen={Boolean(confirm)} title={`Delete this ${noun}?`} message={deleteMessage} confirmLabel={`Delete ${noun}`} loading={busy} onConfirm={remove} onCancel={() => setConfirm(null)} />
     </div>

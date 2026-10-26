@@ -1,6 +1,15 @@
 /* src/components/share/ShareMenu.css — NEW FILE: the share dialog and the "Share and promote" lists */
 
 .share-body { display: grid; gap: var(--space-4); }
+@media (min-width: 720px) { .share-body--card { grid-template-columns: minmax(0, 300px) minmax(0, 1fr); align-items: start; } }
+
+/* the drawn card (1080 x 1350) */
+.share-preview { border: 1px solid var(--color-border, #d1d5db); border-radius: var(--radius-md); overflow: hidden; background: var(--color-primary-soft); aspect-ratio: 4 / 5; display: grid; place-items: center; }
+.share-preview img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.share-preview__wait { display: grid; place-items: center; }
+.share-side { display: grid; gap: var(--space-4); min-width: 0; }
+.share-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.share-actions > * { flex: 1 1 150px; }
 
 .share-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: var(--space-2); }
 .share-ch {

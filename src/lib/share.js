@@ -1,17 +1,19 @@
-// src/lib/share.js — NEW FILE
+// src/lib/share.js — MODIFIED FILE (share targets: a business, a product, a piece of produce or a room type)
 //
 // AIM
 // Everything the "Share" feature needs that is not a screen: the link people actually share, the
-// ready-made message for each kind of thing (site, business, room, product, produce), and the list of
-// social channels with the address that opens each one's share box.
+// ready-made message, the list of social channels, and the "target" of a share. A target says WHAT is
+// shared: its page, its message, and the card picture drawn from it (see lib/shareCard.js).
+//
+//   businessTarget(b)              the business: cover, logo beside the name, details
+//   productTarget(b, p, {farm})    a shop product or farm produce: photo, name, price, place, then logo and business
+//   roomTarget(b, t, {...})        a room type: photo, name, rent, place, then logo and business
 //
 // WHY /share/... LINKS
 // The site is a single-page app, so WhatsApp, Facebook, X and Telegram only ever see the generic
 // <head> of index.html when they fetch a link. A link to /share/... goes through the Worker
 // (worker/share.js), which gives those apps the right title, text and picture, and sends people on
-// to the real page. Paths here mirror the real pages:  /b/:slug, /b/:slug/p/:id, /produce/:id, /room/:id.
-//
-//   shareLink(sharePath.business(b), "whatsapp")  -> https://your-site/share/b/my-shop?utm_source=whatsapp&utm_medium=social
+// to the real page: the business page, or the product, produce or room page.
 
 import { siteUrl } from "./seo.js";
 import { formatKsh } from "./format.js";
@@ -33,6 +35,8 @@ export function shareLink(path, channel) {
   return `${siteUrl()}/share${path}${q}`;
 }
 
+export const siteHost = () => siteUrl().replace(/^https?:\/\//, "");
+
 // ---- ready-made messages (the person can edit them before sharing) -------------------------
 const place = (b) => b.county || "Kenya";
 const KIND = { rental: "rentals", shop: "online shop", agriculture: "farm" };
@@ -53,9 +57,62 @@ export const message = {
   },
 };
 
+// ---- targets -----------------------------------------------------------------------------------
+const placeOf = (b) => [b.address, b.county].filter(Boolean).join(", ");
+
+/** The business itself. `b` needs: id, slug, name, business_type, description, county, address, phone, whatsapp, logo_url, logo_design, cover_url. */
+export function businessTarget(b) {
+  return {
+    path: sharePath.business(b),
+    title: b.name,
+    text: message.business(b),
+    card: { layout: "business", business: b, image: b.cover_url || "", title: b.name, description: b.description || "" },
+  };
+}
+
+/** A shop product or a piece of farm produce (`farm: true`). `p` needs: id, name, price, compare_at_price, unit, stock, images. */
+export function productTarget(b, p, { farm = false } = {}) {
+  const unit = p.unit && p.unit !== "item" ? p.unit : "";
+  const stock = Number(p.stock);
+  return {
+    path: farm ? sharePath.produce(b, p) : sharePath.product(b, p),
+    title: `${p.name} | ${b.name}`,
+    text: message.product(b, p, farm),
+    card: {
+      layout: "item", business: b, image: p.images?.[0] || "", title: p.name,
+      badge: farm ? "Fresh produce" : "For sale",
+      price: formatKsh(p.price), unit, was: p.compare_at_price ? formatKsh(p.compare_at_price) : "",
+      place: placeOf(b),
+      note: Number.isFinite(stock) ? (stock <= 0 ? "Out of stock" : stock <= 5 ? `Only ${stock} left` : "In stock") : "",
+    },
+  };
+}
+
+/**
+ * A room type. `t` needs: id, name, images, is_hostel, monthly_price, semester_price.
+ * `building` (name, address) and `available` (rooms free now) are optional extras for the card.
+ */
+export function roomTarget(b, t, { building, available } = {}) {
+  const hostel = Boolean(t.is_hostel);
+  const free = Number.isFinite(Number(available)) ? Number(available) : Number(t.available);
+  const where = [building?.name || t.building?.name || t.building_name, building?.address || t.building_address, b.county].filter(Boolean).join(", ");
+  return {
+    path: sharePath.room(b, t),
+    title: `${t.name} | ${b.name}`,
+    text: message.room(b, { ...t, available: free }),
+    card: {
+      layout: "item", business: b, image: t.images?.[0] || "", title: t.name,
+      badge: hostel ? "Hostel room" : "Room to rent",
+      price: formatKsh(hostel ? t.semester_price : t.monthly_price), unit: hostel ? "semester" : "month", was: "",
+      place: where,
+      note: Number.isFinite(free) ? (free > 0 ? `${free} room${free === 1 ? "" : "s"} available` : "Fully occupied") : "",
+    },
+  };
+}
+
 // ---- channels --------------------------------------------------------------------------------
 // href(url, text, title) returns the address that opens that app's share box.
-// Instagram and TikTok have no web share address; on a phone they appear in the "More apps" sheet,
+// Instagram and TikTok have no web share address; on a phone they appear in the "Share picture" sheet,
 // and "Copy message and link" covers captions and bios.
 export const CHANNELS = [
   { id: "whatsapp", label: "WhatsApp", color: "#25D366", href: (u, t) => `https://wa.me/?text=${enc(`${t} ${u}`)}` },

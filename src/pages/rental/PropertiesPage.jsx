@@ -1,4 +1,4 @@
-// src/pages/rental/PropertiesPage.jsx — MODIFIED FILE (room types)
+// src/pages/rental/PropertiesPage.jsx — MODIFIED FILE (room types; a share prompt after a new room type is saved, and a Share button on each room type)
 //
 // AIM
 // /app/:slug/properties — buildings, room types and rooms. An owner or manager describes a kind of
@@ -13,6 +13,8 @@ import "./RoomTypes.css";
 import { useMemo, useState } from "react";
 import { Alert, Badge, Button, Card, CardBody, EmptyState, Icon, Input, SelectInput, Skeleton, TextArea, Toggle } from "../../components/ui";
 import PhotoUploader from "../../components/ui/PhotoUploader.jsx";
+import ShareMenu from "../../components/share/ShareMenu.jsx";
+import { roomTarget } from "../../lib/share.js";
 import { ConfirmDialog, Modal } from "../../components/modals/Modal.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { useToast } from "../../hooks/useNotifications.js";
@@ -125,7 +127,7 @@ function BuildingModal({ open, onClose, businessId, building, onSaved }) {
   );
 }
 
-function TypeModal({ open, onClose, businessId, type, buildings, defaultBuilding, occupied, held, allTypes, onSaved }) {
+function TypeModal({ open, onClose, businessId, type, buildings, defaultBuilding, occupied, held, allTypes, onSaved, onCreated }) {
   const toast = useToast();
   const blank = {
     building_id: defaultBuilding || buildings[0]?.id || "", is_hostel: false, kind: "single", capacity: 1, monthly_price: "", semester_price: "",
@@ -175,6 +177,7 @@ function TypeModal({ open, onClose, businessId, type, buildings, defaultBuilding
     const { error: roomsErr } = await addRooms(saved.id, { prefix: form.prefix.trim(), from: form.from, to: form.to, pad: form.pad });
     setBusy(false);
     onSaved(); onClose();
+    onCreated?.(saved.id); // the page offers to share the new room type
     if (roomsErr) toast.error(`Room type saved, but its rooms were not added: ${roomsErr}`, 'Use "Add rooms" on the type to try again.');
     else toast.success("Room type added", rangePreview(form).replace("Creates", "Created"));
   }
@@ -289,6 +292,7 @@ export default function PropertiesPage() {
   const [delRoom, setDelRoom] = useState(null);
   const [busy, setBusy] = useState("");
   const [roomError, setRoomError] = useState("");
+  const [shareTypeId, setShareTypeId] = useState(""); // room type whose share dialog is open
 
   const buildings = useMemo(() => data?.buildings || [], [data]);
   const types = useMemo(() => data?.types || [], [data]);
@@ -297,6 +301,7 @@ export default function PropertiesPage() {
   const count = (typeId, s) => rooms.filter((r) => r.room_type_id === typeId && (!s || r.status === s)).length;
   const inBuilding = (id, s) => rooms.filter((r) => r.building_id === id && (!s || r.status === s)).length;
   const openType = types.find((t) => t.id === roomsOf) || null;
+  const shareType = types.find((t) => t.id === shareTypeId) || null;
   const openRooms = useMemo(() => rooms.filter((r) => r.room_type_id === roomsOf).sort(byNumber), [rooms, roomsOf]);
 
   async function toggleMaintenance(room) {
@@ -383,6 +388,7 @@ export default function PropertiesPage() {
                       <div className="rent-actions">
                         <Button size="sm" variant="outline" onClick={() => setTModal({ type: t })}>Edit</Button>
                         <Button size="sm" variant="outline" onClick={() => setAddFor(t)}>Add rooms</Button>
+                        <Button size="sm" variant="outline" onClick={() => setShareTypeId(t.id)}>Share</Button>
                         <Button size="sm" variant="ghost" onClick={() => { setRoomError(""); setRoomsOf(roomsOf === t.id ? "" : t.id); }}>
                           {roomsOf === t.id ? "Hide rooms" : "Show rooms"}
                         </Button>
@@ -430,7 +436,9 @@ export default function PropertiesPage() {
       {bModal && <BuildingModal open key={bModal.building?.id || "new-b"} businessId={bid} building={bModal.building} onClose={() => setBModal(null)} onSaved={reload} />}
       {tModal && <TypeModal open key={tModal.type?.id || "new-t"} businessId={bid} type={tModal.type} buildings={buildings} defaultBuilding={buildingId}
         occupied={tModal.type ? count(tModal.type.id, "occupied") : 0}
-        held={tModal.type ? count(tModal.type.id, "occupied") + count(tModal.type.id, "reserved") : 0} allTypes={types} onClose={() => setTModal(null)} onSaved={reload} />}
+        held={tModal.type ? count(tModal.type.id, "occupied") + count(tModal.type.id, "reserved") : 0} allTypes={types} onClose={() => setTModal(null)} onSaved={reload} onCreated={(id) => setTimeout(() => setShareTypeId(id), 300)} />}
+      {shareType && <ShareMenu open onClose={() => setShareTypeId("")}
+        target={roomTarget(business, shareType, { building: buildings.find((x) => x.id === shareType.building_id), available: count(shareType.id, "available") })} />}
       {addFor && <AddRoomsModal open key={addFor.id} type={addFor} onClose={() => setAddFor(null)} onSaved={reload} />}
       <ConfirmDialog isOpen={Boolean(delRoom)} title={`Delete room ${delRoom?.room_number || ""}?`}
         message="This cannot be undone. A room that has had residents cannot be deleted; put it under maintenance instead."

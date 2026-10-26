@@ -1,9 +1,13 @@
-// src/pages/shared/MarketingPage.jsx — NEW FILE
+// src/pages/shared/MarketingPage.jsx — MODIFIED FILE (the business share is a card: cover, logo beside the name, details)
 //
 // AIM
-// /app/:slug/share — "Share and promote". The owner or a manager shares the business, or one room type,
-// product or item of produce, to WhatsApp, Facebook, X, Telegram, LinkedIn, SMS, email or the phone's own
-// share sheet. One screen serves rentals (room types), shops (products) and farms (produce).
+// /app/:slug/share — "Share and promote". The owner or a manager shares the business, or any room type,
+// product or item of produce that is already listed. The same share dialog is also offered right after an
+// item is listed (Products, Produce for sale, Properties), so this page is the one place to find everything again.
+//   - the business: a card with its cover photo, its logo to the left of its name, and its details;
+//     the link opens the business page.
+//   - each item: a card with its photo, name, price and place, then the business logo and name;
+//     the link opens that item's page.
 // Only what shoppers can really see is listed (live business, On sale products), because that is
 // all a shared link can open. Until the business is approved there is nothing to share yet.
 
@@ -17,7 +21,7 @@ import { getBusinessBySlug } from "../../lib/api/directory.js";
 import { listRoomTypesPublic } from "../../lib/api/rental.js";
 import { listShopProducts } from "../../lib/api/storefront.js";
 import { formatKsh } from "../../lib/format.js";
-import { message, sharePath } from "../../lib/share.js";
+import { businessTarget, productTarget, roomTarget } from "../../lib/share.js";
 import { Loading, LoadError, PageHead } from "../shop/shared.jsx";
 
 const SECTION = {
@@ -33,7 +37,7 @@ function toItems(b, type, rows) {
       return {
         id: x.id, name: x.name, image: x.images?.[0],
         meta: `${formatKsh(hostel ? x.semester_price : x.monthly_price)} / ${hostel ? "semester" : "month"} · ${Number(x.available) || 0} available`,
-        path: sharePath.room(b, x), title: `${x.name} | ${b.name}`, text: message.room(b, x),
+        target: roomTarget(b, x),
       };
     }
     const farm = type === "agriculture";
@@ -41,7 +45,7 @@ function toItems(b, type, rows) {
     return {
       id: x.id, name: x.name, image: x.images?.[0],
       meta: `${formatKsh(x.price)}${unit}${x.stock <= 0 ? " · out of stock" : ""}`,
-      path: farm ? sharePath.produce(b, x) : sharePath.product(b, x), title: `${x.name} | ${b.name}`, text: message.product(b, x, farm),
+      target: productTarget(b, x, { farm }),
     };
   });
 }
@@ -80,15 +84,15 @@ export default function MarketingPage() {
   return (
     <div className="shop">
       <PageHead title="Share and promote"
-        lead="Share your business, or one room, product or item of produce, on WhatsApp, Facebook, X, Telegram and more. People who open the link land straight on the right page." />
+        lead="Share your business, or any room, product or item of produce, as a picture card on WhatsApp, Facebook, X, Telegram, Instagram and more. Tapping the link opens the right page." />
 
       {!b ? (
         <Alert type="info" title="Not live yet" message="Sharing opens as soon as your business is approved, because a shared link only works for a live business." />
       ) : (
         <>
           <Card>
-            <Row image={b.cover_url || b.logo_url} name={b.name} meta="Your business page">
-              <ShareMenu path={sharePath.business(b)} title={b.name} text={message.business(b)} label="Share my business" size="md" variant="primary" />
+            <Row image={b.cover_url || b.logo_url} name={b.name} meta="Your business: cover, logo and details">
+              <ShareMenu target={businessTarget(b)} label="Share my business" size="md" variant="primary" />
             </Row>
           </Card>
 
@@ -100,7 +104,7 @@ export default function MarketingPage() {
               <div className="share-list">
                 {items.map((it) => (
                   <Row key={it.id} image={it.image} name={it.name} meta={it.meta}>
-                    <ShareMenu path={it.path} title={it.title} text={it.text} />
+                    <ShareMenu target={it.target} />
                   </Row>
                 ))}
               </div>

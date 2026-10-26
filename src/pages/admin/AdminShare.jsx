@@ -34,7 +34,7 @@ export default function AdminShare() {
                   <div className="share-row__meta">{p.meta}</div>
                   <div className="share-row__meta">{shareLink(sharePath.page(p.key))}</div>
                 </div>
-                <ShareMenu path={sharePath.page(p.key)} title={`${p.title} | ${brand.name}`} text={p.text}
+                <ShareMenu target={{ path: sharePath.page(p.key), title: `${p.title} | ${brand.name}`, text: p.text }}
                   label={p.key === "home" ? "Share the site" : "Share"} variant={p.key === "home" ? "primary" : "outline"} size={p.key === "home" ? "md" : "sm"} />
               </div>
             ))}
