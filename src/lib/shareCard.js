@@ -11,8 +11,8 @@
 //                         changes, so a saved preview is never out of date.
 //
 // THE DESIGN (the same in both shapes; portrait stacks it, landscape puts the photo on the left)
-//   business   cover photo | LOGO beside the NAME, type and place | description | location, phone
-//   item       item photo  | name | price tag | place | note | LOGO beside the business NAME
+//   business   cover photo on top | LOGO beside the NAME, type | location, phone, description
+//   item       item photo on top | name, price tag, place, note | LOGO beside the business NAME
 //   site       hero photo  | LOGO beside the brand NAME | tagline | three facts (from the system)
 //
 // `card` is built by lib/share.js. The logo is the business's uploaded logo or the logo drawn from its
@@ -25,10 +25,9 @@ import markUrl from "../assets/bizkenia-mark.png";
 
 export { safeFileName };
 
-const DESIGN_VERSION = "c2"; // change this to redraw every saved preview
+const DESIGN_VERSION = "c3"; // change this to redraw every saved preview
 const PW = 1080, PH = 1350, PAD = 48;      // poster
-const LW = 1200, LH = 630, LFOOT = 56;      // link preview
-const SPLIT = 540;                          // width of the photo in the preview
+const LW = 1200, LH = 630, LFOOT = 52;      // link preview
 const CONTENT_H = LH - LFOOT;
 const GREEN = "#16A34A";
 const GREEN_DARK = "#166534";
@@ -231,7 +230,7 @@ function factRow(ctx, label, value, x, y, { labelSize, valueSize, labelW, maxW }
 function posterFooter(ctx, host) {
   ctx.fillStyle = GREEN;
   ctx.fillRect(0, PH - 80, PW, 80);
-  text(ctx, `Tap the link to view  ·  ${host}`, PW / 2, PH - 28, { size: 30, weight: 600, color: "#fff", align: "center" });
+  text(ctx, host, PW / 2, PH - 28, { size: 30, weight: 600, color: "#fff", align: "center" });
 }
 
 function posterBusiness(ctx, c, { image, logo, host }) {
@@ -332,105 +331,107 @@ function posterSite(ctx, c, { image, logo, host }) {
   posterFooter(ctx, host);
 }
 
-// ---- the link preview (landscape) -----------------------------------------------------------------
+// ---- the link preview (landscape): the photo on top, the details below it --------------------------
+const PHOTO_H = 300;                        // height of the photo band at the top of the preview
+const LPAD = 40;
+
 function previewFooter(ctx, host) {
   ctx.fillStyle = GREEN;
   ctx.fillRect(0, LH - LFOOT, LW, LFOOT);
-  text(ctx, `Tap the link to view  ·  ${host}`, LW / 2, LH - 19, { size: 24, weight: 600, color: "#fff", align: "center" });
-}
-
-/** The logo beside the name (and the line under it), used by the business and the site previews. */
-function identity(ctx, c, logo, x, y, size, fit) {
-  logoBox(ctx, logo, nameOf(c), x, y, size, fit);
-  const tx = x + size + 24;
-  const nameLines = lines(ctx, nameOf(c), { size: 40, weight: 700, width: LW - 44 - tx, max: 2 });
-  const sub = subOf(c);
-  const block = nameLines.length * 46 + (sub ? 32 : 0);
-  let ty = y + (size - block) / 2 + 36;
-  nameLines.forEach((l) => { text(ctx, l, tx, ty, { size: 40, weight: 700 }); ty += 46; });
-  if (sub) text(ctx, sub, tx, ty - 8, { size: 24, color: MUTED });
+  text(ctx, host, LW / 2, LH - 16, { size: 26, weight: 600, color: "#fff", align: "center" });
 }
 
 function previewBusiness(ctx, c, { image, logo, host }) {
   const b = c.business;
-  photo(ctx, image, b.name, 0, 0, SPLIT, CONTENT_H);
+  photo(ctx, image, b.name, 0, 0, LW, PHOTO_H);
   pill(ctx, typeCaption(b.business_type), 28, 28, 24);
-  const x = SPLIT + 44;
-  identity(ctx, c, logo, x, 40, 104, "cover");
-  ctx.fillStyle = "#E5E7EB";
-  ctx.fillRect(x, 168, LW - x - 44, 2);
-  let dy = 216;
-  lines(ctx, c.description || b.description || "", { size: 26, width: LW - x - 44, max: 4 }).forEach((l) => { text(ctx, l, x, dy, { size: 26, color: "#374151" }); dy += 38; });
-  let ry = CONTENT_H - 96;
+  const top = PHOTO_H + 24, colW = 640;
+  logoBox(ctx, logo, b.name, LPAD, top, 96, "cover");
+  const tx = LPAD + 96 + 22;
+  const nameLines = lines(ctx, b.name, { size: 38, weight: 700, width: colW - 96 - 22, max: 2 });
+  const sub = typeLine(b);
+  let ty = top + (96 - (nameLines.length * 44 + (sub ? 30 : 0))) / 2 + 34;
+  nameLines.forEach((l) => { text(ctx, l, tx, ty, { size: 38, weight: 700 }); ty += 44; });
+  if (sub) text(ctx, sub, tx, ty - 8, { size: 24, color: MUTED });
+
+  const rx = LPAD + colW + 40, rw = LW - rx - LPAD;
+  let ry = top + 22;
   [["LOCATION", place(b) || "Kenya"], ["CALL", b.phone || ""]].filter((r) => r[1]).forEach(([k, v]) => {
-    factRow(ctx, k, v, x, ry, { labelSize: 20, valueSize: 26, labelW: 140, maxW: LW - x - 44 });
-    ry += 44;
+    text(ctx, k, rx, ry, { size: 20, weight: 700, color: GREEN_DARK });
+    lines(ctx, v, { size: 28, weight: 600, width: rw, max: k === "LOCATION" ? 2 : 1 }).forEach((l) => { ry += 34; text(ctx, l, rx, ry, { size: 28, weight: 600 }); });
+    ry += 34;
   });
+
+  let dy = top + 96 + 70;
+  lines(ctx, c.description || b.description || "", { size: 24, width: LW - LPAD * 2, max: 2 }).forEach((l) => { text(ctx, l, LPAD, dy, { size: 24, color: "#374151" }); dy += 32; });
   previewFooter(ctx, host);
 }
 
 function previewItem(ctx, c, { image, logo, host }) {
   const b = c.business;
-  photo(ctx, image, c.title, 0, 0, SPLIT, CONTENT_H);
+  photo(ctx, image, c.title, 0, 0, LW, PHOTO_H);
   if (c.badge) pill(ctx, c.badge, 28, 28, 24);
-  const x = SPLIT + 44, w = LW - x - 44;
+  const top = PHOTO_H + 22;
 
-  const nameLines = lines(ctx, c.title, { size: 44, weight: 700, width: w, max: 2 });
-  let y = 88;
-  nameLines.forEach((l) => { text(ctx, l, x, y, { size: 44, weight: 700 }); y += 52; });
-
-  const tagY = y - 52 + 28;
-  ctx.font = `700 44px ${FONT}`;
+  // price tag on the right
+  ctx.font = `700 38px ${FONT}`;
   const priceW = ctx.measureText(c.price).width;
-  ctx.font = `500 26px ${FONT}`;
+  ctx.font = `500 24px ${FONT}`;
   const unitW = c.unit ? ctx.measureText(` / ${c.unit}`).width : 0;
-  const tagW = Math.ceil(priceW + unitW) + 44;
+  const tagW = Math.ceil(priceW + unitW) + 40;
+  const tagX = LW - LPAD - tagW;
   ctx.fillStyle = GREEN;
-  roundPath(ctx, x, tagY, tagW, 74, 18);
+  roundPath(ctx, tagX, top, tagW, 62, 16);
   ctx.fill();
-  text(ctx, c.price, x + 22, tagY + 52, { size: 44, weight: 700, color: "#fff" });
-  if (c.unit) text(ctx, ` / ${c.unit}`, x + 22 + priceW, tagY + 52, { size: 26, weight: 500, color: "rgba(255,255,255,0.92)" });
-  if (c.was && x + tagW + 20 + 150 < LW) {
-    const wx = x + tagW + 20;
-    text(ctx, c.was, wx, tagY + 50, { size: 28, weight: 500, color: "#9CA3AF" });
-    ctx.font = `500 28px ${FONT}`;
-    ctx.fillStyle = "#9CA3AF";
-    ctx.fillRect(wx, tagY + 38, ctx.measureText(c.was).width, 2);
-  }
+  text(ctx, c.price, tagX + 20, top + 43, { size: 38, weight: 700, color: "#fff" });
+  if (c.unit) text(ctx, ` / ${c.unit}`, tagX + 20 + priceW, top + 43, { size: 24, weight: 500, color: "rgba(255,255,255,0.92)" });
 
-  let ly = tagY + 74 + 50;
+  // name on the left
+  const [name] = lines(ctx, c.title, { size: 40, weight: 700, width: tagX - LPAD - 24, max: 1 });
+  text(ctx, name, LPAD, top + 44, { size: 40, weight: 700 });
+
+  // place and note
+  const ly = top + 62 + 40;
+  let lx = LPAD;
   if (c.place) {
-    pin(ctx, x, ly, GREEN, 0.85);
-    const [one] = lines(ctx, c.place, { size: 28, weight: 500, width: w - 40, max: 1 });
-    text(ctx, one, x + 40, ly, { size: 28, weight: 500, color: MUTED });
-    ly += 44;
+    pin(ctx, lx, ly, GREEN, 0.8);
+    const [one] = lines(ctx, c.place, { size: 26, weight: 500, width: c.note ? 640 : LW - LPAD * 2 - 40, max: 1 });
+    text(ctx, one, lx + 38, ly, { size: 26, weight: 500, color: MUTED });
+    ctx.font = `500 26px ${FONT}`;
+    lx += 38 + ctx.measureText(one).width + 36;
   }
-  if (c.note) text(ctx, c.note, x, ly, { size: 28, weight: 700, color: GREEN_DARK });
+  if (c.note) text(ctx, c.note, lx, ly, { size: 26, weight: 700, color: GREEN_DARK });
 
+  // the business: logo, then name
+  const dyv = ly + 24;
   ctx.fillStyle = "#E5E7EB";
-  ctx.fillRect(x, CONTENT_H - 134, w, 2);
-  logoBox(ctx, logo, b.name, x, CONTENT_H - 112, 88);
-  const tx = x + 88 + 22;
-  const [name] = lines(ctx, b.name, { size: 34, weight: 700, width: LW - tx - 44, max: 1 });
-  text(ctx, name, tx, CONTENT_H - 112 + 38, { size: 34, weight: 700 });
-  text(ctx, typeLine(b), tx, CONTENT_H - 112 + 72, { size: 24, color: MUTED });
+  ctx.fillRect(LPAD, dyv, LW - LPAD * 2, 2);
+  const by = dyv + 18;
+  logoBox(ctx, logo, b.name, LPAD, by, 72);
+  const tx = LPAD + 72 + 20;
+  const [bn] = lines(ctx, b.name, { size: 32, weight: 700, width: LW - tx - LPAD, max: 1 });
+  text(ctx, bn, tx, by + 32, { size: 32, weight: 700 });
+  text(ctx, typeLine(b), tx, by + 62, { size: 22, color: MUTED });
   previewFooter(ctx, host);
 }
 
 function previewSite(ctx, c, { image, logo, host }) {
-  photo(ctx, image, c.brandName, 0, 0, SPLIT, CONTENT_H);
+  photo(ctx, image, c.brandName, 0, 0, LW, PHOTO_H);
   if (c.badge) pill(ctx, c.badge, 28, 28, 24);
-  const x = SPLIT + 44, w = LW - x - 44;
-  identity(ctx, c, logo, x, 40, 104, "contain");
-  let ty = 206;
-  lines(ctx, c.tagline || "", { size: 28, width: w, max: 3 }).forEach((l) => { text(ctx, l, x, ty, { size: 28, color: "#374151" }); ty += 40; });
+  const top = PHOTO_H + 22;
+  logoBox(ctx, logo, c.brandName, LPAD, top, 88, "contain");
+  const tx = LPAD + 88 + 22;
+  text(ctx, c.brandName, tx, top + 40, { size: 40, weight: 700 });
+  const [tag] = lines(ctx, c.tagline || "", { size: 26, width: LW - tx - LPAD, max: 1 });
+  text(ctx, tag || "", tx, top + 78, { size: 26, color: "#374151" });
   ctx.fillStyle = "#E5E7EB";
-  ctx.fillRect(x, 330, w, 2);
-  (c.facts || []).slice(0, 3).forEach(([k, v], i) => {
-    const ly = 376 + i * 66;
-    text(ctx, k, x, ly, { size: 20, weight: 700, color: GREEN_DARK });
-    const [one] = lines(ctx, v, { size: 32, weight: 600, width: w, max: 1 });
-    text(ctx, one || "", x, ly + 34, { size: 32, weight: 600 });
+  ctx.fillRect(LPAD, top + 108, LW - LPAD * 2, 2);
+  const facts = (c.facts || []).slice(0, 3), cw = (LW - LPAD * 2) / Math.max(facts.length, 1);
+  facts.forEach(([k, v], i) => {
+    const fx = LPAD + i * cw;
+    text(ctx, k, fx, top + 150, { size: 20, weight: 700, color: GREEN_DARK });
+    const [one] = lines(ctx, v, { size: 32, weight: 600, width: cw - 20, max: 1 });
+    text(ctx, one || "", fx, top + 188, { size: 32, weight: 600 });
   });
   previewFooter(ctx, host);
 }

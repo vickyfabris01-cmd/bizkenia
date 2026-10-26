@@ -75,9 +75,9 @@ async function buildCard(m, env) {
     const sc = await storedCard(env, "site", null, m.key);
     return { brand, title: p.title ? `${p.title} | ${brand.name}` : brand.name, desc: p.desc || `${brand.tagline}. Rentals, shops and farms across Kenya.`, image: sc?.url || "", wide: Boolean(sc) };
   }
-  const [b] = (await supabase(env, `businesses?select=id,name,business_type,description,county,logo_url,cover_url&status=eq.active&slug=eq.${encodeURIComponent(m.slug)}&limit=1`)) || [];
+  const [b] = (await supabase(env, `businesses?select=id,name,business_type,description,county,address,logo_url,cover_url&status=eq.active&slug=eq.${encodeURIComponent(m.slug)}&limit=1`)) || [];
   if (!b) return null;
-  const where = b.county || "Kenya";
+  const where = [b.address, b.county].filter(Boolean).join(", ") || "Kenya";
   const fallbackImage = b.cover_url || b.logo_url || "";
 
   if (m.kind === "business") {
