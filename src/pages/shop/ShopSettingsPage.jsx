@@ -78,7 +78,9 @@ export default function ShopSettingsPage() {
 
   return (
     <div className="shop">
-      <PageHead title="Settings" lead="How you deliver, how customers pay, and how your shop looks." />
+      <PageHead title="Settings" lead="How you deliver, how customers pay, and how your shop looks.">
+        <Button as={Link} to={`/app/${business.slug}/share?open=business`} variant="outline">Share this business</Button>
+      </PageHead>
       <div className="shop-grid shop-grid--2">
         <Card>
           <CardHeader title="Delivery and payment" subtitle="Applied to every order at checkout" />

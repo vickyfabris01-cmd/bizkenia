@@ -1,4 +1,4 @@
-// src/pages/admin/AdminSettings.jsx — MODIFIED (step 2: the "Business types" switch is removed; only a single business can be locked. Phase 5 step 3: adds the Maintenance mode and Default commission cards. Step 5: the free-form price table is replaced by the fixed plan grid)
+// src/pages/admin/AdminSettings.jsx — MODIFIED (a "Share the site" button leads to /admin/share; step 2: the "Business types" switch is removed; only a single business can be locked. Phase 5 step 3: adds the Maintenance mode and Default commission cards. Step 5: the free-form price table is replaced by the fixed plan grid)
 //
 // AIM
 // Platform settings, one card per topic, each saved on its own:
@@ -13,6 +13,7 @@
 
 import "./Admin.css";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Alert, Button, Card, CardBody, CardHeader, Input, SelectInput, Skeleton, Toggle } from "../../components/ui";
 import HeroImagesCard from "./HeroImagesCard.jsx";
 import PlanPricesCard from "./PlanPricesCard.jsx";
@@ -62,7 +63,10 @@ export default function AdminSettings() {
 
   return (
     <div className="adm">
-      <h2 className="adm__title">Settings</h2>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-3)", flexWrap: "wrap" }}>
+        <h2 className="adm__title" style={{ margin: 0 }}>Settings</h2>
+        <Button as={Link} to="/admin/share?open=home" variant="outline">Share the site</Button>
+      </div>
       {error && <Alert type="error" message={error} />}
 
       <Card>

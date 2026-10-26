@@ -1,10 +1,11 @@
-// src/lib/share.js — MODIFIED FILE (share targets: a business, a product, a piece of produce or a room type)
+// src/lib/share.js — MODIFIED FILE (share targets: a business, a product, produce, a room type, or the site; links carry a card version)
 //
 // AIM
 // Everything the "Share" feature needs that is not a screen: the link people actually share, the
 // ready-made message, the list of social channels, and the "target" of a share. A target says WHAT is
 // shared: its page, its message, and the card picture drawn from it (see lib/shareCard.js).
 //
+//   siteTarget(page, data)         the main site, Explore or Pricing, from brand, hero photo and live counts
 //   businessTarget(b)              the business: cover, logo beside the name, details
 //   productTarget(b, p, {farm})    a shop product or farm produce: photo, name, price, place, then logo and business
 //   roomTarget(b, t, {...})        a room type: photo, name, rent, place, then logo and business
@@ -29,10 +30,17 @@ export const sharePath = {
   room: (b, t) => `/b/${b.slug}/room/${t.id}`,
 };
 
-/** The address to share. `channel` is added as utm_source so owners can see where visitors came from. */
-export function shareLink(path, channel) {
-  const q = channel ? `?utm_source=${enc(channel)}&utm_medium=social` : "";
-  return `${siteUrl()}/share${path}${q}`;
+/**
+ * The address to share. `v` is the version of the saved link card: a new card gives a new address, so
+ * WhatsApp and Facebook (which remember a link's preview) show the new card. `channel` is added as
+ * utm_source so owners can see where visitors came from.
+ */
+export function shareLink(path, channel, v) {
+  const q = new URLSearchParams();
+  if (v) q.set("v", v);
+  if (channel) { q.set("utm_source", channel); q.set("utm_medium", "social"); }
+  const s = q.toString();
+  return `${siteUrl()}/share${path}${s ? `?${s}` : ""}`;
 }
 
 export const siteHost = () => siteUrl().replace(/^https?:\/\//, "");
@@ -63,6 +71,7 @@ const placeOf = (b) => [b.address, b.county].filter(Boolean).join(", ");
 /** The business itself. `b` needs: id, slug, name, business_type, description, county, address, phone, whatsapp, logo_url, logo_design, cover_url. */
 export function businessTarget(b) {
   return {
+    ref: { kind: "business", id: b.id, businessId: b.id },
     path: sharePath.business(b),
     title: b.name,
     text: message.business(b),
@@ -75,6 +84,7 @@ export function productTarget(b, p, { farm = false } = {}) {
   const unit = p.unit && p.unit !== "item" ? p.unit : "";
   const stock = Number(p.stock);
   return {
+    ref: { kind: "product", id: p.id, businessId: b.id },
     path: farm ? sharePath.produce(b, p) : sharePath.product(b, p),
     title: `${p.name} | ${b.name}`,
     text: message.product(b, p, farm),
@@ -97,6 +107,7 @@ export function roomTarget(b, t, { building, available } = {}) {
   const free = Number.isFinite(Number(available)) ? Number(available) : Number(t.available);
   const where = [building?.name || t.building?.name || t.building_name, building?.address || t.building_address, b.county].filter(Boolean).join(", ");
   return {
+    ref: { kind: "room", id: t.id, businessId: b.id },
     path: sharePath.room(b, t),
     title: `${t.name} | ${b.name}`,
     text: message.room(b, { ...t, available: free }),
@@ -110,10 +121,33 @@ export function roomTarget(b, t, { building, available } = {}) {
   };
 }
 
+/**
+ * One of the three site pages. `data` is what the system knows (see lib/api/siteShare.js):
+ * { brand: { name, tagline }, hero: photo address, counts: { total, rental, shop, agriculture }, plans: [{ type, price }] }.
+ */
+export function siteTarget(page, { brand, hero = "", counts = {}, plans = [] }) {
+  const TYPE = { rental: "Rentals", shop: "Shops", agriculture: "Farms" };
+  const mix = `${counts.rental ?? 0} rentals · ${counts.shop ?? 0} shops · ${counts.agriculture ?? 0} farms`;
+  const facts = {
+    home: [["ACTIVE BUSINESSES", String(counts.total ?? 0)], ["ON THE PLATFORM", mix], ["PAY WITH", "M-Pesa"]],
+    explore: [["BUSINESSES TO EXPLORE", String(counts.total ?? 0)], ["WHAT YOU WILL FIND", mix], ["PAY WITH", "M-Pesa"]],
+    pricing: plans.length
+      ? plans.slice(0, 3).map((p) => [`${(TYPE[p.type] || p.type).toUpperCase()} PLAN`, `from ${formatKsh(p.price)} a month`])
+      : [["PLANS", "Rentals, shops and farms"]],
+  }[page];
+  const badge = { home: "Main site", explore: "Explore", pricing: "Plans and pricing" }[page];
+  return {
+    ref: { kind: "site", key: page },
+    path: sharePath.page(page),
+    title: page === "home" ? brand.name : `${badge} | ${brand.name}`,
+    text: message[page](brand),
+    card: { layout: "site", brandName: brand.name, tagline: brand.tagline || "", image: hero, badge, title: brand.name, facts },
+  };
+}
+
 // ---- channels --------------------------------------------------------------------------------
 // href(url, text, title) returns the address that opens that app's share box.
-// Instagram and TikTok have no web share address; on a phone they appear in the "Share picture" sheet,
-// and "Copy message and link" covers captions and bios.
+// Instagram and TikTok have no web share address: use "Share as poster" for them.
 export const CHANNELS = [
   { id: "whatsapp", label: "WhatsApp", color: "#25D366", href: (u, t) => `https://wa.me/?text=${enc(`${t} ${u}`)}` },
   { id: "facebook", label: "Facebook", color: "#1877F2", href: (u) => `https://www.facebook.com/sharer/sharer.php?u=${enc(u)}` },
@@ -123,8 +157,6 @@ export const CHANNELS = [
   { id: "sms", label: "SMS", color: "#16A34A", href: (u, t) => `sms:?&body=${enc(`${t} ${u}`)}` },
   { id: "email", label: "Email", color: "#6B7280", href: (u, t, title) => `mailto:?subject=${enc(title || "")}&body=${enc(`${t}\n\n${u}`)}` },
 ];
-
-export const canNativeShare = () => typeof navigator !== "undefined" && typeof navigator.share === "function";
 
 export async function copyText(text) {
   try {

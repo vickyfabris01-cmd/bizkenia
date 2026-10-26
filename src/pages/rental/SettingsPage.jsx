@@ -79,7 +79,9 @@ export default function SettingsPage() {
 
   return (
     <div className="rent">
-      <PageHead title="Settings" lead="How you bill and how residents pay you." />
+      <PageHead title="Settings" lead="How you bill and how residents pay you.">
+        <Button as={Link} to={`/app/${business.slug}/share?open=business`} variant="outline">Share this business</Button>
+      </PageHead>
       {error && <Alert type="error" message={error} />}
       {loading ? <Skeleton height={260} /> : (
         <div className="rent-grid2">

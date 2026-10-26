@@ -1,19 +1,18 @@
-// src/pages/shared/MarketingPage.jsx — MODIFIED FILE (the business share is a card: cover, logo beside the name, details)
+// src/pages/shared/MarketingPage.jsx — MODIFIED FILE (one simple list; every Share button in the app opens this page)
 //
 // AIM
 // /app/:slug/share — "Share and promote". The owner or a manager shares the business, or any room type,
-// product or item of produce that is already listed. The same share dialog is also offered right after an
-// item is listed (Products, Produce for sale, Properties), so this page is the one place to find everything again.
-//   - the business: a card with its cover photo, its logo to the left of its name, and its details;
-//     the link opens the business page.
-//   - each item: a card with its photo, name, price and place, then the business logo and name;
-//     the link opens that item's page.
+// product or item of produce that is already listed. This is the ONE place where sharing happens: the
+// Share buttons on the dashboard, the settings page and the product, produce and room screens all lead
+// here, with ?open=business or ?open=<item id> to open that thing's dialog straight away.
+// The dialog (components/share/ShareMenu.jsx) shares it as a link or as a poster.
 // Only what shoppers can really see is listed (live business, On sale products), because that is
 // all a shared link can open. Until the business is approved there is nothing to share yet.
 
 import "../shop/Shop.css";
 import "../../components/share/ShareMenu.css";
-import { Alert, Card, EmptyState } from "../../components/ui";
+import { useSearchParams } from "react-router-dom";
+import { Alert, Button, Card, EmptyState } from "../../components/ui";
 import ShareMenu from "../../components/share/ShareMenu.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { useBusinessContext } from "../../router/BusinessContext.jsx";
@@ -67,6 +66,8 @@ function Row({ image, name, meta, children }) {
 
 export default function MarketingPage() {
   const { business } = useBusinessContext();
+  const [params, setParams] = useSearchParams();
+  const openId = params.get("open") || "";
   const live = useAsync(() => getBusinessBySlug(business.slug), [business.slug]);
   const b = live.data;
   const type = b?.business_type || business.business_type;
@@ -80,19 +81,23 @@ export default function MarketingPage() {
 
   const section = SECTION[type] || SECTION.shop;
   const items = b ? toItems(b, type, listing.data) : [];
+  const own = b ? businessTarget(b) : null;
+  const active = openId === "business" ? own : items.find((it) => it.id === openId)?.target || null;
+  const openIt = (id) => setParams({ open: id });
+  const closeIt = () => setParams({}, { replace: true });
 
   return (
     <div className="shop">
       <PageHead title="Share and promote"
-        lead="Share your business, or any room, product or item of produce, as a picture card on WhatsApp, Facebook, X, Telegram, Instagram and more. Tapping the link opens the right page." />
+        lead="Share your business, or anything you have listed, as a link or as a poster." />
 
       {!b ? (
         <Alert type="info" title="Not live yet" message="Sharing opens as soon as your business is approved, because a shared link only works for a live business." />
       ) : (
         <>
           <Card>
-            <Row image={b.cover_url || b.logo_url} name={b.name} meta="Your business: cover, logo and details">
-              <ShareMenu target={businessTarget(b)} label="Share my business" size="md" variant="primary" />
+            <Row image={b.cover_url || b.logo_url} name={b.name} meta="Your business page">
+              <Button onClick={() => openIt("business")}>Share</Button>
             </Row>
           </Card>
 
@@ -104,13 +109,15 @@ export default function MarketingPage() {
               <div className="share-list">
                 {items.map((it) => (
                   <Row key={it.id} image={it.image} name={it.name} meta={it.meta}>
-                    <ShareMenu target={it.target} />
+                    <Button variant="outline" onClick={() => openIt(it.id)}>Share</Button>
                   </Row>
                 ))}
               </div>
             )}
         </>
       )}
+
+      {active && <ShareMenu open target={active} onClose={closeIt} />}
     </div>
   );
 }

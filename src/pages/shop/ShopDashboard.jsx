@@ -1,4 +1,4 @@
-// src/pages/shop/ShopDashboard.jsx — NEW FILE (Phase 5)
+// src/pages/shop/ShopDashboard.jsx — MODIFIED (a "Products on sale" card with Share buttons)
 //
 // AIM
 // /app/:slug — the shop owner's home: new orders waiting, sales in the last 30 days, products on
@@ -8,6 +8,7 @@
 import "./Shop.css";
 import { Link } from "react-router-dom";
 import { Button, Card, CardBody, CardHeader, EmptyState } from "../../components/ui";
+import ShareShelf from "../../components/share/ShareShelf.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { getShopOverview } from "../../lib/api/shop.js";
 import { formatDateTime } from "../../lib/format.js";
@@ -30,6 +31,8 @@ export default function ShopDashboard() {
         <Stat label="Products on sale" value={d.activeProducts} to={`${base}/products`} />
         <Stat label="Low or out of stock" value={d.lowStock} to={`${base}/inventory`} tone={d.lowStock ? "bad" : undefined} />
       </div>
+
+      <ShareShelf />
 
       {!d.anyProducts && (
         <Card>

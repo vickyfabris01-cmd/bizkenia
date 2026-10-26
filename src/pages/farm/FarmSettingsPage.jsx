@@ -31,6 +31,7 @@ export default function FarmSettingsPage() {
     <div className="farm">
       <PageHead title="Farm settings and profile" lead="How your farm appears on the platform">
         <Button as={Link} to={`/start/details?business=${business.slug}`} variant="outline">Edit farm details</Button>
+        <Button as={Link} to={`/app/${business.slug}/share?open=business`} variant="outline">Share this business</Button>
       </PageHead>
 
       <div className="farm-grid farm-grid--2">

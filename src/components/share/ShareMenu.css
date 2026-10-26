@@ -1,13 +1,15 @@
 /* src/components/share/ShareMenu.css — NEW FILE: the share dialog and the "Share and promote" lists */
 
-.share-body { display: grid; gap: var(--space-4); }
-@media (min-width: 720px) { .share-body--card { grid-template-columns: minmax(0, 300px) minmax(0, 1fr); align-items: start; } }
-
-/* the drawn card (1080 x 1350) */
-.share-preview { border: 1px solid var(--color-border, #d1d5db); border-radius: var(--radius-md); overflow: hidden; background: var(--color-primary-soft); aspect-ratio: 4 / 5; display: grid; place-items: center; }
+/* the two tabs and the pictures */
+.share-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-bottom: var(--space-4); border-radius: var(--radius-md); background: var(--color-primary-soft); }
+.share-tab { min-height: 44px; border: 0; border-radius: var(--radius-sm, 8px); background: transparent; color: var(--color-text); font: inherit; font-weight: 600; cursor: pointer; }
+.share-tab.is-on { background: var(--color-surface, #fff); box-shadow: 0 1px 3px rgba(0,0,0,.15); color: var(--color-on-primary-soft); }
+.share-pane { display: grid; gap: var(--space-4); }
+.share-preview { border: 1px solid var(--color-border, #d1d5db); border-radius: var(--radius-md); overflow: hidden; background: var(--color-primary-soft); display: grid; place-items: center; width: 100%; }
+.share-preview--wide { aspect-ratio: 1200 / 630; }
+.share-preview--tall { aspect-ratio: 4 / 5; max-width: 340px; margin-inline: auto; }
 .share-preview img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .share-preview__wait { display: grid; place-items: center; }
-.share-side { display: grid; gap: var(--space-4); min-width: 0; }
 .share-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .share-actions > * { flex: 1 1 150px; }
 
@@ -20,14 +22,9 @@
   text-decoration: none; cursor: pointer;
 }
 .share-ch:hover { background: var(--color-primary-soft); }
+.share-ch.is-disabled { opacity: .5; cursor: default; pointer-events: none; }
 .share-ch__dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--dot, currentColor); }
 
-.share-link { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
-.share-link code {
-  flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere;
-  padding: var(--space-2) var(--space-3); border-radius: var(--radius-md);
-  background: var(--color-primary-soft); color: var(--color-text); font-size: var(--text-sm);
-}
 .share-hint { margin: 0; font-size: var(--text-sm); color: var(--color-text-muted); }
 
 /* "Share and promote" page */

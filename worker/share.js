@@ -62,11 +62,18 @@ async function getBrand(env) {
   return { name: v.name || "BizKenia", tagline: v.tagline || "Manage and grow your business" };
 }
 
+/** The ready-made link card saved by the share dialog (see supabase/migrations/20261026100001_share_cards.sql) */
+async function storedCard(env, kind, id, key) {
+  const c = await supabase(env, "rpc/get_share_card", { p_kind: kind, p_id: id || null, p_key: key || null });
+  return c && typeof c.url === "string" && c.url ? c : null;
+}
+
 async function buildCard(m, env) {
   const brand = await getBrand(env);
   if (m.kind === "page") {
     const p = PAGES[m.key];
-    return { brand, title: p.title ? `${p.title} | ${brand.name}` : brand.name, desc: p.desc || `${brand.tagline}. Rentals, shops and farms across Kenya.`, image: "" };
+    const sc = await storedCard(env, "site", null, m.key);
+    return { brand, title: p.title ? `${p.title} | ${brand.name}` : brand.name, desc: p.desc || `${brand.tagline}. Rentals, shops and farms across Kenya.`, image: sc?.url || "", wide: Boolean(sc) };
   }
   const [b] = (await supabase(env, `businesses?select=id,name,business_type,description,county,logo_url,cover_url&status=eq.active&slug=eq.${encodeURIComponent(m.slug)}&limit=1`)) || [];
   if (!b) return null;
@@ -74,19 +81,22 @@ async function buildCard(m, env) {
   const fallbackImage = b.cover_url || b.logo_url || "";
 
   if (m.kind === "business") {
-    return { brand, title: `${b.name} (${KIND[b.business_type] || "Business"}, ${where})`, desc: b.description || `${b.name} on ${brand.name}.`, image: fallbackImage };
+    const sc = await storedCard(env, "business", b.id);
+    return { brand, title: `${b.name} (${KIND[b.business_type] || "Business"}, ${where})`, desc: b.description || `${b.name} on ${brand.name}.`, image: sc?.url || fallbackImage, wide: Boolean(sc) };
   }
   if (m.kind === "room") {
     const t = ((await supabase(env, "rpc/list_room_types", { p_business: b.id })) || []).find((x) => x.id === m.id);
     if (!t) return null;
     const hostel = Boolean(t.is_hostel);
     const rent = `${ksh(hostel ? t.semester_price : t.monthly_price)} a ${hostel ? "semester" : "month"}`;
-    return { brand, title: `${t.name} | ${b.name}`, desc: `${rent}. ${t.description || `Room to rent at ${b.name}, ${where}.`}`, image: t.images?.[0] || fallbackImage };
+    const sc = await storedCard(env, "room", t.id);
+    return { brand, title: `${t.name} | ${b.name}`, desc: `${rent}. ${t.description || `Room to rent at ${b.name}, ${where}.`}`, image: sc?.url || t.images?.[0] || fallbackImage, wide: Boolean(sc) };
   }
   const [p] = (await supabase(env, `products?select=id,business_id,name,description,price,unit,images&status=eq.active&id=eq.${encodeURIComponent(m.id)}&limit=1`)) || [];
   if (!p || p.business_id !== b.id) return null;
   const unit = p.unit && p.unit !== "item" ? ` / ${p.unit}` : "";
-  return { brand, title: `${p.name} | ${b.name}`, desc: `${ksh(p.price)}${unit}. ${p.description || `From ${b.name}, ${where}.`}`, image: p.images?.[0] || fallbackImage };
+  const sc = await storedCard(env, "product", p.id);
+  return { brand, title: `${p.name} | ${b.name}`, desc: `${ksh(p.price)}${unit}. ${p.description || `From ${b.name}, ${where}.`}`, image: sc?.url || p.images?.[0] || fallbackImage, wide: Boolean(sc) };
 }
 
 function html({ card, shareUrl, target, origin }) {
@@ -103,7 +113,10 @@ function html({ card, shareUrl, target, origin }) {
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${desc}">
 <meta property="og:url" content="${esc(shareUrl)}">
-<meta property="og:image" content="${image}">
+<meta property="og:image" content="${image}">${card.wide ? `
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/jpeg">` : ""}
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${title}">
 <meta name="twitter:description" content="${desc}">

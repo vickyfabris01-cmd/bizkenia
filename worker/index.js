@@ -17,10 +17,10 @@ const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const FILE = "[A-Za-z0-9_-]{1,80}\\.(?:jpg|png|webp)";
 const BUCKETS = {
   "business-media": { maxBytes: 5 * MB, path: new RegExp(`^${UUID}(?:/[A-Za-z0-9_-]{1,40}){1,3}/${FILE}$`) },
-  "site-media": { maxBytes: 5 * MB, path: new RegExp(`^hero/${FILE}$`) },
+  "site-media": { maxBytes: 5 * MB, path: new RegExp(`^(?:hero|share)/${FILE}$`) },
   avatars: { maxBytes: 2 * MB, path: new RegExp(`^${UUID}/${FILE}$`) },
 };
-const FOLDER = new RegExp(`^(?:${UUID}|hero)$`);
+const FOLDER = new RegExp(`^(?:${UUID}|hero|share)$`);
 
 const json = (body, status = 200, extra = {}) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...extra } });

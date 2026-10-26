@@ -1,4 +1,4 @@
-// src/pages/app/BusinessDashboard.jsx — MODIFIED FILE (Phase 2: real figures above the checklist)
+// src/pages/app/BusinessDashboard.jsx — MODIFIED FILE (a "Rooms listed" card with Share buttons)
 //
 // AIM
 // The business dashboard for owners and managers. Phase 2 adds the real picture: occupancy,
@@ -12,6 +12,7 @@ import "../rental/Rental.css";
 import { Link } from "react-router-dom";
 import { Alert, Badge, Button, Card, CardBody, CardHeader, Icon, Skeleton } from "../../components/ui";
 import { useBusinessContext } from "../../router/BusinessContext.jsx";
+import ShareShelf from "../../components/share/ShareShelf.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { supabase } from "../../config/supabase.js";
 import { getDashboard, getMpesaStatus } from "../../lib/api/rental.js";
@@ -136,6 +137,8 @@ export default function BusinessDashboard() {
           </div>
         </>
       )}
+
+      <ShareShelf />
 
       <div className="rent-grid2">
         {!allDone && (

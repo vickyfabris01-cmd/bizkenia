@@ -1,4 +1,4 @@
-// src/pages/farm/FarmDashboard.jsx — MODIFIED (land shown in acres)
+// src/pages/farm/FarmDashboard.jsx — MODIFIED (a "Produce on sale" card with Share buttons)
 //
 // AIM
 // /app/:slug for an agriculture business (owner and manager). The farm at a glance: acres of land,
@@ -10,6 +10,7 @@ import "./Farm.css";
 import { Link } from "react-router-dom";
 import { Alert, Button, Card, CardBody, CardHeader, EmptyState } from "../../components/ui";
 import LineTrend from "../../components/charts/LineTrend.jsx";
+import ShareShelf from "../../components/share/ShareShelf.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { getFarmSummary, remindTasks } from "../../lib/api/farm.js";
 import { formatDate } from "../../lib/format.js";
@@ -55,6 +56,8 @@ export default function FarmDashboard() {
         <Alert type="warning" title={`${d.lowStock.length} item${d.lowStock.length === 1 ? " is" : "s are"} low on stock`}
           message={<>{d.lowStock.slice(0, 4).map((i) => i.name).join(", ")}{d.lowStock.length > 4 ? " and more" : ""}. <Link to={`${base}/inventory`}>Open supplies</Link></>} />
       )}
+
+      <ShareShelf />
 
       <div className="farm-grid farm-grid--sidebar">
         <Card>

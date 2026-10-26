@@ -1,149 +1,131 @@
-// src/components/share/ShareMenu.jsx — MODIFIED FILE (shows and shares a designed card)
+// src/components/share/ShareMenu.jsx — MODIFIED FILE (two ways to share: as a link, or as a poster)
 //
 // AIM
-// The share dialog. It draws the card for what is being shared (a business, or one product, piece of
-// produce or room type; see lib/shareCard.js), shows it, and lets the person:
-//   - "Share picture"   send the card itself plus the message and link through the phone's share sheet
-//                       (WhatsApp, Instagram, Facebook, TikTok, Telegram and every other app on the phone);
-//   - "Download"        save the card to post by hand (computers, Instagram and TikTok posts);
-//   - the app buttons   WhatsApp, Facebook, X, Telegram, LinkedIn, SMS and email, which send the message and
-//                       link (the link shows a preview of the photo);
-//   - copy the link, or the message and link.
-// Whoever opens the link or taps the card's link lands on the business page or the item page.
+// The share dialog. It has two tabs and nothing else:
 //
-// USAGE
-//   <ShareMenu target={businessTarget(b)} label="Share my business" />        its own button
-//   <ShareMenu target={productTarget(b, p)} open={open} onClose={close} />      opened by the page (for example
-//                                                                              straight after saving an item)
+//   Share as link     The link card is made ready first (drawn and saved, see lib/api/shareCards.js),
+//                     then the app buttons (WhatsApp, Facebook, X, Telegram, LinkedIn, SMS, email) and
+//                     Copy link work. Pasted anywhere, the link shows the card (photo, details, logo and
+//                     name) and opens the business page or the item page.
+//   Share as poster   The poster is drawn from the same data. Download it, post it (WhatsApp, Instagram,
+//                     Facebook, TikTok, a status) and paste the link in the caption (Copy link).
+//
+// There is deliberately no phone share sheet: it would offer apps we have never tested.
 //
 // PROPS
-//   target            from lib/share.js: { path, title, text, card? }. Without `card` (the site itself), no picture is drawn.
-//   open, onClose     optional. When `open` is given the page controls the dialog and no button is drawn.
-//   label, size, variant, fullWidth   the look of the opening button
+//   target            from lib/share.js: { ref, path, title, text, card }
+//   open, onClose     the page controls the dialog (see MarketingPage and AdminShare)
 
 import "./ShareMenu.css";
-import { useEffect, useMemo, useState } from "react";
-import { Button, Spinner, TextArea } from "../ui";
+import { useEffect, useState } from "react";
+import { Button, Spinner } from "../ui";
 import { Modal } from "../modals/Modal.jsx";
 import useBrand from "../../hooks/useBrand.js";
 import { useToast } from "../../hooks/useNotifications.js";
-import { CHANNELS, canNativeShare, copyText, shareLink, siteHost } from "../../lib/share.js";
-import { renderCard, safeFileName } from "../../lib/shareCard.js";
+import { CHANNELS, copyText, shareLink, siteHost } from "../../lib/share.js";
+import { ensureShareCard } from "../../lib/api/shareCards.js";
+import { renderPoster, safeFileName } from "../../lib/shareCard.js";
 
-export default function ShareMenu({ target, open, onClose, label = "Share", size = "sm", variant = "outline", fullWidth = false }) {
+const IDLE = { state: "idle", url: "", blob: null };
+
+export default function ShareMenu({ target, open, onClose }) {
   const toast = useToast();
   const brand = useBrand();
-  const controlled = open !== undefined;
-  const [inner, setInner] = useState(false);
-  const isOpen = controlled ? Boolean(open) : inner;
-  const close = () => (controlled ? onClose?.() : setInner(false));
-
-  const [msg, setMsg] = useState(target.text);
-  const [pic, setPic] = useState({ blob: null, url: "", state: "idle" }); // state: idle | drawing | ready | failed
+  const [tab, setTab] = useState("link");
+  const [link, setLink] = useState({ ...IDLE, v: "", saved: false }); // state: preparing | ready | failed
+  const [poster, setPoster] = useState(IDLE);                         // state: drawing | ready | failed
   const path = target.path;
-  const hasCard = Boolean(target.card);
 
-  // reset the message each time the dialog opens
-  useEffect(() => { if (isOpen) setMsg(target.text); }, [isOpen, target.text]);
-
-  // draw the card when the dialog opens
+  // each time the dialog opens: get the link card ready, and draw the poster
   useEffect(() => {
-    if (!isOpen || !hasCard) return undefined;
+    if (!open) return undefined;
     let dead = false;
-    let made = "";
-    setPic({ blob: null, url: "", state: "drawing" });
-    renderCard(target.card, { host: siteHost() }).then((blob) => {
+    const urls = [];
+    setTab("link");
+    setLink({ ...IDLE, v: "", saved: false, state: "preparing" });
+    setPoster({ ...IDLE, state: "drawing" });
+
+    ensureShareCard(target).then(({ data, error }) => {
       if (dead) return;
-      if (!blob) { setPic({ blob: null, url: "", state: "failed" }); return; }
-      made = URL.createObjectURL(blob);
-      setPic({ blob, url: made, state: "ready" });
+      const url = data?.blob ? URL.createObjectURL(data.blob) : "";
+      if (url) urls.push(url);
+      setLink({ state: error && !data?.blob ? "failed" : "ready", url, blob: data?.blob || null, v: data?.v || "", saved: Boolean(data?.saved) });
+      if (error && data?.blob) toast.info("The link will show the main photo.", "The card could not be saved");
     });
-    return () => { dead = true; if (made) URL.revokeObjectURL(made); };
-    // the card is rebuilt only when the dialog opens or a different thing is shared
+    renderPoster(target.card, { host: siteHost() }).then((blob) => {
+      if (dead) return;
+      if (!blob) { setPoster({ ...IDLE, state: "failed" }); return; }
+      const url = URL.createObjectURL(blob);
+      urls.push(url);
+      setPoster({ state: "ready", url, blob });
+    });
+    return () => { dead = true; urls.forEach((u) => URL.revokeObjectURL(u)); };
+    // redone only when the dialog opens or something else is shared
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, path]);
+  }, [open, path]);
 
-  const fileName = `${safeFileName(target.card?.title || target.title)}.png`;
-  const file = useMemo(() => (pic.blob ? new File([pic.blob], fileName, { type: "image/png" }) : null), [pic.blob, fileName]);
-  const canShareFile = Boolean(file && typeof navigator !== "undefined" && navigator.canShare?.({ files: [file] }));
+  const preparing = link.state === "preparing";
+  const fileName = `${safeFileName(target.card.title || target.title)}-poster.png`;
 
-  async function copy(what) {
-    const link = shareLink(path, "copy");
-    const ok = await copyText(what === "link" ? link : `${msg.trim()} ${link}`);
-    if (ok) toast.success(what === "link" ? "Link copied" : "Message and link copied");
-    else toast.error("Could not copy. Select the link and copy it by hand.");
-  }
-
-  async function sharePicture() {
-    const link = shareLink(path, "native");
-    try {
-      if (canShareFile) await navigator.share({ files: [file], title: target.title, text: `${msg.trim()} ${link}` });
-      else await navigator.share({ title: target.title, text: msg.trim(), url: link });
-    } catch { /* closed without sharing */ }
+  async function copyLink(channel) {
+    const ok = await copyText(shareLink(path, channel, link.v));
+    if (ok) toast.success("Link copied");
+    else toast.error("Could not copy. Try again.");
   }
 
   function download() {
-    if (!pic.url) return;
+    if (!poster.url) return;
     const a = document.createElement("a");
-    a.href = pic.url;
+    a.href = poster.url;
     a.download = fileName;
     a.click();
-    toast.success("Picture saved", "Post it with the link, so people can tap through to the page.");
   }
 
-  const link = shareLink(path, "copy");
-
   return (
-    <>
-      {!controlled && <Button size={size} variant={variant} fullWidth={fullWidth} onClick={() => setInner(true)}>{label}</Button>}
-      <Modal isOpen={isOpen} onClose={close} title="Share" size="lg"
-        footer={<Button variant="secondary" onClick={close}>Done</Button>}>
-        <div className={`share-body${hasCard ? " share-body--card" : ""}`}>
-          {hasCard && (
-            <div className="share-preview" aria-live="polite">
-              {pic.state === "ready" && <img src={pic.url} alt={`Share picture: ${target.card.title}`} />}
-              {pic.state === "drawing" && <div className="share-preview__wait"><Spinner label="Drawing the picture" /></div>}
-              {pic.state === "failed" && <p className="share-hint" style={{ padding: "var(--space-4)" }}>The picture could not be drawn on this device. You can still share the link below.</p>}
-            </div>
-          )}
+    <Modal isOpen={Boolean(open)} onClose={onClose} title={`Share ${target.card.title}`} size="md"
+      footer={<Button variant="secondary" onClick={onClose}>Done</Button>}>
+      <div className="share-tabs" role="tablist" aria-label="How to share">
+        <button type="button" role="tab" aria-selected={tab === "link"} className={`share-tab${tab === "link" ? " is-on" : ""}`} onClick={() => setTab("link")}>Share as link</button>
+        <button type="button" role="tab" aria-selected={tab === "poster"} className={`share-tab${tab === "poster" ? " is-on" : ""}`} onClick={() => setTab("poster")}>Share as poster</button>
+      </div>
 
-          <div className="share-side">
-            <TextArea label="Message" rows={3} value={msg} maxLength={280} onChange={(e) => setMsg(e.target.value)}
-              helper="The link is added for you. It opens the page for this business or item." />
-
-            {hasCard && (
-              <div className="share-actions">
-                {(canShareFile || canNativeShare()) && <Button onClick={sharePicture} disabled={pic.state === "drawing"}>{canShareFile ? "Share picture" : "Share"}</Button>}
-                <Button variant="outline" onClick={download} disabled={pic.state !== "ready"}>Download picture</Button>
-              </div>
-            )}
-
-            <div className="share-grid">
-              {CHANNELS.map((c) => {
-                const href = c.href(shareLink(path, c.id), msg.trim(), target.title);
-                const web = href.startsWith("http");
-                return (
-                  <a key={c.id} className="share-ch" href={href} style={{ "--dot": c.color }}
-                    {...(web ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
-                    <span className="share-ch__dot" aria-hidden="true" />{c.label}
-                  </a>
-                );
-              })}
-            </div>
-
-            <div className="share-link">
-              <code>{link.replace(/\?.*$/, "")}</code>
-              <Button size="sm" variant="outline" onClick={() => copy("link")}>Copy link</Button>
-              <Button size="sm" variant="ghost" onClick={() => copy("both")}>Copy message and link</Button>
-            </div>
-            <p className="share-hint">
-              {hasCard
-                ? `${brand.name} links show the main photo when pasted. To post the full card, use Share picture on your phone, or download it and post it on Instagram or TikTok with the link in your caption or bio.`
-                : "Instagram and TikTok have no web share box. Copy the message and link and paste them into your post, story or bio."}
-            </p>
+      {tab === "link" ? (
+        <div className="share-pane" role="tabpanel">
+          <div className="share-preview share-preview--wide" aria-live="polite">
+            {link.url && <img src={link.url} alt={`How the link looks: ${target.card.title}`} />}
+            {preparing && <div className="share-preview__wait"><Spinner label="Getting your link ready" /></div>}
+            {link.state === "failed" && <p className="share-hint" style={{ padding: "var(--space-4)" }}>The preview could not be drawn on this device. The link still works.</p>}
           </div>
+          <p className="share-hint">{preparing ? "Getting your link ready…" : `People who open the link see this card on ${brand.name}, and tapping it opens the page.`}</p>
+          <div className="share-grid">
+            {CHANNELS.map((c) => {
+              const href = c.href(shareLink(path, c.id, link.v), target.text, target.title);
+              const web = href.startsWith("http");
+              return preparing ? (
+                <span key={c.id} className="share-ch is-disabled" style={{ "--dot": c.color }} aria-disabled="true"><span className="share-ch__dot" aria-hidden="true" />{c.label}</span>
+              ) : (
+                <a key={c.id} className="share-ch" href={href} style={{ "--dot": c.color }} {...(web ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
+                  <span className="share-ch__dot" aria-hidden="true" />{c.label}
+                </a>
+              );
+            })}
+          </div>
+          <div><Button variant="outline" onClick={() => copyLink("copy")} disabled={preparing}>Copy link</Button></div>
         </div>
-      </Modal>
-    </>
+      ) : (
+        <div className="share-pane" role="tabpanel">
+          <div className="share-preview share-preview--tall" aria-live="polite">
+            {poster.url && <img src={poster.url} alt={`Poster: ${target.card.title}`} />}
+            {poster.state === "drawing" && <div className="share-preview__wait"><Spinner label="Drawing the poster" /></div>}
+            {poster.state === "failed" && <p className="share-hint" style={{ padding: "var(--space-4)" }}>The poster could not be drawn on this device. Try another browser.</p>}
+          </div>
+          <div className="share-actions">
+            <Button onClick={download} disabled={poster.state !== "ready"}>Download poster</Button>
+            <Button variant="outline" onClick={() => copyLink("poster")} disabled={preparing}>Copy link</Button>
+          </div>
+          <p className="share-hint">Post the poster on WhatsApp, Instagram, Facebook or TikTok, and paste the link in the caption so people can tap through.</p>
+        </div>
+      )}
+    </Modal>
   );
 }
