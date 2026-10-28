@@ -1,4 +1,4 @@
-// src/lib/shareCard.js — MODIFIED FILE (one design, two shapes: the poster and the link preview; site cards added)
+// src/lib/shareCard.js — MODIFIED FILE (one design, two shapes: the poster and the link preview; no quantities; the price tag and the place can be left out)
 //
 // AIM
 // Draws the picture for a share. It is made on the person's own device from the live data.
@@ -25,7 +25,7 @@ import markUrl from "../assets/bizkenia-mark.png";
 
 export { safeFileName };
 
-const DESIGN_VERSION = "c3"; // change this to redraw every saved preview
+const DESIGN_VERSION = "c4"; // change this to redraw every saved preview
 const PW = 1080, PH = 1350, PAD = 48;      // poster
 const LW = 1200, LH = 630, LFOOT = 52;      // link preview
 const CONTENT_H = LH - LFOOT;
@@ -40,7 +40,7 @@ export function cardFingerprint(card) {
   const b = card.business || {};
   const seen = JSON.stringify([
     DESIGN_VERSION, card.layout, card.title, card.image, card.badge, card.price, card.unit, card.was, card.place, card.note,
-    card.description, card.brandName, card.tagline, card.facts,
+    card.description, card.brandName, card.tagline, card.facts, card.hideLocation,
     b.id, b.name, b.business_type, b.logo_url, b.logo_design, b.county, b.address, b.phone, b.whatsapp, b.description, b.cover_url,
   ]);
   let h = 0x811c9dc5; // FNV-1a
@@ -253,7 +253,7 @@ function posterBusiness(ctx, c, { image, logo, host }) {
   lines(ctx, c.description || b.description || "", { size: 38, width: PW - PAD * 2, max: 3 }).forEach((l) => { text(ctx, l, PAD, dy, { size: 38, color: "#374151" }); dy += 56; });
 
   let ry = 1128;
-  [["LOCATION", place(b) || "Kenya"], ["CALL", b.phone || ""], ["WHATSAPP", b.whatsapp && b.whatsapp !== b.phone ? b.whatsapp : ""]]
+  [["LOCATION", place(b) || (c.hideLocation ? "" : "Kenya")], ["CALL", b.phone || ""], ["WHATSAPP", b.whatsapp && b.whatsapp !== b.phone ? b.whatsapp : ""]]
     .filter((r) => r[1]).slice(0, 3)
     .forEach(([k, v]) => { factRow(ctx, k, v, PAD, ry, { labelSize: 26, valueSize: 36, labelW: 220, maxW: PW - PAD * 2 }); ry += 52; });
   posterFooter(ctx, host);
@@ -269,25 +269,28 @@ function posterItem(ctx, c, { image, logo, host }) {
   nameLines.forEach((l) => { text(ctx, l, PAD, y, { size: 58, weight: 700 }); y += 68; });
 
   const tagY = y - 68 + 44;
-  ctx.font = `700 52px ${FONT}`;
-  const priceW = ctx.measureText(c.price).width;
-  ctx.font = `500 32px ${FONT}`;
-  const unitW = c.unit ? ctx.measureText(` / ${c.unit}`).width : 0;
-  const tagW = Math.ceil(priceW + unitW) + 56;
-  ctx.fillStyle = GREEN;
-  roundPath(ctx, PAD, tagY, tagW, 88, 22);
-  ctx.fill();
-  text(ctx, c.price, PAD + 28, tagY + 61, { size: 52, weight: 700, color: "#fff" });
-  if (c.unit) text(ctx, ` / ${c.unit}`, PAD + 28 + priceW, tagY + 61, { size: 32, weight: 500, color: "rgba(255,255,255,0.92)" });
-  if (c.was) {
-    const wx = PAD + tagW + 28;
-    text(ctx, c.was, wx, tagY + 58, { size: 36, weight: 500, color: "#9CA3AF" });
-    ctx.font = `500 36px ${FONT}`;
-    ctx.fillStyle = "#9CA3AF";
-    ctx.fillRect(wx, tagY + 44, ctx.measureText(c.was).width, 3);
+  // the price tag (left out when the owner chose not to show the rent)
+  if (c.price) {
+    ctx.font = `700 52px ${FONT}`;
+    const priceW = ctx.measureText(c.price).width;
+    ctx.font = `500 32px ${FONT}`;
+    const unitW = c.unit ? ctx.measureText(` / ${c.unit}`).width : 0;
+    const tagW = Math.ceil(priceW + unitW) + 56;
+    ctx.fillStyle = GREEN;
+    roundPath(ctx, PAD, tagY, tagW, 88, 22);
+    ctx.fill();
+    text(ctx, c.price, PAD + 28, tagY + 61, { size: 52, weight: 700, color: "#fff" });
+    if (c.unit) text(ctx, ` / ${c.unit}`, PAD + 28 + priceW, tagY + 61, { size: 32, weight: 500, color: "rgba(255,255,255,0.92)" });
+    if (c.was) {
+      const wx = PAD + tagW + 28;
+      text(ctx, c.was, wx, tagY + 58, { size: 36, weight: 500, color: "#9CA3AF" });
+      ctx.font = `500 36px ${FONT}`;
+      ctx.fillStyle = "#9CA3AF";
+      ctx.fillRect(wx, tagY + 44, ctx.measureText(c.was).width, 3);
+    }
   }
 
-  let ly = tagY + 88 + 62;
+  let ly = c.price ? tagY + 88 + 62 : y - 68 + 76;
   if (c.place) {
     pin(ctx, PAD, ly, GREEN);
     const [one] = lines(ctx, c.place, { size: 36, weight: 500, width: PW - PAD * 2 - 52, max: 1 });
@@ -323,10 +326,10 @@ function posterSite(ctx, c, { image, logo, host }) {
   ctx.fillStyle = "#E5E7EB";
   ctx.fillRect(PAD, 980, PW - PAD * 2, 2);
   (c.facts || []).slice(0, 3).forEach(([k, v], i) => {
-    const ly = 1036 + i * 78;
+    const ly = 1020 + i * 84;
     text(ctx, k, PAD, ly, { size: 24, weight: 700, color: GREEN_DARK });
-    const [one] = lines(ctx, v, { size: 40, weight: 600, width: PW - PAD * 2, max: 1 });
-    text(ctx, one || "", PAD, ly + 42, { size: 40, weight: 600 });
+    const [one] = lines(ctx, v, { size: 36, weight: 600, width: PW - PAD * 2, max: 1 });
+    text(ctx, one || "", PAD, ly + 40, { size: 36, weight: 600 });
   });
   posterFooter(ctx, host);
 }
@@ -356,7 +359,7 @@ function previewBusiness(ctx, c, { image, logo, host }) {
 
   const rx = LPAD + colW + 40, rw = LW - rx - LPAD;
   let ry = top + 22;
-  [["LOCATION", place(b) || "Kenya"], ["CALL", b.phone || ""]].filter((r) => r[1]).forEach(([k, v]) => {
+  [["LOCATION", place(b) || (c.hideLocation ? "" : "Kenya")], ["CALL", b.phone || ""]].filter((r) => r[1]).forEach(([k, v]) => {
     text(ctx, k, rx, ry, { size: 20, weight: 700, color: GREEN_DARK });
     lines(ctx, v, { size: 28, weight: 600, width: rw, max: k === "LOCATION" ? 2 : 1 }).forEach((l) => { ry += 34; text(ctx, l, rx, ry, { size: 28, weight: 600 }); });
     ry += 34;
@@ -373,21 +376,24 @@ function previewItem(ctx, c, { image, logo, host }) {
   if (c.badge) pill(ctx, c.badge, 28, 28, 24);
   const top = PHOTO_H + 22;
 
-  // price tag on the right
-  ctx.font = `700 38px ${FONT}`;
-  const priceW = ctx.measureText(c.price).width;
-  ctx.font = `500 24px ${FONT}`;
-  const unitW = c.unit ? ctx.measureText(` / ${c.unit}`).width : 0;
-  const tagW = Math.ceil(priceW + unitW) + 40;
-  const tagX = LW - LPAD - tagW;
-  ctx.fillStyle = GREEN;
-  roundPath(ctx, tagX, top, tagW, 62, 16);
-  ctx.fill();
-  text(ctx, c.price, tagX + 20, top + 43, { size: 38, weight: 700, color: "#fff" });
-  if (c.unit) text(ctx, ` / ${c.unit}`, tagX + 20 + priceW, top + 43, { size: 24, weight: 500, color: "rgba(255,255,255,0.92)" });
+  // price tag on the right (left out when the owner chose not to show the rent)
+  let tagX = LW - LPAD;
+  if (c.price) {
+    ctx.font = `700 38px ${FONT}`;
+    const priceW = ctx.measureText(c.price).width;
+    ctx.font = `500 24px ${FONT}`;
+    const unitW = c.unit ? ctx.measureText(` / ${c.unit}`).width : 0;
+    const tagW = Math.ceil(priceW + unitW) + 40;
+    tagX = LW - LPAD - tagW;
+    ctx.fillStyle = GREEN;
+    roundPath(ctx, tagX, top, tagW, 62, 16);
+    ctx.fill();
+    text(ctx, c.price, tagX + 20, top + 43, { size: 38, weight: 700, color: "#fff" });
+    if (c.unit) text(ctx, ` / ${c.unit}`, tagX + 20 + priceW, top + 43, { size: 24, weight: 500, color: "rgba(255,255,255,0.92)" });
+  }
 
   // name on the left
-  const [name] = lines(ctx, c.title, { size: 40, weight: 700, width: tagX - LPAD - 24, max: 1 });
+  const [name] = lines(ctx, c.title, { size: 40, weight: 700, width: tagX - LPAD - (c.price ? 24 : 0), max: 1 });
   text(ctx, name, LPAD, top + 44, { size: 40, weight: 700 });
 
   // place and note
@@ -430,8 +436,8 @@ function previewSite(ctx, c, { image, logo, host }) {
   facts.forEach(([k, v], i) => {
     const fx = LPAD + i * cw;
     text(ctx, k, fx, top + 150, { size: 20, weight: 700, color: GREEN_DARK });
-    const [one] = lines(ctx, v, { size: 32, weight: 600, width: cw - 20, max: 1 });
-    text(ctx, one || "", fx, top + 188, { size: 32, weight: 600 });
+    // the benefit lines are short sentences: two lines each fit under the label
+    lines(ctx, v, { size: 26, weight: 600, width: cw - 24, max: 2 }).forEach((l, n) => text(ctx, l, fx, top + 186 + n * 32, { size: 26, weight: 600 }));
   });
   previewFooter(ctx, host);
 }

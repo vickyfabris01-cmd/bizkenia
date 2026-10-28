@@ -1,4 +1,4 @@
-// src/lib/api/shareCards.js — NEW FILE
+// src/lib/api/shareCards.js — MODIFIED FILE (the saved card is checked first; nothing is drawn when it is still current)
 //
 // AIM
 // Keeps the LINK CARD of each thing ready. The link card is the small landscape picture that WhatsApp,
@@ -37,18 +37,19 @@ function locate(ref, fp) {
  * Makes sure the saved link card matches the data. `target` comes from lib/share.js.
  * Returns { data: { v, blob, saved }, error }:
  *   v      the card version for the link (always set, even when saving failed)
- *   blob   the drawn card, to show as a preview
+ *   blob   the card that was just drawn; null when the saved one was still current, so nothing was drawn
  *   saved  true when the link will show this card; false when the link will fall back to the item photo
+ * The saved card is looked up first, so opening Share on something that has not changed is quick: no drawing, no upload.
  */
 export async function ensureShareCard(target) {
   const v = cardFingerprint(target.card);
+  const ref = target.ref;
+  const stored = supabase ? await getStored(ref) : null;
+  if (stored?.v === v && stored?.url) return { data: { v, blob: null, saved: true }, error: null };
+
   const blob = await renderPreview(target.card, { host: siteHost() });
   if (!blob) return { data: { v, blob: null, saved: false }, error: "The card could not be drawn on this device." };
   if (!supabase) return { data: { v, blob, saved: false }, error: NOT_CONNECTED };
-
-  const ref = target.ref;
-  const stored = await getStored(ref);
-  if (stored?.v === v && stored?.url) return { data: { v, blob, saved: true }, error: null };
 
   const { bucket, path } = locate(ref, v);
   const up = await uploadFile(bucket, path, new File([blob], path.split("/").pop(), { type: "image/jpeg" }));

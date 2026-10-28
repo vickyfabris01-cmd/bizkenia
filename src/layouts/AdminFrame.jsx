@@ -1,4 +1,4 @@
-// src/layouts/AdminFrame.jsx — MODIFIED (Phase 3: live notification bell)
+// src/layouts/AdminFrame.jsx — MODIFIED (Phase 3: live notification bell; the share dialog is mounted here once, for every admin screen)
 //
 // AIM
 // The frame for platform admin pages (/admin/*): the AppShell with the admin menu. Screens that
@@ -8,6 +8,7 @@
 import { Suspense } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AppShell from "../components/shell/AppShell.jsx";
+import ShareProvider from "../components/share/ShareProvider.jsx";
 import ComingSoonPage from "../pages/shared/ComingSoonPage.jsx";
 import { FullPageLoader } from "../router/guards.jsx";
 import { ADMIN_NAV } from "../modules/adminNav.js";
@@ -39,10 +40,12 @@ export default function AdminFrame() {
   }
 
   return (
-    <AppShell nav={nav} tabs={["/admin", "/admin/businesses", "/admin/users", "/admin/settings"]}
-      user={{ name: profile?.full_name || user?.email, email: user?.email, role: "Super admin", avatarUrl: profile?.avatar_url, avatarId: user?.id, avatarDesign: profile?.avatar_design }}
-      business={{ name: `${brand.name} admin`, subtitle: "Platform" }}
-      bellTo="live" profileTo="/account" helpHref={brand.mailto}
-      onSwitchBusiness={() => navigate("/businesses")} onSignOut={signOut} />
+    <ShareProvider>
+      <AppShell nav={nav} tabs={["/admin", "/admin/businesses", "/admin/users", "/admin/settings"]}
+        user={{ name: profile?.full_name || user?.email, email: user?.email, role: "Super admin", avatarUrl: profile?.avatar_url, avatarId: user?.id, avatarDesign: profile?.avatar_design }}
+        business={{ name: `${brand.name} admin`, subtitle: "Platform" }}
+        bellTo="live" profileTo="/account" helpHref={brand.mailto}
+        onSwitchBusiness={() => navigate("/businesses")} onSignOut={signOut} />
+    </ShareProvider>
   );
 }

@@ -1,4 +1,4 @@
-// src/pages/farm/FarmSettingsPage.jsx — MODIFIED (Phase 6 Danger zone; M-Pesa details for online orders)
+// src/pages/farm/FarmSettingsPage.jsx — MODIFIED (Phase 6 Danger zone; M-Pesa details for online orders; "Share this business" opens the platform picker; a Share and promote card chooses what shared cards show)
 //
 // AIM
 // /app/:slug/settings (owner only) — the farm's profile and a summary of how it is set up: name,
@@ -12,6 +12,8 @@ import { Badge, Button, Card, CardBody, CardHeader } from "../../components/ui";
 import BusinessLogoCard from "../../components/business/BusinessLogoCard.jsx";
 import BusinessCoverCard from "../../components/business/BusinessCoverCard.jsx";
 import BusinessDangerZone from "../../components/lifecycle/BusinessDangerZone.jsx";
+import ShareButton from "../../components/share/ShareButton.jsx";
+import ShareOptionsCard from "../../components/share/ShareOptionsCard.jsx";
 import { MpesaCard } from "../shop/ShopSettingsPage.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { getFarmSummary } from "../../lib/api/farm.js";
@@ -31,7 +33,7 @@ export default function FarmSettingsPage() {
     <div className="farm">
       <PageHead title="Farm settings and profile" lead="How your farm appears on the platform">
         <Button as={Link} to={`/start/details?business=${business.slug}`} variant="outline">Edit farm details</Button>
-        <Button as={Link} to={`/app/${business.slug}/share?open=business`} variant="outline">Share this business</Button>
+        <ShareButton variant="outline" size="md" request={{ type: "business", business }}>Share this business</ShareButton>
       </PageHead>
 
       <div className="farm-grid farm-grid--2">
@@ -70,6 +72,8 @@ export default function FarmSettingsPage() {
       </div>
 
       <MpesaCard bid={bid} />
+
+      <ShareOptionsCard business={business} />
 
       <BusinessDangerZone business={business} />
     </div>

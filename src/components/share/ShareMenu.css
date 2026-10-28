@@ -1,4 +1,4 @@
-/* src/components/share/ShareMenu.css — NEW FILE: the share dialog and the "Share and promote" lists */
+/* src/components/share/ShareMenu.css — MODIFIED FILE: the share dialogs, the share icon button and the "Share and promote" lists */
 
 /* the two tabs and the pictures */
 .share-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-bottom: var(--space-4); border-radius: var(--radius-md); background: var(--color-primary-soft); }
@@ -41,3 +41,16 @@
 .share-row__text { flex: 1 1 160px; min-width: 0; }
 .share-row__title { font-weight: 700; overflow-wrap: anywhere; }
 .share-row__meta { font-size: var(--text-sm); color: var(--color-text-muted); overflow-wrap: anywhere; }
+
+/* the icon-only Share button: a square the same height as the buttons beside it */
+.ui-btn.share-icon-btn { padding-inline: 0; min-width: var(--control-h-md); }
+.ui-btn--sm.share-icon-btn { min-width: var(--control-h-sm); }
+.share-wait { display: inline-flex; align-items: center; gap: var(--space-2); }
+
+/* the "Share and promote" switches on the Settings pages */
+.share-switches { display: grid; gap: var(--space-3); }
+
+/* a list card (shop and farm products) with the share icon in its corner */
+.share-wrap { position: relative; }
+.share-wrap--has > .shop-card .shop-prod > span:last-child { padding-right: 44px; }
+.share-wrap__btn { position: absolute; top: var(--space-2); right: var(--space-2); background: var(--color-surface); }

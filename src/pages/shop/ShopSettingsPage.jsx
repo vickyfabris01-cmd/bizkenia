@@ -1,4 +1,4 @@
-// src/pages/shop/ShopSettingsPage.jsx — MODIFIED (Phase 6 Danger zone; the M-Pesa card is exported so farm settings can use it too)
+// src/pages/shop/ShopSettingsPage.jsx — MODIFIED (Phase 6 Danger zone; the M-Pesa card is exported so farm settings can use it too; "Share this business" opens the platform picker; a Share and promote card chooses what shared cards show)
 //
 // AIM
 // /app/:slug/settings (owner only) — how the shop delivers and takes payment: delivery on or off
@@ -14,6 +14,8 @@ import { Alert, Button, Card, CardBody, CardHeader, Input, TextArea, Toggle } fr
 import BusinessLogoCard from "../../components/business/BusinessLogoCard.jsx";
 import BusinessCoverCard from "../../components/business/BusinessCoverCard.jsx";
 import BusinessDangerZone from "../../components/lifecycle/BusinessDangerZone.jsx";
+import ShareButton from "../../components/share/ShareButton.jsx";
+import ShareOptionsCard from "../../components/share/ShareOptionsCard.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { useToast } from "../../hooks/useNotifications.js";
 import { getShopMpesa, getShopSettings, saveShopMpesa, saveShopSettings } from "../../lib/api/shop.js";
@@ -79,7 +81,7 @@ export default function ShopSettingsPage() {
   return (
     <div className="shop">
       <PageHead title="Settings" lead="How you deliver, how customers pay, and how your shop looks.">
-        <Button as={Link} to={`/app/${business.slug}/share?open=business`} variant="outline">Share this business</Button>
+        <ShareButton variant="outline" size="md" request={{ type: "business", business }}>Share this business</ShareButton>
       </PageHead>
       <div className="shop-grid shop-grid--2">
         <Card>
@@ -118,6 +120,8 @@ export default function ShopSettingsPage() {
         <BusinessLogoCard business={business} />
         <BusinessCoverCard business={business} />
       </div>
+
+      <ShareOptionsCard business={business} />
 
       <BusinessDangerZone business={business} />
     </div>

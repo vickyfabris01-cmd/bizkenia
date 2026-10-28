@@ -1,4 +1,4 @@
-// worker/share.js — NEW FILE
+// worker/share.js — MODIFIED FILE (the preview follows the owner's share choices: rent price, address)
 //
 // AIM
 // Link previews for shared links. The site is a single-page app, so when someone shares a link on
@@ -56,6 +56,13 @@ async function supabase(env, path, body) {
   }
 }
 
+/** What the owner chose to show (rent price, phone, location); see supabase/migrations/20261027100001_share_options.sql. Defaults when nothing is saved. */
+async function getOptions(env, businessId) {
+  const o = (await supabase(env, "rpc/get_share_options", { p_business: businessId || null })) || {};
+  const on = (k) => (typeof o[k] === "boolean" ? o[k] : true);
+  return { showRent: on("showRent"), showLocation: on("showLocation") };
+}
+
 async function getBrand(env) {
   const rows = await supabase(env, "platform_settings?select=value&key=eq.brand&limit=1");
   const v = rows?.[0]?.value || {};
@@ -73,30 +80,32 @@ async function buildCard(m, env) {
   if (m.kind === "page") {
     const p = PAGES[m.key];
     const sc = await storedCard(env, "site", null, m.key);
-    return { brand, title: p.title ? `${p.title} | ${brand.name}` : brand.name, desc: p.desc || `${brand.tagline}. Rentals, shops and farms across Kenya.`, image: sc?.url || "", wide: Boolean(sc) };
+    return { brand, title: p.title ? `${p.title} | ${brand.name}` : brand.name, desc: p.desc || `${brand.tagline}. Collect rent, sell online and keep your farm records in one place.`, image: sc?.url || "", wide: Boolean(sc) };
   }
   const [b] = (await supabase(env, `businesses?select=id,name,business_type,description,county,address,logo_url,cover_url&status=eq.active&slug=eq.${encodeURIComponent(m.slug)}&limit=1`)) || [];
   if (!b) return null;
-  const where = [b.address, b.county].filter(Boolean).join(", ") || "Kenya";
+  const opt = await getOptions(env, b.id);
+  const where = opt.showLocation ? ([b.address, b.county].filter(Boolean).join(", ") || "Kenya") : "";
+  const at = (lead) => (where ? `${lead}${where}` : "");
   const fallbackImage = b.cover_url || b.logo_url || "";
 
   if (m.kind === "business") {
     const sc = await storedCard(env, "business", b.id);
-    return { brand, title: `${b.name} (${KIND[b.business_type] || "Business"}, ${where})`, desc: b.description || `${b.name} on ${brand.name}.`, image: sc?.url || fallbackImage, wide: Boolean(sc) };
+    return { brand, title: `${b.name} (${KIND[b.business_type] || "Business"}${at(", ")})`, desc: b.description || `${b.name} on ${brand.name}.`, image: sc?.url || fallbackImage, wide: Boolean(sc) };
   }
   if (m.kind === "room") {
     const t = ((await supabase(env, "rpc/list_room_types", { p_business: b.id })) || []).find((x) => x.id === m.id);
     if (!t) return null;
     const hostel = Boolean(t.is_hostel);
-    const rent = `${ksh(hostel ? t.semester_price : t.monthly_price)} a ${hostel ? "semester" : "month"}`;
+    const rent = opt.showRent ? `${ksh(hostel ? t.semester_price : t.monthly_price)} a ${hostel ? "semester" : "month"}. ` : "";
     const sc = await storedCard(env, "room", t.id);
-    return { brand, title: `${t.name} | ${b.name}`, desc: `${rent}. ${t.description || `Room to rent at ${b.name}, ${where}.`}`, image: sc?.url || t.images?.[0] || fallbackImage, wide: Boolean(sc) };
+    return { brand, title: `${t.name} | ${b.name}`, desc: `${rent}${t.description || `Room to rent at ${b.name}${at(", ")}.`}`, image: sc?.url || t.images?.[0] || fallbackImage, wide: Boolean(sc) };
   }
   const [p] = (await supabase(env, `products?select=id,business_id,name,description,price,unit,images&status=eq.active&id=eq.${encodeURIComponent(m.id)}&limit=1`)) || [];
   if (!p || p.business_id !== b.id) return null;
   const unit = p.unit && p.unit !== "item" ? ` / ${p.unit}` : "";
   const sc = await storedCard(env, "product", p.id);
-  return { brand, title: `${p.name} | ${b.name}`, desc: `${ksh(p.price)}${unit}. ${p.description || `From ${b.name}, ${where}.`}`, image: sc?.url || p.images?.[0] || fallbackImage, wide: Boolean(sc) };
+  return { brand, title: `${p.name} | ${b.name}`, desc: `${ksh(p.price)}${unit}. ${p.description || `From ${b.name}${at(", ")}.`}`, image: sc?.url || p.images?.[0] || fallbackImage, wide: Boolean(sc) };
 }
 
 function html({ card, shareUrl, target, origin }) {

@@ -1,4 +1,4 @@
-// src/pages/rental/SettingsPage.jsx — MODIFIED (Phase 6: Danger zone — hand over or delete the business)
+// src/pages/rental/SettingsPage.jsx — MODIFIED (Phase 6: Danger zone — hand over or delete the business; "Share this business" opens the platform picker; a Share and promote card chooses what shared cards show)
 //
 // AIM
 // /app/:slug/settings (owner only). Billing rules (day rent is due, grace days, late fee) and the
@@ -20,6 +20,8 @@ import { PageHead } from "./shared.jsx";
 import BusinessLogoCard from "../../components/business/BusinessLogoCard.jsx";
 import BusinessCoverCard from "../../components/business/BusinessCoverCard.jsx";
 import BusinessDangerZone from "../../components/lifecycle/BusinessDangerZone.jsx";
+import ShareButton from "../../components/share/ShareButton.jsx";
+import ShareOptionsCard from "../../components/share/ShareOptionsCard.jsx";
 
 const DEFAULTS = { billing_due_day: 5, grace_period_days: 3, late_fee_amount: 500, late_fee_percent: 0 };
 
@@ -80,7 +82,7 @@ export default function SettingsPage() {
   return (
     <div className="rent">
       <PageHead title="Settings" lead="How you bill and how residents pay you.">
-        <Button as={Link} to={`/app/${business.slug}/share?open=business`} variant="outline">Share this business</Button>
+        <ShareButton variant="outline" size="md" request={{ type: "business", business }}>Share this business</ShareButton>
       </PageHead>
       {error && <Alert type="error" message={error} />}
       {loading ? <Skeleton height={260} /> : (
@@ -142,6 +144,8 @@ export default function SettingsPage() {
           <BusinessLogoCard business={business} />
 
           <BusinessCoverCard business={business} />
+
+          <ShareOptionsCard business={business} />
 
           <BusinessDangerZone business={business} />
         </div>

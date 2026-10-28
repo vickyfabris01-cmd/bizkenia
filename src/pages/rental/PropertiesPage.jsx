@@ -1,4 +1,4 @@
-// src/pages/rental/PropertiesPage.jsx — MODIFIED FILE (room types; after a new room type is saved it offers to share it, and each room type has a Share button. Both lead to the Share page)
+// src/pages/rental/PropertiesPage.jsx — MODIFIED FILE (room types; after a new room type is saved it offers to share it, and each room type has a share icon. Both open the platform picker on the spot, with no page change)
 //
 // AIM
 // /app/:slug/properties — buildings, room types and rooms. An owner or manager describes a kind of
@@ -11,7 +11,8 @@
 import "./Rental.css";
 import "./RoomTypes.css";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import ShareButton from "../../components/share/ShareButton.jsx";
+import { useShare } from "../../components/share/shareContext.js";
 import { Alert, Badge, Button, Card, CardBody, EmptyState, Icon, Input, SelectInput, Skeleton, TextArea, Toggle } from "../../components/ui";
 import PhotoUploader from "../../components/ui/PhotoUploader.jsx";
 import { ConfirmDialog, Modal } from "../../components/modals/Modal.jsx";
@@ -292,8 +293,7 @@ export default function PropertiesPage() {
   const [busy, setBusy] = useState("");
   const [roomError, setRoomError] = useState("");
   const [shareTypeId, setShareTypeId] = useState(""); // a room type just created: asks "Share it now?"
-  const navigate = useNavigate();
-  const sharePage = `/app/${business.slug}/share`;
+  const { share } = useShare();
 
   const buildings = useMemo(() => data?.buildings || [], [data]);
   const types = useMemo(() => data?.types || [], [data]);
@@ -389,7 +389,7 @@ export default function PropertiesPage() {
                       <div className="rent-actions">
                         <Button size="sm" variant="outline" onClick={() => setTModal({ type: t })}>Edit</Button>
                         <Button size="sm" variant="outline" onClick={() => setAddFor(t)}>Add rooms</Button>
-                        <Button size="sm" variant="outline" onClick={() => navigate(`${sharePage}?open=${t.id}`)}>Share</Button>
+                        <ShareButton request={{ type: "room", business, item: t, available: count(t.id, "available"), total }} label={`Share ${t.name}`} />
                         <Button size="sm" variant="ghost" onClick={() => { setRoomError(""); setRoomsOf(roomsOf === t.id ? "" : t.id); }}>
                           {roomsOf === t.id ? "Hide rooms" : "Show rooms"}
                         </Button>
@@ -438,8 +438,8 @@ export default function PropertiesPage() {
       {tModal && <TypeModal open key={tModal.type?.id || "new-t"} businessId={bid} type={tModal.type} buildings={buildings} defaultBuilding={buildingId}
         occupied={tModal.type ? count(tModal.type.id, "occupied") : 0}
         held={tModal.type ? count(tModal.type.id, "occupied") + count(tModal.type.id, "reserved") : 0} allTypes={types} onClose={() => setTModal(null)} onSaved={reload} onCreated={(id) => setTimeout(() => setShareTypeId(id), 300)} />}
-      <ConfirmDialog isOpen={Boolean(shareType)} variant="info" title="Room type added" message={`${shareType?.name || "It"} is listed. Share it now as a link or a poster?`}
-        confirmLabel="Share" cancelLabel="Not now" onConfirm={() => { const id = shareType.id; setShareTypeId(""); navigate(`${sharePage}?open=${id}`); }} onCancel={() => setShareTypeId("")} />
+      <ConfirmDialog isOpen={Boolean(shareType)} variant="info" title="Room type added" message={`${shareType?.name || "It"} is listed. Share it now on WhatsApp, Facebook and more?`}
+        confirmLabel="Share" cancelLabel="Not now" onConfirm={() => { const t = shareType; setShareTypeId(""); share({ type: "room", business, item: t, available: count(t.id, "available"), total: count(t.id) }); }} onCancel={() => setShareTypeId("")} />
       {addFor && <AddRoomsModal open key={addFor.id} type={addFor} onClose={() => setAddFor(null)} onSaved={reload} />}
       <ConfirmDialog isOpen={Boolean(delRoom)} title={`Delete room ${delRoom?.room_number || ""}?`}
         message="This cannot be undone. A room that has had residents cannot be deleted; put it under maintenance instead."

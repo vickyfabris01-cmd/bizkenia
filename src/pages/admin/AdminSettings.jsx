@@ -1,4 +1,4 @@
-// src/pages/admin/AdminSettings.jsx — MODIFIED (a "Share the site" button leads to /admin/share; step 2: the "Business types" switch is removed; only a single business can be locked. Phase 5 step 3: adds the Maintenance mode and Default commission cards. Step 5: the free-form price table is replaced by the fixed plan grid)
+// src/pages/admin/AdminSettings.jsx — MODIFIED (a "Share the site" button opens the platform picker; a Share and promote card has the "Show plan prices" switch; step 2: the "Business types" switch is removed; only a single business can be locked. Phase 5 step 3: adds the Maintenance mode and Default commission cards. Step 5: the free-form price table is replaced by the fixed plan grid)
 //
 // AIM
 // Platform settings, one card per topic, each saved on its own:
@@ -6,6 +6,7 @@
 //   Home page hero  background photos for the home page and how often they change (HeroImagesCard)
 //   Approval        manual (default) or automatic approval after payment
 //   Prices          fixed plan grid per business type: amount and on/off only, plus an optional offer (PlanPricesCard.jsx)
+//   Share           whether the Pricing share card shows plan prices (ShareOptionsCard.jsx, off by default)
 //   M-Pesa          sandbox or live and the shortcode (secret keys live in Edge Function secrets)
 //   Maintenance     switch the site to the maintenance page (PlatformControls.jsx)
 //   Commission      default commission percent, stored only (PlatformControls.jsx)
@@ -13,8 +14,9 @@
 
 import "./Admin.css";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { Alert, Button, Card, CardBody, CardHeader, Input, SelectInput, Skeleton, Toggle } from "../../components/ui";
+import ShareButton from "../../components/share/ShareButton.jsx";
+import ShareOptionsCard from "../../components/share/ShareOptionsCard.jsx";
 import HeroImagesCard from "./HeroImagesCard.jsx";
 import PlanPricesCard from "./PlanPricesCard.jsx";
 import { CommissionCard, MaintenanceCard } from "./PlatformControls.jsx";
@@ -65,7 +67,7 @@ export default function AdminSettings() {
     <div className="adm">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-3)", flexWrap: "wrap" }}>
         <h2 className="adm__title" style={{ margin: 0 }}>Settings</h2>
-        <Button as={Link} to="/admin/share?open=home" variant="outline">Share the site</Button>
+        <ShareButton variant="outline" size="md" request={{ type: "site", page: "home" }}>Share the site</ShareButton>
       </div>
       {error && <Alert type="error" message={error} />}
 
@@ -100,6 +102,8 @@ export default function AdminSettings() {
       </Card>
 
       <PlanPricesCard />
+
+      <ShareOptionsCard />
 
       <Card>
         <CardHeader title="M-Pesa" subtitle="Secret keys are never stored here. Set them as Edge Function secrets (see docs/phase-1/SETUP.md)." />

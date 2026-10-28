@@ -1,5 +1,9 @@
 # Changelog
 
+## Share rework (one picker, icon buttons, card and poster page)
+Built on `e747c89`. See `docs/SHARING.md`. Needs migration `20261027100001_share_options.sql`, run **before** deploying the app; redeploy the Worker too.
+Every item, business and site page has a share icon that opens one platform picker over the current screen (no page change). The Share and promote pages now only show and download the card and the poster. Shared cards and messages never show quantities (items are "Available", "Out of stock" or "Fully occupied"; the site cards say what the platform solves, with no business counts). Out-of-stock items and full room types ask "Share anyway?". Each business chooses what shows (rent price, phone, address) under Settings > Share and promote; the super admin chooses whether the Pricing card shows plan prices.
+
 ## Brand studio (drawn logos and avatars)
 Built on `8323024`. See `docs/BRAND-STUDIO.md`.
 Every business gets a designed logo and every person a designed avatar, drawn in the browser from a tiny saved recipe instead of a stored picture. Owners pick from six designs when they create a business (or upload their own); people pick an avatar at sign-up. Skipping picks the first design. Existing rows with nothing saved get a stable design worked out from their id. Needs migration `20261025100001_brand_designs.sql`, run **before** deploying the app.

@@ -1,4 +1,4 @@
-// src/layouts/BusinessAppFrame.jsx — MODIFIED FILE (Phase 3 live bell; shows the business logo)
+// src/layouts/BusinessAppFrame.jsx — MODIFIED FILE (Phase 3 live bell; shows the business logo; the share dialog is mounted here once, for every screen)
 //
 // AIM
 // The signed-in frame for one business (/app/:slug/*): the AppShell with the menu supplied by
@@ -14,6 +14,7 @@
 import { Suspense } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AppShell from "../components/shell/AppShell.jsx";
+import ShareProvider from "../components/share/ShareProvider.jsx";
 import { Button, Card, EmptyState } from "../components/ui";
 import { FullPageLoader } from "../router/guards.jsx";
 import { useBusinessContext } from "../router/BusinessContext.jsx";
@@ -70,15 +71,17 @@ export default function BusinessAppFrame() {
   }
 
   return (
-    <AppShell
-      nav={nav}
-      user={{ name: profile?.full_name || user?.email, email: user?.email, role: ROLE_LABEL[role] || role, avatarUrl: profile?.avatar_url, avatarId: user?.id, avatarDesign: profile?.avatar_design }}
-      business={{ name: business.name, subtitle: `${typeLabel(business.business_type)} business` }}
-      bellTo="live"
-      profileTo="/account"
-      helpHref={brand.mailto}
-      onSwitchBusiness={() => navigate("/businesses")}
-      onSignOut={signOut}
-    />
+    <ShareProvider>
+      <AppShell
+        nav={nav}
+        user={{ name: profile?.full_name || user?.email, email: user?.email, role: ROLE_LABEL[role] || role, avatarUrl: profile?.avatar_url, avatarId: user?.id, avatarDesign: profile?.avatar_design }}
+        business={{ name: business.name, subtitle: `${typeLabel(business.business_type)} business` }}
+        bellTo="live"
+        profileTo="/account"
+        helpHref={brand.mailto}
+        onSwitchBusiness={() => navigate("/businesses")}
+        onSignOut={signOut}
+      />
+    </ShareProvider>
   );
 }

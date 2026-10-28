@@ -1,4 +1,4 @@
-// src/pages/shop/ProductsPage.jsx — MODIFIED (after an item is put on sale it offers to share it; editing an item on sale has a Share button. Both lead to the Share page)
+// src/pages/shop/ProductsPage.jsx — MODIFIED (every item on sale has a share icon; after an item is put on sale it offers to share it; editing an item on sale has a Share button. All open the platform picker on the spot, with no page change)
 //
 // AIM
 // /app/:slug/products — the shop's catalogue. Search, filter by status and category, add a
@@ -21,7 +21,9 @@
 
 import "./Shop.css";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
+import ShareButton from "../../components/share/ShareButton.jsx";
+import { useShare } from "../../components/share/shareContext.js";
 import { Alert, Badge, Button, Card, CardBody, EmptyState, Input, SelectInput } from "../../components/ui";
 import { ConfirmDialog, Modal } from "../../components/modals/Modal.jsx";
 import ImageUploadButton from "../../components/ui/ImageUploadButton.jsx";
@@ -172,8 +174,8 @@ export default function ProductsPage({
   farm = false,
 }) {
   const Noun = noun.charAt(0).toUpperCase() + noun.slice(1);
-  const { bid, base } = useShop();
-  const navigate = useNavigate();
+  const { business, bid } = useShop();
+  const { share } = useShare();
   const toast = useToast();
   const [search, setSearch] = useState("");
   const [term, setTerm] = useState("");
@@ -322,19 +324,25 @@ export default function ProductsPage({
       ) : (
         <>
           <div className="shop-cards">
-            {items.map((x) => (
-              <button type="button" key={x.id} className="shop-card" onClick={() => openForm({ product: x })} aria-label={`Edit ${x.name}`}>
-                <span className="shop-prod">
-                  <Thumb p={x} />
-                  <span style={{ display: "grid", gap: 2, minWidth: 0 }}>
-                    <span className="shop-card__title">{x.name}</span>
-                    <span className="shop-card__meta">{farm && x.source_kind ? `From ${KIND_LABEL[x.source_kind]}: ${findSrc(`${x.source_kind}:${x.source_id}`)?.name || "your farm"}` : x.category?.name || "No category"}</span>
-                    <span className="shop-price">{money(x.price)}{x.compare_at_price ? <s>{money(x.compare_at_price)}</s> : null}</span>
-                  </span>
-                </span>
-                <span className="shop-badges">{stockBadge(x)}<ProductBadge status={x.status} /></span>
-              </button>
-            ))}
+            {items.map((x) => {
+              const live = x.status === "active"; // only what is on sale can be shared: that is all a shared link can open
+              return (
+                <div className={`share-wrap${live ? " share-wrap--has" : ""}`} key={x.id}>
+                  <button type="button" className="shop-card" onClick={() => openForm({ product: x })} aria-label={`Edit ${x.name}`}>
+                    <span className="shop-prod">
+                      <Thumb p={x} />
+                      <span style={{ display: "grid", gap: 2, minWidth: 0 }}>
+                        <span className="shop-card__title">{x.name}</span>
+                        <span className="shop-card__meta">{farm && x.source_kind ? `From ${KIND_LABEL[x.source_kind]}: ${findSrc(`${x.source_kind}:${x.source_id}`)?.name || "your farm"}` : x.category?.name || "No category"}</span>
+                        <span className="shop-price">{money(x.price)}{x.compare_at_price ? <s>{money(x.compare_at_price)}</s> : null}</span>
+                      </span>
+                    </span>
+                    <span className="shop-badges">{stockBadge(x)}<ProductBadge status={x.status} /></span>
+                  </button>
+                  {live && <ShareButton className="share-wrap__btn" request={{ type: "product", business, item: x, farm }} label={`Share ${x.name}`} />}
+                </div>
+              );
+            })}
           </div>
           {more && <div className="shop-more"><Button variant="outline" onClick={() => setLimit(limit + 24)}>Show more</Button></div>}
         </>
@@ -349,12 +357,12 @@ export default function ProductsPage({
         extra={(vals, set) => (
           <>
             <PhotoManager bid={bid} images={vals.images} set={set} onUploaded={(u) => uploaded.current.push(u)} />
-            {p && p.status === "active" && <Button type="button" variant="outline" onClick={() => { closeForm(); navigate(`${base}/share?open=${p.id}`); }}>Share this {noun}</Button>}
+            {p && p.status === "active" && <ShareButton variant="outline" size="md" request={{ type: "product", business, item: p, farm }} label={`Share this ${noun}`}>Share this {noun}</ShareButton>}
           </>
         )} />
 
-      <ConfirmDialog isOpen={Boolean(shareItem)} variant="info" title={`${Noun} is on sale`} message={`${shareItem?.name || "It"} is live. Share it now as a link or a poster?`}
-        confirmLabel="Share" cancelLabel="Not now" onConfirm={() => { const id = shareItem.id; setShareItem(null); navigate(`${base}/share?open=${id}`); }} onCancel={() => setShareItem(null)} />
+      <ConfirmDialog isOpen={Boolean(shareItem)} variant="info" title={`${Noun} is on sale`} message={`${shareItem?.name || "It"} is live. Share it now on WhatsApp, Facebook and more?`}
+        confirmLabel="Share" cancelLabel="Not now" onConfirm={() => { const item = shareItem; setShareItem(null); share({ type: "product", business, item, farm }); }} onCancel={() => setShareItem(null)} />
       {cats && <Categories bid={bid} onClose={() => setCats(false)} onChanged={reloadCats} />}
       <ConfirmDialog isOpen={Boolean(confirm)} title={`Delete this ${noun}?`} message={deleteMessage} confirmLabel={`Delete ${noun}`} loading={busy} onConfirm={remove} onCancel={() => setConfirm(null)} />
     </div>
