@@ -1,0 +1,4 @@
+npm notice run fab-rental-management@1.0.0 build
+npm notice run vite build
+'vite' is not recognized as an internal or external command,
+operable program or batch file.
