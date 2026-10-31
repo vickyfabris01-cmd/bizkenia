@@ -1,7 +1,10 @@
 // send-email — transactional email (approval, rejection, invitations).
 // Body: { to, subject, text, html? }. Allowed for a super admin, or to your own address.
-// With no RESEND_API_KEY the message is only logged and the call still succeeds, so a flow
-// never fails because mail is not set up. Optional secret MAIL_FROM (default onboarding@resend.dev).
+// With no RESEND_API_KEY the message is only logged and the call answers { ok: true, sent: false }, so a flow
+// never fails because mail is not set up (callers can read `sent`). When the provider REFUSES the message
+// (or cannot be reached) the answer is { ok: false, sent: false, error: "<the provider's message>" } with status 502, so the caller can tell the person.
+// Optional secret MAIL_FROM (default onboarding@resend.dev). That default sender only delivers to the Resend account
+// owner's own address: to email anyone else, verify a sending domain in Resend and set MAIL_FROM to an address on it.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsFor, jsonFor } from "../_shared/http.ts";
 
@@ -29,11 +32,23 @@ Deno.serve(async (req) => {
     console.log("[send-email] no provider key; logged only:", JSON.stringify({ to: b.to, subject: b.subject }));
     return json({ ok: true, sent: false });
   }
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: Deno.env.get("MAIL_FROM") ?? "onboarding@resend.dev", to: [b.to], subject: b.subject, text: b.text, html: b.html }),
-  });
-  if (!res.ok) { console.log("[send-email] provider error", res.status); return json({ ok: true, sent: false }); }
+  let res: Response;
+  try {
+    res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: Deno.env.get("MAIL_FROM") ?? "onboarding@resend.dev", to: [b.to], subject: b.subject, text: b.text, html: b.html }),
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch (e) {
+    console.log("[send-email] provider unreachable", String((e as Error).message ?? e).slice(0, 200));
+    return json({ ok: false, sent: false, error: "The email service could not be reached. Try again." }, 502);
+  }
+  if (!res.ok) {
+    let reason = "";
+    try { const body = await res.json(); reason = String(body?.message ?? body?.error ?? ""); } catch { /* not JSON */ }
+    console.log("[send-email] provider error", res.status, reason.slice(0, 200));
+    return json({ ok: false, sent: false, error: reason.slice(0, 300) || `The email service refused the message (${res.status}).` }, 502);
+  }
   return json({ ok: true, sent: true });
 });

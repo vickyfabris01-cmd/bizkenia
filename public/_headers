@@ -1,0 +1,22 @@
+# Security headers for every page and built file (Cloudflare static assets read this file from dist/).
+# They do not apply to answers made by the Worker (/api/*, /share/*, /robots.txt, /sitemap.xml); /api/files already sets its own.
+#
+# The Content-Security-Policy is REPORT-ONLY for now: the browser lists what it would block in the console
+# (DevTools > Console) but blocks nothing. To enforce it, change the header name below from
+# Content-Security-Policy-Report-Only to Content-Security-Policy (see part-09-report.md).
+#
+# Origins allowed and why:
+#   script   the page itself, the theme boot script in index.html (by its hash: change that script and the hash must change),
+#            Cloudflare Web Analytics (static.cloudflareinsights.com)
+#   style    the page itself, inline styles (React style attributes), Google Fonts CSS
+#   font     Google Fonts files (fonts.gstatic.com)
+#   img      the page itself (uploads are served from /api/files), data: and blob: (previews, share cards),
+#            the map tiles (tile.openstreetmap.org, server.arcgisonline.com), the Supabase host (older picture links)
+#   connect  the page itself, the Supabase host (data, functions, realtime over wss), Nominatim (place search),
+#            Cloudflare Web Analytics (cloudflareinsights.com)
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=(self)
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'sha256-S0XZfnEm1ePY5/Hxt+/a2CpWAsBklqW0gtbkYzrvb3Q=' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://tile.openstreetmap.org https://server.arcgisonline.com https://vhjptjbonpzpohdqydrt.supabase.co; connect-src 'self' https://vhjptjbonpzpohdqydrt.supabase.co wss://vhjptjbonpzpohdqydrt.supabase.co https://nominatim.openstreetmap.org https://cloudflareinsights.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'

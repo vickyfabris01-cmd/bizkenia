@@ -11,5 +11,4 @@ Disallow: /checkout
 Disallow: /orders
 Disallow: /account
 
-# Replace with your real domain (see docs/GO-LIVE.md)
-Sitemap: https://YOUR-DOMAIN/sitemap.xml
+# The Worker adds the Sitemap line (built from the host that was asked), see worker/entry.js
