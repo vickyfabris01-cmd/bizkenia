@@ -1,12 +1,12 @@
 npm notice run fab-rental-management@1.0.0 test:worker
 npm notice run node --test worker/worker.test.mjs
-✔ staff can upload, public can read, nosniff set (57.1434ms)
-✔ no token -> 401, wrong user -> 403, other business folder -> 403 (2.4925ms)
-✔ html renamed to .jpg is refused; extension must match real type (1.6292ms)
-✔ too big, existing name, traversal, unknown bucket, svg name (5.2646ms)
-✔ remove needs permission (4.1763ms)
-✔ admin routes need the secret; remove-folder empties a folder (1.6603ms)
-✔ CORS only for the site and listed origins (0.4743ms)
+✔ staff can upload, public can read, nosniff set (58.6831ms)
+✔ no token -> 401, wrong user -> 403, other business folder -> 403 (2.7885ms)
+✔ html renamed to .jpg is refused; extension must match real type (1.6703ms)
+✔ too big, existing name, traversal, unknown bucket, svg name (5.4335ms)
+✔ remove needs permission (6.324ms)
+✔ admin routes need the secret; remove-folder empties a folder (1.7633ms)
+✔ CORS only for the site and listed origins (0.5272ms)
 ℹ tests 7
 ℹ suites 0
 ℹ pass 7
@@ -14,4 +14,4 @@ npm notice run node --test worker/worker.test.mjs
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 1513.3638
+ℹ duration_ms 244.9774

@@ -7,11 +7,12 @@
 ## Files
 NEW: none.
 
-MODIFIED (only these two):
+MODIFIED:
 - `src/components/notifications/NotificationBell.jsx`
 - `src/components/notifications/Notifications.css`
+- `src/pages/notifications/NotificationsPage.jsx`  (added at your request, see Part 4b below; it is outside the two files the brief listed, so please confirm it does not clash with other parts)
 
-No deleted or moved files, so no `git rm` / `git mv`. `Shell.css`, `TopBar.jsx` and the sharing files were not touched.
+No deleted or moved files, so no `git rm` / `git mv`. `Shell.css`, `TopBar.jsx` and the sharing files were not touched. `Notifications.css` is edited in two places (panel rules, and the `.nc-filters` rule).
 
 ## Cause
 `.nc-panel` was `position: absolute; right: 0` and up to 360px wide, inside `.nc-bell` (the 44px bell). The bell sits left of the user avatar, so on a 360px screen the panel's left edge landed at x = -48px (x = -19px at 414px). Part of every row was cut off.
@@ -72,3 +73,32 @@ Checks, run in a fresh clone at the base commit after `unzip -o` of the zip (git
 
 ## Rollback
 Restore the two files from the base commit: `git checkout e6b67ddf77e777a324e7c7c2e0cae85a2275a8a0 -- src/components/notifications/NotificationBell.jsx src/components/notifications/Notifications.css`
+
+---
+# Part 4b: Notifications page filters (follow-up request)
+
+Request: the row of filter chips on /notifications is slow on mobile; replace with a clean dropdown, All as default, sectioned so a person who owns two or more businesses does not see them mixed.
+
+## What changed (NotificationsPage.jsx, plus `.nc-filters` / new `.nc-filter` rules in Notifications.css)
+- Chips removed. Two native dropdowns (touch and screen-reader friendly, labelled, 44px controls from the existing `ui-control` styles, chevron from `Icon.jsx`):
+  1. **Business** appears only when the notifications come from 2 or more businesses. Options: All my businesses (default), each business by name, and "General (not tied to a business)" when such notifications exist (account and system alerts), so they never become unreachable.
+  2. **Show**: All (default), Unread (n), then topics in sections via `<optgroup>`: Property and rent (Rent and payments, Complaints, Announcements, Requests and moves), Messages and help (Messages, Help desk), Work (Work and pay). Only topics that currently have notifications in the chosen business are listed, with counts, so the list stays short. The selected topic stays listed even if it empties.
+- Choosing a business scopes everything: the list, the Unread count and the topic counts.
+- "Mark all read" now respects the filter: with no filter it calls the existing `markAllRead()`; with a business or topic chosen the label becomes "Mark these read" and only the visible unread items are marked (via the existing `markNotificationRead`), so one business's alerts are not cleared by accident. The button is disabled when nothing visible is unread.
+- Empty-state title: "Nothing here yet" only when unfiltered.
+- No API, SQL or `people.js` change: businesses are grouped by the `tenant_id` and `business.name` already returned by `listNotifications`. `CATEGORIES` export, preferences card and all other behaviour are unchanged.
+- Layout: dropdowns sit side by side from ~520px up and stack full width below it; the button goes full width on phones.
+
+## Tests
+- Same checks as above, re-run in a fresh clone after `unzip -o` of the 3-file zip: `npm run build` passes, `check:budget` PASS (JS 134.4 KB, CSS 10.6 KB), `test:worker` 7/7. `npm run lint` still fails at base (unrelated, see above).
+- Harness (mocked data: 6 notifications from "Admin Farm", "Fab Plaza Rentals" and one with no business): business list correct; choosing Fab Plaza Rentals showed only its 3 items and the topic list shrank to its 3 topics; choosing Rent and payments showed 1 item and the button read "Mark these read". No horizontal scroll at 360px or 1100px, no page errors.
+- Screenshots: `part-04b-notifications-page-360.png` (default, then filtered), `part-04b-notifications-page-1100.png`.
+
+## Assumptions / not tested
+- "Business type" is interpreted as "business" (each owned business). If you meant grouping by kind of business (farm vs rental), tell me.
+- Topic sections are my grouping; easy to rename or regroup in `FILTER_GROUPS`.
+- Not tested against real Supabase data or on a real phone's native dropdown picker. The harness did not load the page-title CSS, so the tight gap under the title in the screenshot is not real.
+- If `tenant_id` is not the business id for some rows, those rows fall back to grouping by business name.
+
+## Rollback
+`git checkout e6b67ddf77e777a324e7c7c2e0cae85a2275a8a0 -- src/pages/notifications/NotificationsPage.jsx` (and the two notification component files as above).

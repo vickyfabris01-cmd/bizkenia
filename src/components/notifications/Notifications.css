@@ -30,7 +30,9 @@
 
 /* centre page */
 .nc-page { display: grid; gap: var(--space-4); }
-.nc-filters { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.nc-filters { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: end; }
+.nc-filter { flex: 1 1 220px; min-width: 0; max-width: 320px; }
+@media (max-width: 520px) { .nc-filter { max-width: none; flex-basis: 100%; } .nc-filters__read { width: 100%; } }
 .nc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
 .nc-item { display: flex; gap: var(--space-3); align-items: start; justify-content: space-between; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4); }
 .nc-item.is-unread { border-color: var(--color-primary); background: var(--color-primary-soft); }
