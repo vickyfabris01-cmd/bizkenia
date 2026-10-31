@@ -1,8 +1,12 @@
 /* src/pages/public/HomePage.css — MODIFIED (the nth-child row rules are gone: .crow in CardRows.css lays out the cards) */
 .home-hero { background: var(--color-primary-soft); border-bottom: 1px solid var(--color-border); }
-/* Phones: a compact hero (still well under half the screen, 24px taller than before): a 20px headline
-   that may use the full width, a one or two line paragraph and one 44px search row. */
+/* Phones: use the available vertical space for the hero while keeping the content compact. */
 .home-hero__inner { max-width: var(--container-max); margin: 0 auto; padding: var(--space-6) var(--gutter); display: grid; gap: var(--space-2); }
+@media (max-width: 767px) {
+  .home-hero { min-height: clamp(16.25rem, 42dvh, 22.5rem); display: grid; align-items: center; }
+  .home-hero__inner { gap: var(--space-4); }
+  .home-hero__lead { font-size: var(--text-lg); line-height: 1.45; }
+}
 .home-hero__title { margin: 0; font-size: var(--text-xl); line-height: 1.2; font-weight: var(--weight-bold); color: var(--color-on-primary-soft); }
 .home-hero__lead { margin: 0; max-width: 60ch; color: var(--color-text); font-size: var(--text-sm); line-height: 1.35; }
 .home-hero__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
