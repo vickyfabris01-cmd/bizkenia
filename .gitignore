@@ -32,3 +32,6 @@ phase2bugs.txt
 e2e/report.json
 test-results
 playwright-report
+
+# Vite dependency cache
+.vite

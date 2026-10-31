@@ -12,6 +12,7 @@
 // super admin's manual "mark as paid" and testing is never blocked.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsFor, jsonFor } from "../_shared/http.ts";
+import { darajaBase, darajaTimestamp, darajaToken } from "../_shared/daraja.ts";
 
 
 Deno.serve(async (req) => {
@@ -133,21 +134,39 @@ Deno.serve(async (req) => {
     return json({ error: "M-Pesa is not set up on this server yet.", code: "NOT_CONFIGURED" }, 400);
   }
 
+  // Duplicate-prompt block: a second tap (or a second tab) must not send a second prompt. If this user already has a
+  // pending intent for the same purpose and reference (invoice, order or business subscription) from the last 2 minutes,
+  // that intent is returned instead. The amount (and, for a subscription, the plan) must match, so a changed request still goes through.
+  const DUP_MSG = "A payment prompt was sent a moment ago. Check your phone for the M-Pesa prompt.";
+  const findPending = async () => {
+    let q = admin.from("payment_intents").select("id, created_at").eq("user_id", user.id).eq("purpose", purpose)
+      .eq("status", "pending").eq("amount_kes", amount).gte("created_at", new Date(Date.now() - 120_000).toISOString());
+    if (purpose === "order") q = q.eq("order_id", orderRef!);
+    else if (purpose === "rent") q = q.eq("billing_cycle_id", cycleRef!);
+    else q = q.eq("business_id", bizId).eq("plan_id", planRef!);
+    const { data } = await q.order("created_at", { ascending: true }).order("id", { ascending: true }).limit(1);
+    return data?.[0] ?? null;
+  };
+  const already = await findPending();
+  if (already) return json({ intentId: already.id, status: "pending", message: DUP_MSG, duplicate: true });
+
   const { data: intent, error: insErr } = await admin.from("payment_intents").insert({
     user_id: user.id, business_id: bizId, plan_id: planRef, purpose, method: "mpesa_stk",
     amount_kes: amount, phone, status: "pending", billing_cycle_id: cycleRef, tenancy_id: tenancyRef, order_id: orderRef,
   }).select("id").single();
   if (insErr) return json({ error: "Could not start the payment." }, 500);
+  // Two taps that arrive at the same moment can both pass the check above. The oldest pending intent wins; the other stops here.
+  const first = await findPending();
+  if (first && first.id !== intent.id) {
+    await admin.from("payment_intents").update({ status: "failed", result_desc: "Duplicate request, no prompt was sent." }).eq("id", intent.id);
+    return json({ intentId: first.id, status: "pending", message: DUP_MSG, duplicate: true });
+  }
 
-  const base = env === "live" ? "https://api.safaricom.co.ke" : "https://sandbox.safaricom.co.ke";
+  const base = darajaBase(env);
   try {
-    const tokenRes = await fetch(`${base}/oauth/v1/generate?grant_type=client_credentials`, {
-      headers: { Authorization: "Basic " + btoa(`${key}:${secret}`) },
-    });
-    if (!tokenRes.ok) throw new Error("Safaricom rejected the credentials.");
-    const { access_token } = await tokenRes.json();
+    const access_token = await darajaToken(env, key, secret);
 
-    const ts = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
+    const ts = darajaTimestamp();
     const callbackSecret = Deno.env.get("MPESA_CALLBACK_SECRET") ?? "";
     const stk = await fetch(`${base}/mpesa/stkpush/v1/processrequest`, {
       method: "POST",

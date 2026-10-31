@@ -47,7 +47,7 @@ async function unreferenced(env, token, keys) {
   return { refs: Number(out.refs || 0), keys: Array.isArray(out.unreferenced) ? out.unreferenced : [] };
 }
 
-async function listAll(env) {
+export async function listAll(env) {
   const out = [];
   let cursor, truncated = false;
   do {

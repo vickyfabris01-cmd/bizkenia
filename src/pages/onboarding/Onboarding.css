@@ -31,6 +31,11 @@
 .onb__plan-name .ui-badge { vertical-align: middle; }
 .onb__plan-desc { display: block; }
 .onb__wait { display: grid; justify-items: center; gap: var(--space-3); text-align: center; padding: var(--space-6) 0; }
+.onb__state { display: grid; place-items: center; width: 72px; height: 72px; border-radius: var(--radius-full); background: var(--color-primary-soft); color: var(--color-primary); }
+.onb__state--ok { background: var(--color-success-bg); color: var(--color-success-text); }
+.onb__state--bad { background: var(--color-error-bg); color: var(--color-error-text); }
+.onb__state--wait { background: var(--color-warning-bg); color: var(--color-warning-text); }
+.onb__wait .onb__actions { justify-content: center; flex-wrap: wrap; }
 .onb__status { display: grid; gap: var(--space-4); }
 .onb__timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
 .onb__timeline li { display: flex; gap: var(--space-3); align-items: start; color: var(--color-text-muted); font-size: var(--text-sm); }

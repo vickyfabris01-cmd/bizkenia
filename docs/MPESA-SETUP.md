@@ -40,6 +40,42 @@ Subscriptions (businesses paying you) use the platform values. Rent and shop ord
 
 You do **not** register a callback address in Daraja: the app sends it with every request (`<project-url>/functions/v1/mpesa-callback?secret=...`).
 
+## Go-live checklist (do the steps in this order)
+
+**0. Put payments in maintenance first.** Admin > Settings > Maintenance > **Level 4: all money handling** > switch on "Block all M-Pesa payments" and save. The server (`mpesa-stk-push`) then refuses every prompt (subscription, rent, order) with a friendly message, so nobody is charged while you change keys. Super admins are not blocked, so you can still test. Level 5 blocks only the subscriptions of the businesses you pick. Switch level 4 off at the end (step 12).
+
+1. **Daraja app.** developer.safaricom.co.ke > My Apps. For live, use **Go Live** with your own Paybill. Safaricom sends the production Consumer Key and Consumer Secret.
+2. **Shortcode and passkey.** Your Paybill number and the production passkey for that shortcode (from Safaricom after approval; for the sandbox it is `174379` and the passkey on the M-Pesa Express page).
+3. **Secrets** (Supabase > Edge Functions > Secrets):
+   | Secret | Used by | Note |
+   |---|---|---|
+   | `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET` | stk-push, reconcile | production values for live |
+   | `MPESA_PASSKEY` | stk-push, reconcile | production passkey |
+   | `MPESA_CALLBACK_SECRET` | stk-push, callback | new random value, `openssl rand -hex 32` |
+   | `CRON_SECRET` | reconcile, purge | must exist before scheduling |
+   | `MPESA_SHORTCODE` | stk-push, reconcile | leave unset so Admin > Settings > M-Pesa decides |
+   | `ALLOWED_ORIGINS` | browser-facing functions | your site origin(s), comma separated |
+4. **Callback URL with its secret.** You do not register it in Daraja. Every prompt sends `<project-url>/functions/v1/mpesa-callback?secret=<MPESA_CALLBACK_SECRET>`. Deploy `mpesa-callback` with `--no-verify-jwt`. If you change `MPESA_CALLBACK_SECRET` while a prompt is open, that prompt's callback is refused with 403 and `mpesa-reconcile` settles it.
+5. **Deploy:** `supabase functions deploy mpesa-stk-push mpesa-status` and `supabase functions deploy mpesa-callback mpesa-reconcile --no-verify-jwt`.
+6. **Schedule `mpesa-reconcile` every 2 minutes** with pg_cron and pg_net (the exact SQL is in `docs/reports/part-03-report.md`, section "Scheduling mpesa-reconcile every 2 minutes"; it sends the `x-cron-secret` header). Check: `select * from cron.job_run_details order by start_time desc limit 5;`. Test once by hand: `curl -X POST -H "x-cron-secret: YOUR_CRON_SECRET" https://YOUR-PROJECT-REF.supabase.co/functions/v1/mpesa-reconcile` should answer JSON with `checked`, `paid`, `cancelled`, `failed`, `pending`.
+7. **Platform settings:** Admin > Settings > M-Pesa: Mode = **Live (real money)**, Business shortcode = your Paybill. Save. (The `platform_settings` row with key `mpesa` and `env` = `live`.)
+8. **Sandbox run first** (Mode = Sandbox) with the five cases below. Every case must end as described.
+9. **Live run:** set one plan to KSh 10, pay with your own phone, check Admin > Transactions says Successful and the business is active, then restore the price.
+10. Tell each business owner to enter their own Paybill and passkey (see Part B step 5).
+11. Confirm `/admin/errors` shows no new `mpesa-` entries.
+12. **Switch Level 4 off.** Make one more payment as a normal (non-admin) owner to prove prompts work for everyone.
+
+### The five sandbox cases
+| Case | What you do | Expected result |
+|---|---|---|
+| Success | Pay and enter the PIN | Screen shows "Payment confirmed", then the approval step; Transactions: Successful |
+| Wrong PIN | Enter a wrong PIN on the prompt | Screen shows "Payment not completed" with Safaricom's reason; Transactions: Failed |
+| Cancel | Dismiss the prompt | "Payment cancelled", nothing charged; Transactions: Failed (cancelled) |
+| Timeout | Do not answer | After about 2 minutes "No answer yet" with a Check again button; `mpesa-reconcile` settles it within a few minutes |
+| Double tap | Tap "Pay" twice quickly, or open the page in two tabs | Only one prompt arrives; the second request returns the same payment with "A payment prompt was sent a moment ago" (no second row stays pending) |
+
+On the subscribe screen, a prompt that has been waiting for 90 seconds shows "Still waiting" and a **Check again** button.
+
 ## Limits to know
 - Prompts use **Paybill** (`CustomerPayBillOnline`). A **Till** (Buy Goods) number is not supported for prompts yet; a business with only a till should use pay on delivery or manual recording. The forms say "paybill or till" but only a paybill will actually send prompts.
 - A payment whose amount differs from the amount requested is marked **failed** ("Amount mismatch") and does not activate anything. Refund the customer through M-Pesa.
@@ -53,3 +89,5 @@ You do **not** register a callback address in Daraja: the app sends it with ever
 | Failed with "Amount mismatch" | Paid amount differed from the amount asked. Refund and retry. |
 | "You cannot pay for this business" | Only the business owner can pay its subscription. |
 | Too many prompts (429) | More than 3 in a minute from one account. Wait a minute. |
+| "Payments are paused for a short while" | Maintenance Level 4 (or Level 5 for this business) is on in Admin > Settings > Maintenance. Switch it off when setup is done. |
+| "A payment prompt was sent a moment ago" | The duplicate-prompt block: the same user, purpose, reference and amount already has a pending prompt from the last 2 minutes. Wait for it, or press Check again. |

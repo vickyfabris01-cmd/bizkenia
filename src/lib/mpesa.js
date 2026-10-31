@@ -5,6 +5,7 @@
 //   startStk({ purpose, ... })             asks the `mpesa-stk-push` Edge Function to send the prompt
 //                                          (while payments are in maintenance the error says so in plain words; err.code starts with MAINTENANCE)
 //   watchPayment(intentId, onChange)       polls `mpesa-status` until the payment is no longer pending
+//   checkPayment(intentId)                 asks `mpesa-status` once (the "check again" button); returns the intent or null
 //
 // The browser never talks to Safaricom: Daraja keys live in Edge Function secrets, `mpesa-callback`
 // records the result, and the database decides what a successful payment changes.
@@ -57,6 +58,15 @@ export async function startStk({ purpose = "subscription", businessId, planId, p
   }
   if (data?.error) { const err = new Error(stkMessage(data.error, data.code)); err.code = data.code; throw err; }
   return data; // { intentId, status, simulated?, message }
+}
+
+/** One status check, the same call watchPayment makes. Returns the intent, or null when the answer could not be read. Never throws. */
+export async function checkPayment(intentId) {
+  if (!supabase) return null;
+  try {
+    const { data } = await supabase.functions.invoke("mpesa-status", { body: { intentId } });
+    return data?.intent || null;
+  } catch { return null; }
 }
 
 /**

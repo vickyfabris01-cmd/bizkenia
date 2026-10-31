@@ -1,5 +1,5 @@
 // Daraja (Safaricom M-Pesa) helpers shared by the functions that call Safaricom themselves.
-// Used by mpesa-reconcile. mpesa-stk-push still has its own copy of the token and push code.
+// Used by mpesa-reconcile and by mpesa-stk-push (base URL, token and timestamp; the push request itself stays in mpesa-stk-push).
 // Nothing here reads secrets: the caller passes the keys in, and nothing is logged except
 // short messages (never keys, passkeys, tokens or phone numbers).
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";

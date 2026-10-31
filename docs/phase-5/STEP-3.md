@@ -10,9 +10,15 @@ Built on top of phase 5 step 2 (storefront, checkout, account lock). The three f
 | Revenue (new menu item) | `pages/admin/AdminRevenue.jsx` | Subscription income: this month vs last month, 12 months, all time, running and ending subscriptions, by month and by business type, latest payments, CSV. |
 | Reports | `pages/admin/AdminReports.jsx` | Tabs: Growth, Businesses, Money, Top businesses. Chart, table and CSV on each. |
 | Audit log | `pages/admin/AdminAudit.jsx` | Read-only history in plain English with before and after, filters, raw record on request, CSV. |
-| Settings (two new cards) | `pages/admin/PlatformControls.jsx` | Maintenance mode (switch and message) and Default commission (stored only). |
+| Settings (two new cards) | `pages/admin/PlatformControls.jsx` | Maintenance (five levels, a page picker and a message) and Default commission (stored only). |
 
-**Maintenance mode:** `router/MaintenanceGate.jsx` wraps all routes in `AppRouter.jsx`; `pages/shared/MaintenancePage.jsx` is the page and the `/maintenance` route. Everyone except a super admin sees it while the switch is on. `/login`, `/forgot-password`, `/reset-password` and `/auth/callback` stay open so a super admin can sign in. A super admin sees a banner with a "Turn it off" link.
+**Maintenance (five levels):** Admin > Settings > Maintenance. Everything is saved in the `maintenance` setting and a super admin is never blocked.
+1. **Whole system.** Only super admins can use the site; everyone else sees the maintenance page.
+2. **All dashboards.** Everything under `/app`; public pages keep working.
+3. **One business type.** Only the dashboards of the types ticked (rentals, shops, farms).
+4. **All money handling.** Every M-Pesa prompt (subscription, rent, shop order) is refused. The server (`mpesa-stk-push`) enforces this and fails closed, so it also stops calls that do not use the screen.
+5. **Some businesses' subscriptions.** The subscription prompt is refused for the businesses picked, for example new ones with no billing set up yet.
+A **Pages** picker shows the maintenance page on single pages, and an optional message is shown on it. `router/MaintenanceGate.jsx` wraps all routes in `AppRouter.jsx` and `pages/shared/MaintenancePage.jsx` is the page and the `/maintenance` route. `/login`, `/forgot-password`, `/reset-password` and `/auth/callback` stay open so a super admin can sign in. A super admin sees a banner with a "Turn it off" link. Switching something ON asks for a confirmation.
 
 **Shop owner Reports** (the placeholder from 5A): `pages/shop/ShopReportsPage.jsx`. Tabs: Sales, Orders, Top products. Owner only, as in 5A.
 
@@ -48,14 +54,14 @@ Built on top of phase 5 step 2 (storefront, checkout, account lock). The three f
 3. Revenue: this month and 12-month totals equal the "Subscriptions" total on Transactions (filter Type = Subscription, Status = Successful, no dates). The chart and table agree. The dashboard "Subscription revenue" tile equals "All time".
 4. Reports: each of the four tabs shows a chart, a table and a working CSV.
 5. Settings: change a plan price, then open Audit log: "Price plan changed" with the old and new price. Switch an account off in Users: it appears too. Approve or suspend a business: "Business status changed".
-6. Settings > Maintenance mode: switch on with a message and confirm. In a private window, any page shows the maintenance page with your message; `/login` still opens. As the super admin the site works and the banner shows. Switch it off: the private window returns to normal within a minute, or at once with "Check again". The change is in the Audit log.
+6. Settings > Maintenance: switch on level 1 with a message and confirm. In a private window, any page shows the maintenance page with your message; `/login` still opens. As the super admin the site works and the banner shows. Switch it off: the private window returns to normal within a minute, or at once with "Check again". The change is in the Audit log. Then switch on level 4 and start a payment as a normal owner: the prompt is refused with "Payments are paused for a short while"; switch level 4 off again.
 7. Settings > Default commission: save 5; reload and it is still 5; the Audit log shows it. Nothing in Revenue changes.
 8. Sign in as `shop.demo@example.com`, open Reports: Sales, Orders and Top products match the Orders screen (cancelled orders left out of sales).
 9. Sign in as an ordinary business owner and open `/admin/transactions`: you land on the 404 page.
 
 ## Known limits and decisions
-- **Maintenance mode hides the pages in the browser only.** It does not stop API calls, the M-Pesa callback or direct database access. That is deliberate for planned short work (and the M-Pesa callback must keep working). Server-side enforcement is a candidate for step 4 (hardening).
+- **Levels 1 to 3 and the page picker hide pages in the browser only.** They do not stop API calls, the M-Pesa callback or direct database access. That is deliberate for planned short work (and the M-Pesa callback must keep working). Levels 4 and 5 are different: they are enforced on the server, in `mpesa-stk-push`, which refuses the prompt (and fails closed if the setting cannot be read).
 - Sheet 11 also shows "2FA required" and "Auto backup" switches. They are not built: two-factor needs the auth provider's setup and backups are done by the hosting plan, so a switch here would not do anything. The commission field is stored and shown only, as the plan's defaults say.
 - Lists show 25 rows a page. CSV downloads hold up to 5,000 rows; if more match, the message says so and asks you to narrow the dates.
 - Dates and months follow UTC (as the Phase 4 reports do).
-- The repo's `npm run lint` does not start (`eslint.config.js` needs ESLint 9; `package.json` pins 8). It was already like that; the new files were checked with an equivalent ESLint 8 setup instead, with no warnings. `npm run build` passes.
+- `npm run lint` works (ESLint 9) and runs in CI. `npm run build` passes.
