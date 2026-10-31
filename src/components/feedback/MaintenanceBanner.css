@@ -1,0 +1,56 @@
+/* src/components/feedback/MaintenanceBanner.css — NEW FILE
+   Styles for MaintenanceBanner.jsx. Tokens only: no hex values (the warning pair is a tested colour pair in both themes).
+   Mobile first: the text wraps, the close button is a 44px target. */
+
+.maint-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--gutter);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border-bottom: 1px solid var(--color-warning);
+  font-size: var(--text-sm);
+  line-height: var(--lh-sm);
+}
+.maint-notice__icon {
+  display: flex;
+  flex-shrink: 0;
+  padding-block: var(--space-2);
+}
+.maint-notice__text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding-block: var(--space-2);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.maint-notice__link {
+  color: inherit;
+  font-weight: var(--weight-semibold);
+  text-decoration: underline;
+}
+.maint-notice__link:focus-visible,
+.maint-notice__close:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+.maint-notice__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .maint-notice__close:hover {
+    background: color-mix(in srgb, currentColor 14%, transparent);
+  }
+}

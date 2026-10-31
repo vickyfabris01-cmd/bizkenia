@@ -15,6 +15,7 @@ import { Drawer } from "../components/modals/Modal.jsx";
 import NotificationBell from "../components/notifications/NotificationBell.jsx";
 import UserMenu from "../components/shell/UserMenu.jsx";
 import BrandLogo from "../components/shell/BrandLogo.jsx";
+import MaintenanceBanner from "../components/feedback/MaintenanceBanner.jsx";
 import useBrand from "../hooks/useBrand.js";
 import { useSession } from "../store/sessionStore.js";
 import { useBusinessStore } from "../store/businessStore.js";
@@ -174,6 +175,7 @@ export default function PublicLayout() {
     <div className="site">
       <a className="site-skip" href="#main-content">Skip to content</a>
       <SiteHeader />
+      <MaintenanceBanner />
       <main id="main-content" className="site__main" tabIndex={-1}>
         <Outlet />
       </main>
