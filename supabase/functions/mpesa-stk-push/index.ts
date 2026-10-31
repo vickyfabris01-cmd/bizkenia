@@ -27,6 +27,27 @@ Deno.serve(async (req) => {
   const user = auth?.user;
   if (!user) return json({ error: "Please sign in first." }, 401);
 
+  // Maintenance guard (levels 4 and 5 of Admin > Settings > Maintenance). Fails closed: if the setting cannot be read, no prompt is sent.
+  //   level 4  payments: true            every prompt (subscription, rent, order) is refused
+  //   level 5  businesses: [business id]  a subscription prompt for a listed business is refused
+  {
+    const { data: maint, error: maintErr } = await admin.from("platform_settings").select("value").eq("key", "maintenance").maybeSingle();
+    const m = maint?.value;
+    if (maintErr || !m || typeof m !== "object" || Array.isArray(m)) {
+      return json({ error: "Payments are paused for a short while. Nothing was charged. Please try again later.", code: "MAINTENANCE_UNKNOWN" }, 503);
+    }
+    if (m.payments === true) {
+      return json({ error: "Payments are paused for a short while. Nothing was charged. Please try again later.", code: "MAINTENANCE_PAYMENTS" }, 503);
+    }
+    if (Array.isArray(m.businesses) && m.businesses.length > 0) {
+      const peek = await req.clone().json().catch(() => null);
+      const listed = m.businesses.map((b: unknown) => String(b).toLowerCase());
+      if ((peek?.purpose ?? "subscription") === "subscription" && listed.includes(String(peek?.businessId ?? "").toLowerCase())) {
+        return json({ error: "Subscription payments are not open for this business yet. Please try again later or contact support.", code: "MAINTENANCE_BUSINESS" }, 503);
+      }
+    }
+  }
+
   // A switched-off account does nothing, and nobody can flood phones with prompts.
   const { data: prof } = await admin.from("profiles").select("is_active").eq("id", user.id).maybeSingle();
   if (prof && prof.is_active === false) return json({ error: "This account has been switched off." }, 403);

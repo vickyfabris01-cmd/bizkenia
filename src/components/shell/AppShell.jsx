@@ -4,7 +4,7 @@
 // The frame around every signed-in page: sidebar (tablet and desktop), top bar, and a bottom
 // tab bar with "More" (phones). It knows nothing about roles or business types. The caller
 // passes the navigation list, so a rental manager, a shop owner and a super admin can all use
-// the same shell with different menus.
+// the same shell with different menus. The maintenance warning strip (MaintenanceBanner) sits under the top bar.
 //
 // PROPS
 //   nav               [{ to, label, icon, end?, section? }]  (see Sidebar.jsx)
@@ -31,6 +31,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import BottomTabBar from "./BottomTabBar.jsx";
 import Sidebar from "./Sidebar.jsx";
 import TopBar from "./TopBar.jsx";
+import MaintenanceBanner from "../feedback/MaintenanceBanner.jsx";
 
 /** The nav item whose path best matches the current URL (longest match wins). */
 function activeItem(nav, pathname) {
@@ -79,6 +80,8 @@ export default function AppShell({
           helpHref={helpHref}
           onSignOut={onSignOut}
         />
+
+        <MaintenanceBanner />
 
         <main id="main-content" className="shell__content" tabIndex={-1}>
           {children ?? <Outlet />}

@@ -1,0 +1,4 @@
+npm notice run fab-rental-management@1.0.0 lint
+npm notice run eslint src --report-unused-disable-directives-severity warn
+'eslint' is not recognized as an internal or external command,
+operable program or batch file.
