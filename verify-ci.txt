@@ -1,16 +1,25 @@
-npm error code EPERM
-npm error syscall unlink
-npm error path C:\Users\vicky\web-projects\bizkenia\node_modules\@rollup\rollup-win32-x64-msvc\rollup.win32-x64-msvc.node
-npm error errno -4048
-npm error [Error: EPERM: operation not permitted, unlink 'C:\Users\vicky\web-projects\bizkenia\node_modules\@rollup\rollup-win32-x64-msvc\rollup.win32-x64-msvc.node'] {
-npm error   errno: -4048,
-npm error   code: 'EPERM',
-npm error   syscall: 'unlink',
-npm error   path: 'C:\\Users\\vicky\\web-projects\\bizkenia\\node_modules\\@rollup\\rollup-win32-x64-msvc\\rollup.win32-x64-msvc.node'
-npm error }
-npm error
-npm error The operation was rejected by your operating system.
-npm error It's possible that the file was already in use (by a text editor or antivirus), or that you lack permissions to access it.
-npm error
-npm error If you believe this might be a permissions issue, please double-check the permissions of the file and its containing directories, or try running the command again as root/Administrator.
-npm error A complete log of this run can be found in: C:\Users\vicky\AppData\Local\npm-cache\_logs\2026-10-30T16_33_41_370Z-debug-0.log
+npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+npm warn deprecated eslint@9.39.5: This version is no longer supported. Please see https://eslint.org/version-support for other options.
+
+added 353 packages, and audited 354 packages in 51s
+
+116 packages are looking for funding
+  run `npm fund` for details
+
+23 vulnerabilities (1 low, 13 moderate, 8 high, 1 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+npm warn install-scripts 2 packages had install scripts blocked because they are not covered by allowScripts:
+npm warn install-scripts   esbuild@0.21.5 (postinstall: node install.js)
+npm warn install-scripts   supabase@2.84.5 (postinstall: node scripts/postinstall.js)
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
