@@ -4,6 +4,7 @@
 // updates a payment that we created ourselves. The paid amount must equal the amount we asked for.
 // Safe to receive twice: a payment that is already paid stays paid.
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { logError } from "../_shared/daraja.ts";
 
 const ok = () => new Response(JSON.stringify({ ResultCode: 0, ResultDesc: "Accepted" }), { headers: { "Content-Type": "application/json" } });
 
@@ -31,10 +32,19 @@ Deno.serve(async (req) => {
 
   const items: { Name: string; Value?: string | number }[] = cb.CallbackMetadata?.Item ?? [];
   const receipt = items.find((i) => i.Name === "MpesaReceiptNumber")?.Value as string | undefined;
-  const paid = Number(items.find((i) => i.Name === "Amount")?.Value);
+  // A missing, empty or non-numeric Amount is NaN (Number(null) and Number("") would wrongly be 0).
+  const rawAmount = items.find((i) => i.Name === "Amount")?.Value;
+  const paid = (typeof rawAmount === "number" || (typeof rawAmount === "string" && rawAmount.trim() !== "")) ? Number(rawAmount) : NaN;
 
   if (cb.ResultCode === 0) {
-    if (Number.isFinite(paid) && Math.round(paid) !== Number(intent.amount_kes)) {
+    if (!Number.isFinite(paid)) {
+      // Success without a usable Amount: we cannot check what was paid, so do not mark it paid.
+      // It stays pending and mpesa-reconcile asks Safaricom about it.
+      await logError(admin, "mpesa-callback", "Success callback without a usable Amount; left pending for reconcile", `intent ${intent.id} checkout ${cb.CheckoutRequestID}`);
+      await admin.from("payment_intents").update({ note: "Callback had no usable Amount; waiting for reconcile" }).eq("id", intent.id).eq("status", "pending");
+      return ok();
+    }
+    if (Math.round(paid) !== Number(intent.amount_kes)) {
       // Paid a different amount than asked: do not mark it paid; a super admin sorts it out by hand.
       await admin.from("payment_intents").update({
         status: "failed", result_code: 0, result_desc: `Amount mismatch: asked ${intent.amount_kes}, received ${paid}. Receipt ${receipt ?? "?"}`,
@@ -42,7 +52,11 @@ Deno.serve(async (req) => {
       return ok();
     }
     await admin.from("payment_intents").update({ result_code: 0, result_desc: cb.ResultDesc }).eq("id", intent.id);
-    await admin.rpc("mark_intent_paid", { p_intent: intent.id, p_receipt: receipt ?? null });
+    const { error: payErr } = await admin.rpc("mark_intent_paid", { p_intent: intent.id, p_receipt: receipt ?? null });
+    if (payErr) {
+      // Leave it pending so mpesa-reconcile retries; Safaricom still gets Accepted (it must not retry on its own).
+      await logError(admin, "mpesa-callback", "mark_intent_paid failed; left pending for reconcile", `intent ${intent.id} checkout ${cb.CheckoutRequestID}: ${payErr.message}`);
+    }
   } else {
     await admin.from("payment_intents").update({
       status: cb.ResultCode === 1032 ? "cancelled" : "failed", result_code: cb.ResultCode, result_desc: cb.ResultDesc,
