@@ -6,7 +6,7 @@
 // person sees an in-app alert without opening anything. Falls back to a count refresh every minute.
 
 import "./Notifications.css";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "../ui/Icon.jsx";
 import { useToast } from "../../hooks/useNotifications.js";
@@ -24,6 +24,7 @@ export default function NotificationBell() {
   const [items, setItems] = useState([]);
   const root = useRef(null);
   const btn = useRef(null);
+  const panel = useRef(null);
   const panelId = useId();
 
   const refresh = useCallback(async () => {
@@ -51,6 +52,18 @@ export default function NotificationBell() {
     return () => { document.removeEventListener("pointerdown", down); document.removeEventListener("keydown", key); };
   }, [open]);
 
+  // On phones the panel is fixed under the header; tell the CSS where the header ends (re-measured on resize / rotate).
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    const place = () => {
+      const edge = (btn.current?.closest("header") || btn.current)?.getBoundingClientRect();
+      if (edge && panel.current) panel.current.style.setProperty("--nc-top", `${Math.round(edge.bottom + 6)}px`);
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [open]);
+
   async function openItem(n) {
     setOpen(false);
     if (!n.is_read) { await markNotificationRead(n.id); refresh(); }
@@ -66,7 +79,7 @@ export default function NotificationBell() {
         {count > 0 && <span className="nc-bell__badge" aria-hidden="true">{count > 99 ? "99+" : count}</span>}
       </button>
       {open && (
-        <div id={panelId} className="nc-panel" role="region" aria-label="Latest notifications">
+        <div id={panelId} ref={panel} className="nc-panel" role="region" aria-label="Latest notifications">
           <div className="nc-panel__head">
             <strong>Notifications</strong>
             {count > 0 && <button type="button" className="nc-link" onClick={readAll}>Mark all read</button>}

@@ -4,26 +4,35 @@
 .nc-bell__btn:hover { background: var(--color-surface-2); }
 .nc-bell__btn:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .nc-bell__badge { position: absolute; top: 4px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--radius-full); background: var(--color-error); color: var(--color-on-error, #fff); font-size: 11px; font-weight: var(--weight-bold); display: grid; place-items: center; box-sizing: border-box; }
-.nc-panel { position: absolute; right: 0; top: calc(100% + 6px); z-index: 60; width: min(360px, calc(100vw - 24px)); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); overflow: hidden; }
+.nc-panel { position: absolute; right: 0; top: calc(100% + 6px); z-index: 60; width: min(360px, calc(100vw - 16px)); max-width: calc(100vw - 16px); display: flex; flex-direction: column; max-height: calc(100vh - 6rem); max-height: calc(100dvh - 6rem); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); overflow: hidden; }
 .nc-panel__head { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border); }
 .nc-link { all: unset; cursor: pointer; color: var(--color-link); font-size: var(--text-sm); font-weight: var(--weight-medium); min-height: 32px; display: inline-flex; align-items: center; }
 .nc-link:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
-.nc-panel__list { list-style: none; margin: 0; padding: 0; max-height: 50vh; overflow-y: auto; }
+.nc-panel__list { list-style: none; margin: 0; padding: 0; max-height: 50vh; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .nc-panel__list li { border-bottom: 1px solid var(--color-border); }
 .nc-panel__list li.is-unread { background: var(--color-primary-soft); }
-.nc-panel__list button { all: unset; box-sizing: border-box; display: grid; gap: 2px; width: 100%; padding: var(--space-3) var(--space-4); cursor: pointer; min-height: 44px; }
+.nc-panel__list button { all: unset; box-sizing: border-box; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; width: 100%; padding: var(--space-3) var(--space-4); cursor: pointer; min-height: 44px; }
 .nc-panel__list button:hover { background: var(--color-surface-2); }
 .nc-panel__list button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
-.nc-panel__list strong { font-size: var(--text-sm); color: var(--color-text); }
-.nc-panel__list span { font-size: var(--text-sm); color: var(--color-text-muted); }
+.nc-panel__list strong { font-size: var(--text-sm); color: var(--color-text); overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.nc-panel__list span { font-size: var(--text-sm); color: var(--color-text-muted); overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
 .nc-panel__list small { font-size: var(--text-xs); color: var(--color-text-subtle); }
 .nc-panel__empty { margin: 0; padding: var(--space-5); text-align: center; color: var(--color-text-muted); font-size: var(--text-sm); }
 .nc-panel__all { all: unset; box-sizing: border-box; display: block; width: 100%; text-align: center; padding: var(--space-3); color: var(--color-link); font-weight: var(--weight-medium); cursor: pointer; border-top: 1px solid var(--color-border); }
 .nc-panel__all:hover { background: var(--color-surface-2); }
+/* Phones: a full-width panel pinned just under the header (left and right anchored, never centred, never off-screen).
+   --nc-top is set from the header's bottom edge by NotificationBell.jsx; the fallback is the standard header height.
+   The bottom limit keeps it clear of the phone tab bar; the list scrolls inside the panel. */
+@media (max-width: 520px) {
+  .nc-panel { position: fixed; top: var(--nc-top, calc(var(--topbar-h) + var(--safe-top) + 6px)); left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); width: auto; max-width: calc(100vw - 16px); max-height: calc(100vh - var(--nc-top, 4.5rem) - var(--tabbar-h) - var(--safe-bottom) - 8px); max-height: calc(100dvh - var(--nc-top, 4.5rem) - var(--tabbar-h) - var(--safe-bottom) - 8px); }
+  .nc-panel__list { max-height: none; flex: 1 1 auto; }
+}
 
 /* centre page */
 .nc-page { display: grid; gap: var(--space-4); }
-.nc-filters { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.nc-filters { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: end; }
+.nc-filter { flex: 1 1 220px; min-width: 0; max-width: 320px; }
+@media (max-width: 520px) { .nc-filter { max-width: none; flex-basis: 100%; } .nc-filters__read { width: 100%; } }
 .nc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
 .nc-item { display: flex; gap: var(--space-3); align-items: start; justify-content: space-between; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4); }
 .nc-item.is-unread { border-color: var(--color-primary); background: var(--color-primary-soft); }
