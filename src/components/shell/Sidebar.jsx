@@ -1,4 +1,4 @@
-// src/components/shell/Sidebar.jsx — MODIFIED (logo follows the current business)
+// src/components/shell/Sidebar.jsx — MODIFIED (logo follows the current business; Part 8: action count badges)
 //
 // AIM
 // The left navigation on tablets and desktops. Full width (labels) from 1024px, an icon-only
@@ -6,18 +6,22 @@
 // It only draws the nav items it is given, so every business type can supply its own.
 //
 // PROPS
-//   nav       array of { to, label, icon, end?, section? }
+//   nav       array of { to, label, icon, end?, section?, badgeKey? }
 //               to       route path        label  text    icon  a name from ui/Icon.jsx
 //               end      match this path exactly (use for the "Dashboard" root item)
 //               section  optional small heading shown above the first item of a group
+//               badgeKey optional: the action count drawn on the item (see store/actionCountsStore.js).
+//                        The frames do not pass it on, so it is also found from the item's address.
 //   business  optional { name, subtitle } shown at the bottom (the business being managed)
 
 import { NavLink } from "react-router-dom";
 import Icon from "../ui/Icon.jsx";
 import BrandLogo from "./BrandLogo.jsx";
+import { useNavBadges } from "../../store/actionCountsStore.js";
 
 export default function Sidebar({ nav = [], business }) {
   let lastSection = null;
+  const badgeFor = useNavBadges();
 
   return (
     <aside className="shell-sidebar" aria-label="Main navigation">
@@ -30,19 +34,22 @@ export default function Sidebar({ nav = [], business }) {
           {nav.map((item) => {
             const showSection = item.section && item.section !== lastSection;
             if (item.section) lastSection = item.section;
+            const badge = badgeFor(item);
             return (
               <li key={item.to}>
                 {showSection && <p className="shell-sidebar__section">{item.section}</p>}
                 <NavLink
-                  to={item.to}
+                  to={badge ? badge.to : item.to}
                   end={item.end}
                   className={({ isActive }) =>
-                    `shell-navlink${isActive ? " is-active" : ""}`
+                    `shell-navlink${isActive ? " is-active" : ""}${badge ? " has-badge" : ""}`
                   }
                   title={item.label}
+                  aria-label={badge ? `${item.label}, ${badge.label}` : undefined}
                 >
                   <Icon name={item.icon || "dashboard"} size={20} />
                   <span className="shell-navlink__label">{item.label}</span>
+                  {badge && <span className="shell-badge" aria-hidden="true">{badge.shown}</span>}
                 </NavLink>
               </li>
             );

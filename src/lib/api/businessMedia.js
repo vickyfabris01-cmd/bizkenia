@@ -1,4 +1,4 @@
-// src/lib/api/businessMedia.js — MODIFIED (the cover is framed and converted by the smart upload, so the 16:9 check is gone)
+// src/lib/api/businessMedia.js — MODIFIED (the cover is framed and converted by the smart upload, so the 16:9 check is gone; Part 8: optional upload progress)
 //
 // AIM
 // The two business pictures: the cover photo (businesses.cover_url) and the logo
@@ -42,13 +42,14 @@ async function setColumn(businessId, column, url) {
   return "";
 }
 
-export async function uploadBusinessImage(kind, businessId, file, oldUrl) {
+// uploadOptions (optional, last): { onProgress(percent|null), signal } passed to uploadFile, see lib/storage.js
+export async function uploadBusinessImage(kind, businessId, file, oldUrl, uploadOptions) {
   if (!supabase) return NOT_CONNECTED;
   const k = KINDS[kind];
   if (!TYPES[file.type]) return { data: null, error: "Use a JPG, PNG or WebP photo." };
   if (file.size > k.maxMb * 1024 * 1024) return { data: null, error: `The ${k.who} must be under ${k.maxMb} MB.` };
   const path = `${businessId}/${k.folder}/${crypto.randomUUID()}.${TYPES[file.type]}`;
-  const up = await uploadFile(BUCKET, path, file);
+  const up = await uploadFile(BUCKET, path, file, uploadOptions);
   if (up.error) return { data: null, error: up.error.message };
   const url = publicUrl(BUCKET, path);
   const err = await setColumn(businessId, k.column, url);
@@ -71,7 +72,7 @@ export async function removeBusinessImage(kind, businessId, oldUrl) {
   return { data: null, error: null };
 }
 
-export const uploadBusinessCover = (id, file, oldUrl) => uploadBusinessImage("cover", id, file, oldUrl);
+export const uploadBusinessCover = (id, file, oldUrl, uploadOptions) => uploadBusinessImage("cover", id, file, oldUrl, uploadOptions);
 export const removeBusinessCover = (id, oldUrl) => removeBusinessImage("cover", id, oldUrl);
-export const uploadBusinessLogo = (id, file, oldUrl) => uploadBusinessImage("logo", id, file, oldUrl);
+export const uploadBusinessLogo = (id, file, oldUrl, uploadOptions) => uploadBusinessImage("logo", id, file, oldUrl, uploadOptions);
 export const removeBusinessLogo = (id, oldUrl) => removeBusinessImage("logo", id, oldUrl);

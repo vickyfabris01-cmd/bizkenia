@@ -1,9 +1,10 @@
-// src/pages/admin/AdminBusinesses.jsx — MODIFIED (Phase 6: Close business / Restore business for support)
+// src/pages/admin/AdminBusinesses.jsx — MODIFIED (Phase 6: Close business / Restore business for support; Part 8: menu number refreshes after a decision)
 //
 // AIM
 // /admin/businesses (list with status filter and search) and /admin/businesses/:id (one business
 // with owner, subscription, payments and the decision buttons). One file because the admin
 // frame hands both paths to this screen.
+// The list filter lives in the address (?status=pending, ?q=word), so the menu badge can open it filtered.
 
 import "./Admin.css";
 import { useState } from "react";
@@ -17,6 +18,7 @@ import { adminGetBusiness, adminListBusinesses, adminRecordPayment, adminReview,
 import { adminCloseBusiness, adminRestoreBusiness } from "../../lib/api/lifecycle.js";
 import { STATUS_BADGE, formatDate, formatDateTime, formatKsh } from "../../lib/format.js";
 import { typeLabel } from "../../config/counties.js";
+import { refreshActionCounts } from "../../store/actionCountsStore.js";
 
 const STATUS_OPTIONS = [
   { value: "", label: "All statuses" },
@@ -104,6 +106,7 @@ function Detail({ id }) {
     if (res.error) { toast.error(res.error); return; }
     toast.success({ approve: "Business approved.", reject: "Business sent back to the owner.", suspend: "Business suspended.", reinstate: "Business reinstated.", pay: "Payment recorded.", close: "Business closed. It is deleted for good after 60 days.", restore: "Business restored." }[dialog]);
     setDialog(null);
+    refreshActionCounts(); // the "pending approval" number on the menu changes with the decision
     reload();
   }
 

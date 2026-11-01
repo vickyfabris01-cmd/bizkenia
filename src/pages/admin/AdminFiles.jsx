@@ -1,19 +1,22 @@
-// src/pages/admin/AdminFiles.jsx — NEW FILE
+// src/pages/admin/AdminFiles.jsx — NEW FILE (Part 8: saves the scan result for the menu badge)
 //
 // AIM
 // /admin/files — finds pictures in file storage that nothing in the database points to (left behind by
 // a failed save or a deleted record) and lets the super admin delete them. Nothing happens until you
 // press Scan. Files younger than 3 days are never shown. Deleting always asks first, and the server
 // checks every file again right before deleting it. Five files per page, Previous and Next.
+// The menu badge never scans storage: each scan saves how many unused files it found (save_scan_state), and
+// opening this page marks the badge as seen.
 
 import "./Admin.css";
 import "./AdminFinance.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Button, Card, CardBody, CardHeader, Checkbox, EmptyState } from "../../components/ui";
 import { ConfirmDialog } from "../../components/modals/Modal.jsx";
 import { useToast } from "../../hooks/useNotifications.js";
 import { scanUnusedFiles, deleteUnusedFiles } from "../../lib/api/adminFiles.js";
 import { Pager, Stat } from "./AdminParts.jsx";
+import { saveScanState, useActionCountsStore } from "../../store/actionCountsStore.js";
 
 const PAGE = 5;
 const n = (v) => Number(v || 0).toLocaleString("en-KE");
@@ -29,6 +32,9 @@ export default function AdminFiles() {
   const [ask, setAsk] = useState(null); // "selected" | "all" | null
   const [busy, setBusy] = useState(false);
 
+  // opening the page clears the menu badge
+  useEffect(() => { useActionCountsStore.getState().markSeen("files"); }, []);
+
   const d = state.data;
   const rows = d?.orphans || [];
   const last = Math.max(1, Math.ceil(rows.length / PAGE));
@@ -41,6 +47,11 @@ export default function AdminFiles() {
     setState({ loading: false, data: error ? null : data, error });
     setPicked(new Set());
     setPage(1);
+    if (!error) {
+      // keep the menu badge in step with the latest scan; the admin is looking at it, so it counts as seen
+      await saveScanState("unused_files", { count: (data.orphans || []).length, bytes: Number(data.unusedBytes) || 0 });
+      useActionCountsStore.getState().markSeen("files");
+    }
   }
 
   const toggle = (key) => setPicked((p) => { const x = new Set(p); if (x.has(key)) x.delete(key); else x.add(key); return x; });

@@ -1,4 +1,4 @@
-// src/lib/api/hero.js — MODIFIED (a slideshow of up to 5 photos; replace and delete per photo; no timing setting)
+// src/lib/api/hero.js — MODIFIED (a slideshow of up to 5 photos; replace and delete per photo; no timing setting; Part 8: optional upload progress)
 //
 // AIM
 // The home page hero photos. Public: the list of photos that are switched on, in order, which the
@@ -49,7 +49,8 @@ export async function adminListHeroImages() {
   return { data: (data || []).map(withUrl), error: error?.message || null };
 }
 
-export async function adminUploadHeroImage(file, label, nextOrder) {
+// uploadOptions (optional, last): { onProgress(percent|null), signal }, see lib/storage.js
+export async function adminUploadHeroImage(file, label, nextOrder, uploadOptions) {
   if (!supabase) return NOT_CONNECTED;
   const bad = checkFile(file);
   if (bad) return { data: null, error: bad };
@@ -57,7 +58,7 @@ export async function adminUploadHeroImage(file, label, nextOrder) {
   if (countErr) return { data: null, error: countErr.message };
   if ((count || 0) >= HERO_MAX_IMAGES) return { data: null, error: `There can be at most ${HERO_MAX_IMAGES} hero photos. Replace or delete one first.` };
   const path = `${FOLDER}/${crypto.randomUUID()}.${TYPES[file.type]}`;
-  const up = await uploadFile(BUCKET, path, file);
+  const up = await uploadFile(BUCKET, path, file, uploadOptions);
   if (up.error) return { data: null, error: up.error.message };
   const { data: auth } = await supabase.auth.getUser();
   const { data, error } = await supabase.from("hero_images")
@@ -71,12 +72,12 @@ export async function adminUploadHeroImage(file, label, nextOrder) {
 }
 
 // Replace one photo. Its place in the order, its description and its on/off setting stay as they are.
-export async function adminReplaceHeroImage(image, file) {
+export async function adminReplaceHeroImage(image, file, uploadOptions) {
   if (!supabase) return NOT_CONNECTED;
   const bad = checkFile(file);
   if (bad) return { data: null, error: bad };
   const path = `${FOLDER}/${crypto.randomUUID()}.${TYPES[file.type]}`;
-  const up = await uploadFile(BUCKET, path, file);
+  const up = await uploadFile(BUCKET, path, file, uploadOptions);
   if (up.error) return { data: null, error: up.error.message };
   const { data, error } = await supabase.from("hero_images").update({ storage_path: path }).eq("id", image.id).select().maybeSingle();
   if (error || !data) {

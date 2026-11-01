@@ -1,4 +1,4 @@
-// src/lib/auditText.js — NEW FILE (Phase 5, step 3)
+// src/lib/auditText.js — NEW FILE (Phase 5, step 3; Part 8: six maintenance labels, lists read as words)
 //
 // AIM
 // Turns a row of the audit log (action, entity, before, after) into plain English for the Audit log
@@ -31,6 +31,9 @@ const FIELD_LABEL = {
   enabled: "Enabled", message: "Message", mode: "Mode", env: "Mode", shortcode: "Shortcode", receipt: "M-Pesa receipt",
   reason: "Reason", status: "Status", role: "Role", rental: "Rental", agriculture: "Agriculture", shop: "Shop",
   duration_code: "Duration", kind: "Kind", offer_starts_on: "Offer starts", offer_ends_on: "Offer ends",
+  // maintenance levels (Part 1 follow-up): the audit entries showed "AllDashboards" and raw lists
+  system: "Whole site", allDashboards: "All dashboards", types: "Business types", pages: "Pages",
+  payments: "M-Pesa payments", businesses: "Businesses (subscriptions)",
 };
 
 export const AUDIT_ACTIONS = [
@@ -69,6 +72,8 @@ export function formatValue(field, v, entity) {
     const map = entity === "payment" ? PAYMENT_STATUS : BUSINESS_STATUS;
     if (map[v]) return map[v];
   }
+  // a list of plain values (maintenance: types, pages) reads as "Rental, Shop", not as raw JSON
+  if (Array.isArray(v) && v.every((x) => x === null || typeof x !== "object")) return v.length ? v.map((x) => fieldLabel(x)).join(", ") : "none";
   if (isObj(v) || Array.isArray(v)) return JSON.stringify(v);
   return String(v);
 }

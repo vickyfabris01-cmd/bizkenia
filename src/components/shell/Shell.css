@@ -529,3 +529,41 @@
   outline: 2px solid var(--color-focus);
   outline-offset: -2px;
 }
+
+/* ── Part 8: action count badges (the small number on a menu item) ───────────────────────────
+   Drawn by Sidebar and BottomTabBar from store/actionCountsStore.js. Colours are theme tokens.
+   Tabular numbers keep the pill from changing width as digits change. */
+.shell-badge {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--color-danger-action);
+  color: var(--color-on-danger-action);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* Sidebar rail (768 to 1023px): the number floats on the corner of the icon */
+.shell-navlink.has-badge { position: relative; }
+.shell-navlink .shell-badge { position: absolute; top: 4px; right: 4px; }
+/* Full sidebar (1024px and up): the number sits at the right end of the row */
+@media (min-width: 1024px) {
+  .shell-navlink .shell-badge { position: static; margin-inline-start: auto; }
+}
+/* Phone tab bar: the number floats on the corner of the icon */
+.shell-tab.has-badge { position: relative; }
+.shell-tab .shell-badge { position: absolute; top: 6px; left: calc(50% + 4px); }
+/* "More" sheet: the number sits before the arrow */
+.shell-more__item .shell-badge { margin-inline-start: auto; }
+.shell-more__item .shell-badge + .shell-more__arrow { margin-inline-start: var(--space-2); }
+@media (forced-colors: active) {
+  .shell-badge { border: 1px solid CanvasText; }
+}

@@ -5,6 +5,7 @@
 // A resident gets their own menu; those screens are Phase 3 and open the ComingSoon page until then.
 // Paths may repeat across roles ("" is the dashboard for staff and "My home" for residents):
 // the shell picks the item whose roles include the person's role.
+// badgeKey (optional, owner and manager items only): the action count shown on the menu item (src/store/actionCountsStore.js).
 
 import { lazy } from "react";
 import { registerModule } from "../registry.js";
@@ -21,14 +22,14 @@ registerModule({
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "", end: true, phase: 1, roles: BOTH,
       element: lazy(() => import("../../pages/app/BusinessDashboard.jsx")) },
     { id: "properties", label: "Properties", icon: "building", path: "properties", phase: 2, roles: BOTH, element: lazy(() => import("../../pages/rental/PropertiesPage.jsx")) },
-    { id: "rental-requests", label: "Rental requests", icon: "file", path: "rental-requests", phase: 2, roles: BOTH, element: lazy(() => import("../../pages/rental/RequestsPage.jsx")) },
+    { id: "rental-requests", label: "Rental requests", icon: "file", path: "rental-requests", badgeKey: "rental-requests", phase: 2, roles: BOTH, element: lazy(() => import("../../pages/rental/RequestsPage.jsx")) },
     { id: "residents", label: "Residents", icon: "users", path: "residents", phase: 2, roles: BOTH, element: lazy(() => import("../../pages/rental/ResidentsPage.jsx")) },
     { id: "tenancies", label: "Tenancies", icon: "swap", path: "tenancies", phase: 2, roles: BOTH, element: lazy(() => import("../../pages/rental/TenanciesPage.jsx")) },
     { id: "billing", label: "Billing", icon: "card", path: "billing", phase: 2, roles: BOTH, element: lazy(() => import("../../pages/rental/BillingPage.jsx")) },
     { id: "payments", label: "Payments", icon: "card", path: "payments", phase: 2, roles: BOTH, element: lazy(() => import("../../pages/rental/PaymentsPage.jsx")) },
-    { id: "invoices", label: "Invoices", icon: "file", path: "invoices", phase: 2, roles: BOTH, element: lazy(() => import("../../pages/rental/InvoicesPage.jsx")) },
-    { id: "complaints", label: "Complaints", icon: "complaint", path: "complaints", phase: 3, roles: BOTH, element: lazy(() => import("../../pages/people/ComplaintsPage.jsx")) },
-    { id: "transfers", label: "Room transfers", icon: "swap", path: "transfers", phase: 3, roles: BOTH, element: lazy(() => import("../../pages/people/TransfersPage.jsx")) },
+    { id: "invoices", label: "Invoices", icon: "file", path: "invoices", badgeKey: "invoices", phase: 2, roles: BOTH, element: lazy(() => import("../../pages/rental/InvoicesPage.jsx")) },
+    { id: "complaints", label: "Complaints", icon: "complaint", path: "complaints", badgeKey: "complaints", phase: 3, roles: BOTH, element: lazy(() => import("../../pages/people/ComplaintsPage.jsx")) },
+    { id: "transfers", label: "Room transfers", icon: "swap", path: "transfers", badgeKey: "transfers", phase: 3, roles: BOTH, element: lazy(() => import("../../pages/people/TransfersPage.jsx")) },
     { id: "workforce", label: "Workforce", icon: "user", path: "workforce", phase: 3, roles: BOTH, element: lazy(() => import("../../pages/people/WorkforcePage.jsx")) },
     { id: "announcements", label: "Announcements", icon: "megaphone", path: "announcements", phase: 3, roles: BOTH, element: lazy(() => import("../../pages/people/AnnouncementsPage.jsx")) },
     { id: "share", label: "Share and promote", icon: "megaphone", path: "share", phase: 6, roles: BOTH, element: lazy(() => import("../../pages/shared/MarketingPage.jsx")) },

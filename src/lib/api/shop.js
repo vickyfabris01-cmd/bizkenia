@@ -1,4 +1,4 @@
-// src/lib/api/shop.js — MODIFIED (listings from holdings, sales recorded by hand, field to store)
+// src/lib/api/shop.js — MODIFIED (listings from holdings, sales recorded by hand, field to store; Part 8: optional upload progress)
 //
 // AIM
 // Everything the seller side of a shop asks of the database, grouped by screen. Every function
@@ -132,12 +132,12 @@ export const moveFieldToStore = guard(async (cropId, quantity, itemId, itemName)
 
 export const deleteProduct = guard(async (id) => wrap(await supabase.from("products").delete().eq("id", id)));
 
-// photo: returns { data: { url } }
-export const uploadProductPhoto = guard(async (bid, file) => {
+// photo: returns { data: { url } }. uploadOptions (optional): { onProgress, signal }, see lib/storage.js
+export const uploadProductPhoto = guard(async (bid, file, uploadOptions) => {
   if (!TYPES[file.type]) return { data: null, error: "Use a JPG, PNG or WebP photo." };
   if (file.size > PHOTO_MAX_MB * 1024 * 1024) return { data: null, error: `Each photo must be under ${PHOTO_MAX_MB} MB.` };
   const path = `${bid}/products/${crypto.randomUUID()}.${TYPES[file.type]}`;
-  const up = await uploadFile(BUCKET, path, file);
+  const up = await uploadFile(BUCKET, path, file, uploadOptions);
   if (up.error) return { data: null, error: up.error.message };
   return { data: { url: publicUrl(BUCKET, path) }, error: null };
 });

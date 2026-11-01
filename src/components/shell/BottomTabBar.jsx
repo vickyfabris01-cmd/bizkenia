@@ -1,4 +1,4 @@
-// src/components/shell/BottomTabBar.jsx — NEW FILE
+// src/components/shell/BottomTabBar.jsx — NEW FILE (Part 8: action count badges)
 //
 // AIM
 // The tab bar fixed to the bottom of the screen on phones (hidden from 768px up, where the
@@ -6,7 +6,8 @@
 // tab opens a sheet listing the rest, so nothing is out of reach.
 //
 // PROPS
-//   nav    same array as Sidebar: { to, label, icon, end? }
+//   nav    same array as Sidebar: { to, label, icon, end?, badgeKey? }. A count on an item inside "More"
+//          is added up on the More tab and shown on the item itself in the sheet.
 //   tabs   optional array of `to` paths to pin as the main tabs (default: the first four).
 //          With five items or fewer, every item becomes a tab and there is no "More".
 
@@ -14,12 +15,14 @@ import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import Icon from "../ui/Icon.jsx";
 import Modal from "../modals/Modal.jsx";
+import { badgeLabel, badgeShown, useNavBadges } from "../../store/actionCountsStore.js";
 
 const MAX_TABS = 4;
 
 export default function BottomTabBar({ nav = [], tabs }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const { pathname } = useLocation();
+  const badgeFor = useNavBadges();
 
   const needsMore = nav.length > MAX_TABS + 1;
   let primary = nav;
@@ -37,34 +40,44 @@ export default function BottomTabBar({ nav = [], tabs }) {
     item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`),
   );
 
+  const moreTotal = rest.reduce((sum, item) => sum + (badgeFor(item)?.count || 0), 0);
+  const moreShown = badgeShown(moreTotal);
+
   return (
     <>
       <nav className="shell-tabbar" aria-label="Main navigation">
         <ul className="shell-tabbar__list">
-          {primary.map((item) => (
-            <li key={item.to} className="shell-tabbar__cell">
-              <NavLink
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) => `shell-tab${isActive ? " is-active" : ""}`}
-              >
-                <Icon name={item.icon || "dashboard"} size={22} />
-                <span className="shell-tab__label">{item.label}</span>
-              </NavLink>
-            </li>
-          ))}
+          {primary.map((item) => {
+            const badge = badgeFor(item);
+            return (
+              <li key={item.to} className="shell-tabbar__cell">
+                <NavLink
+                  to={badge ? badge.to : item.to}
+                  end={item.end}
+                  className={({ isActive }) => `shell-tab${isActive ? " is-active" : ""}${badge ? " has-badge" : ""}`}
+                  aria-label={badge ? `${item.label}, ${badge.label}` : undefined}
+                >
+                  <Icon name={item.icon || "dashboard"} size={22} />
+                  <span className="shell-tab__label">{item.label}</span>
+                  {badge && <span className="shell-badge" aria-hidden="true">{badge.shown}</span>}
+                </NavLink>
+              </li>
+            );
+          })}
 
           {needsMore && (
             <li className="shell-tabbar__cell">
               <button
                 type="button"
-                className={`shell-tab${moreActive ? " is-active" : ""}`}
+                className={`shell-tab${moreActive ? " is-active" : ""}${moreShown ? " has-badge" : ""}`}
                 onClick={() => setMoreOpen(true)}
                 aria-haspopup="dialog"
                 aria-expanded={moreOpen}
+                aria-label={moreShown ? `More, ${badgeLabel("more", moreTotal)}` : undefined}
               >
                 <Icon name="dots" size={22} />
                 <span className="shell-tab__label">More</span>
+                {moreShown && <span className="shell-badge" aria-hidden="true">{moreShown}</span>}
               </button>
             </li>
           )}
@@ -74,20 +87,25 @@ export default function BottomTabBar({ nav = [], tabs }) {
       {needsMore && (
         <Modal isOpen={moreOpen} onClose={() => setMoreOpen(false)} title="More" size="sm">
           <ul className="shell-more">
-            {rest.map((item) => (
-              <li key={item.to}>
-                <NavLink
-                  to={item.to}
-                  end={item.end}
-                  onClick={() => setMoreOpen(false)}
-                  className={({ isActive }) => `shell-more__item${isActive ? " is-active" : ""}`}
-                >
-                  <Icon name={item.icon || "dashboard"} size={20} />
-                  <span>{item.label}</span>
-                  <Icon name="chevron-right" size={16} className="shell-more__arrow" />
-                </NavLink>
-              </li>
-            ))}
+            {rest.map((item) => {
+              const badge = badgeFor(item);
+              return (
+                <li key={item.to}>
+                  <NavLink
+                    to={badge ? badge.to : item.to}
+                    end={item.end}
+                    onClick={() => setMoreOpen(false)}
+                    className={({ isActive }) => `shell-more__item${isActive ? " is-active" : ""}`}
+                    aria-label={badge ? `${item.label}, ${badge.label}` : undefined}
+                  >
+                    <Icon name={item.icon || "dashboard"} size={20} />
+                    <span>{item.label}</span>
+                    {badge && <span className="shell-badge" aria-hidden="true">{badge.shown}</span>}
+                    <Icon name="chevron-right" size={16} className="shell-more__arrow" />
+                  </NavLink>
+                </li>
+              );
+            })}
           </ul>
         </Modal>
       )}

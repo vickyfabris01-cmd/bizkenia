@@ -42,3 +42,27 @@
 
 /* ImageUploadButton: the message that sits next to the picker when a chosen file was not a picture. */
 .imgup__error { display: block; margin-top: var(--space-1); color: var(--color-error-text); font-size: var(--text-sm); }
+
+/* Part 8: upload progress rows (ImageUploadButton's UploadProgress, PhotoUploader's list).
+   Tabular numbers so the percent does not jiggle; theme tokens only; 44px buttons. */
+.imgup-list { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: grid; gap: var(--space-2); }
+.imgup-prog { display: grid; gap: var(--space-1); flex: 1 1 100%; width: 100%; min-width: 0; margin-top: var(--space-1); font-size: var(--text-sm); color: var(--color-text); }
+.imgup-prog__row { display: flex; align-items: center; gap: var(--space-2); min-height: 1.75rem; min-width: 0; }
+.imgup-prog__icon { flex: none; color: var(--color-text-muted); }
+.imgup-prog__name { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imgup-prog__label { flex: 0 1 auto; min-width: 0; }
+.imgup-prog--error .imgup-prog__label { color: var(--color-error-text); }
+.imgup-prog__pct { margin-inline-start: auto; min-width: 3.5ch; text-align: end; font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+.imgup-prog__btn { flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; margin-block: -0.75rem; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--color-text-muted); cursor: pointer; }
+.imgup-prog__btn:hover { background: var(--color-surface-2); color: var(--color-text); }
+.imgup-prog__btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+.imgup-prog__track { height: 6px; border-radius: var(--radius-full); background: var(--color-surface-2); overflow: hidden; }
+.imgup-prog__bar { display: block; height: 100%; border-radius: inherit; background: var(--color-primary); transition: width 0.2s linear; }
+.imgup-prog--error .imgup-prog__bar { background: var(--color-error-text); }
+/* no number known (Supabase storage): a bar that slides, never a made-up percent */
+.imgup-prog--wait .imgup-prog__bar { width: 35%; animation: imgup-slide 1.2s ease-in-out infinite; }
+@keyframes imgup-slide { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+@media (prefers-reduced-motion: reduce) {
+  .imgup-prog__bar { transition: none; }
+  .imgup-prog--wait .imgup-prog__bar { animation: none; width: 100%; opacity: 0.45; }
+}
