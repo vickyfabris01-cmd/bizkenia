@@ -1,4 +1,4 @@
-// src/pages/admin/AdminSettings.jsx — MODIFIED (a "Share the site" button opens the platform picker; a Share and promote card has the "Show plan prices" switch; step 2: the "Business types" switch is removed; only a single business can be locked. Phase 5 step 3: adds the Maintenance mode and Default commission cards. Step 5: the free-form price table is replaced by the fixed plan grid)
+// src/pages/admin/AdminSettings.jsx — MODIFIED (a "Share the site" button opens the platform picker; a Share and promote card has the "Show plan prices" switch; step 2: the "Business types" switch is removed; only a single business can be locked. Phase 5 step 3: adds the Maintenance mode and Default commission cards. Step 5: the free-form price table is replaced by the fixed plan grid. Part 7: the Sign-in methods card (Google on/off) after Maintenance, and a quick-nav bar on phones with an id on every section)
 //
 // AIM
 // Platform settings, one card per topic, each saved on its own:
@@ -9,6 +9,7 @@
 //   Share           whether the Pricing share card shows plan prices (ShareOptionsCard.jsx, off by default)
 //   M-Pesa          sandbox or live and the shortcode (secret keys live in Edge Function secrets)
 //   Maintenance     switch the site to the maintenance page (PlatformControls.jsx)
+//   Sign-in methods the Google sign-in switch (AuthProvidersCard in PlatformControls.jsx)
 //   Commission      default commission percent, stored only (PlatformControls.jsx)
 // Every save is written to the audit log by the database.
 
@@ -19,12 +20,25 @@ import ShareButton from "../../components/share/ShareButton.jsx";
 import ShareOptionsCard from "../../components/share/ShareOptionsCard.jsx";
 import HeroImagesCard from "./HeroImagesCard.jsx";
 import PlanPricesCard from "./PlanPricesCard.jsx";
-import { CommissionCard, MaintenanceCard } from "./PlatformControls.jsx";
+import { AuthProvidersCard, CommissionCard, MaintenanceCard } from "./PlatformControls.jsx";
+import SectionNav from "../../components/ui/SectionNav.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { useToast } from "../../hooks/useNotifications.js";
 import { adminGetSettings, adminSaveSetting } from "../../lib/api/businesses.js";
 import { usePlatformStore } from "../../store/platformStore.js";
 import { collect, email as vEmail, required } from "../../lib/validate.js";
+
+const SECTIONS = [
+  { id: "set-brand", label: "Brand", icon: "settings" },
+  { id: "set-hero", label: "Home page", icon: "home" },
+  { id: "set-approval", label: "Approval", icon: "check" },
+  { id: "set-prices", label: "Prices", icon: "card" },
+  { id: "set-share", label: "Share and promote", icon: "megaphone" },
+  { id: "set-mpesa", label: "M-Pesa", icon: "card" },
+  { id: "set-maintenance", label: "Maintenance", icon: "warning" },
+  { id: "set-auth", label: "Sign-in", icon: "user" },
+  { id: "set-commission", label: "Commission", icon: "chart" },
+];
 
 export default function AdminSettings() {
   const toast = useToast();
@@ -69,9 +83,10 @@ export default function AdminSettings() {
         <h2 className="adm__title" style={{ margin: 0 }}>Settings</h2>
         <ShareButton variant="outline" size="md" request={{ type: "site", page: "home" }}>Share the site</ShareButton>
       </div>
+      <SectionNav items={SECTIONS} />
       {error && <Alert type="error" message={error} />}
 
-      <Card>
+      <Card id="set-brand">
         <CardHeader title="Brand" subtitle="Shown in the header, footer, 404 page, emails and menus." />
         <CardBody>
           <form className="adm-form" onSubmit={saveBrand} noValidate>
@@ -88,9 +103,9 @@ export default function AdminSettings() {
         </CardBody>
       </Card>
 
-      <HeroImagesCard />
+      <div id="set-hero" className="sec-anchor"><HeroImagesCard /></div>
 
-      <Card>
+      <Card id="set-approval">
         <CardHeader title="Approval" subtitle="What happens after a business pays its subscription." />
         <CardBody>
           <div className="adm-sec">
@@ -101,11 +116,11 @@ export default function AdminSettings() {
         </CardBody>
       </Card>
 
-      <PlanPricesCard />
+      <div id="set-prices" className="sec-anchor"><PlanPricesCard /></div>
 
-      <ShareOptionsCard />
+      <div id="set-share" className="sec-anchor"><ShareOptionsCard /></div>
 
-      <Card>
+      <Card id="set-mpesa">
         <CardHeader title="M-Pesa" subtitle="Secret keys are never stored here. Set them as Edge Function secrets (see docs/phase-1/SETUP.md)." />
         <CardBody>
           <div className="adm-form">
@@ -119,8 +134,9 @@ export default function AdminSettings() {
         </CardBody>
       </Card>
 
-      <MaintenanceCard />
-      <CommissionCard />
+      <div id="set-maintenance" className="sec-anchor"><MaintenanceCard /></div>
+      <AuthProvidersCard />
+      <div id="set-commission" className="sec-anchor"><CommissionCard /></div>
     </div>
   );
 }

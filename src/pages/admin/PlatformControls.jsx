@@ -1,7 +1,9 @@
-// src/pages/admin/PlatformControls.jsx — NEW FILE (Phase 5, step 3; maintenance levels)
+// src/pages/admin/PlatformControls.jsx — NEW FILE (Phase 5, step 3; maintenance levels; Part 7: AuthProvidersCard)
 //
 // AIM
-// Two settings cards for Admin > Settings, each saved on its own (like the Hero images card):
+// Three settings cards for Admin > Settings, each saved on its own (like the Hero images card):
+//   AuthProvidersCard  the switch for "Continue with Google" on the login and sign-up pages (platform setting
+//                    auth_providers). It controls the button only; Google itself is set up in Supabase.
 //   MaintenanceCard  the five maintenance levels (whole system, all dashboards, one business type, all M-Pesa,
 //                    some businesses' subscriptions), a page picker and an optional message. Super admins keep full
 //                    access; everyone else sees the maintenance page (or is refused an M-Pesa prompt) until it is switched off.
@@ -17,7 +19,7 @@ import { ConfirmDialog } from "../../components/modals/Modal.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { useToast } from "../../hooks/useNotifications.js";
 import { adminGetSettings, adminListBusinesses, adminSaveSetting } from "../../lib/api/businesses.js";
-import { maintenanceActive, normalizeMaintenance, usePlatformStore } from "../../store/platformStore.js";
+import { maintenanceActive, normalizeAuthProviders, normalizeMaintenance, usePlatformStore } from "../../store/platformStore.js";
 import { describeMaintenance } from "../../components/feedback/MaintenanceBanner.jsx";
 import { PAGE_OPTIONS } from "../../router/routes";
 import { BUSINESS_TYPES } from "../../config/counties.js";
@@ -162,6 +164,50 @@ export function MaintenanceCard() {
       <ConfirmDialog isOpen={confirm} variant="danger" loading={busy} title="Switch these on?"
         message={`${describeMaintenance(added)} This takes effect right away for everyone except super admins.`}
         confirmLabel="Switch on" onConfirm={() => save()} onCancel={() => setConfirm(false)} />
+    </Card>
+  );
+}
+
+const AUTH_MISSING = "This setting is not in the database yet. Apply migration 20261028100001_auth_providers.sql first.";
+
+export function AuthProvidersCard() {
+  const toast = useToast();
+  const { data: s, loading } = useAsync(() => adminGetSettings(), []);
+  const [saved, setSaved] = useState(false);
+  const [google, setGoogle] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!s) return;
+    const v = normalizeAuthProviders(s.auth_providers).google;
+    setSaved(v); setGoogle(v);
+  }, [s]);
+
+  async function save() {
+    setBusy(true);
+    const { error, data } = await saveSetting("auth_providers", { google });
+    setBusy(false);
+    if (error) return toast.error(error === MISSING ? AUTH_MISSING : error);
+    const next = normalizeAuthProviders(data?.value || { google });
+    usePlatformStore.getState().apply("auth_providers", next);
+    setSaved(next.google); setGoogle(next.google);
+    toast.success(next.google ? "Google sign-in is on." : "Google sign-in is off.");
+  }
+
+  if (loading && !s) return <Card id="set-auth"><Skeleton height={120} /></Card>;
+  return (
+    <Card id="set-auth">
+      <CardHeader title="Sign-in methods" subtitle="Choose which sign-in buttons visitors can use." />
+      <CardBody>
+        <div className="adm-form">
+          <Toggle label="Allow sign-in with Google" checked={google} onChange={setGoogle} />
+          <p className="adm-hint">
+            {saved ? "Google sign-in is on: the button works on the login and sign-up pages." : "Google sign-in is off: visitors see a grey button that says it is not available yet."}
+          </p>
+          <p className="adm-hint">Switch this on only after Google is set up in Supabase (Authentication, Providers, Google) and the redirect addresses are added. It controls the button only; it does not change the Supabase setting. Every change is written to the audit log.</p>
+          <div><Button loading={busy} disabled={google === saved} onClick={save}>Save sign-in methods</Button></div>
+        </div>
+      </CardBody>
     </Card>
   );
 }

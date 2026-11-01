@@ -1,4 +1,4 @@
-// src/store/platformStore.js — MODIFIED (Phase 5 step 3: also holds the maintenance switch; maintenance levels: the switch is now a config object read through get_maintenance())
+// src/store/platformStore.js — MODIFIED (Phase 5 step 3: also holds the maintenance switch; maintenance levels: the switch is now a config object read through get_maintenance(); Part 7: also holds authProviders, read through auth_providers())
 //
 // AIM
 // Loads the PUBLIC platform settings once (brand: name, tagline, support email, website;
@@ -10,6 +10,10 @@
 //   { system, allDashboards, types[], pages[], payments, businesses[], message, updated_at }
 //   system 1 whole site | allDashboards 2 | types 3 (rental, shop, agriculture) | payments 4 | businesses 5 | pages = page keys from router/routes.js
 //   `enabled` is kept as a copy of `system` so older code that reads maintenance.enabled still works.
+//
+// AUTH PROVIDERS (its own key 'auth_providers', read through the anon-callable RPC auth_providers())
+//   { google: boolean }  false until a super admin switches Google sign-in on. Anything unreadable counts as false,
+//   so the Google button stays grey rather than offering a sign-in that may not work.
 
 import { create } from "zustand";
 import { supabase } from "../config/supabase.js";
@@ -18,6 +22,14 @@ export const DEFAULT_MODULES = { rental: true, agriculture: true, shop: true };
 export const DEFAULT_MAINTENANCE = {
   system: false, allDashboards: false, types: [], pages: [], payments: false, businesses: [], message: "", updated_at: null, enabled: false,
 };
+
+export const DEFAULT_AUTH_PROVIDERS = { google: false };
+
+/** Any value from the database as { google: boolean }. Only the JSON value true switches Google on. */
+export function normalizeAuthProviders(v) {
+  const o = v && typeof v === "object" && !Array.isArray(v) ? v : {};
+  return { google: o.google === true };
+}
 
 const list = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === "string") : []);
 
@@ -52,19 +64,28 @@ async function fetchMaintenance() {
   return normalizeMaintenance(row.data?.value);
 }
 
+/** The anon-callable RPC. No fallback: if it is not installed yet (migration not applied) Google stays off. */
+async function fetchAuthProviders() {
+  const { data, error } = await supabase.rpc("auth_providers");
+  if (error) throw error;
+  return normalizeAuthProviders(data);
+}
+
 export const usePlatformStore = create((set, get) => ({
   brand: null,      // { name, tagline, support_email, website } from the database, or null
   modules: DEFAULT_MODULES,
   maintenance: DEFAULT_MAINTENANCE, // read by router/MaintenanceGate.jsx and components/feedback/MaintenanceBanner.jsx
+  authProviders: DEFAULT_AUTH_PROVIDERS, // read by components/auth/GoogleButton.jsx
   loaded: false,
 
   async load(force = false) {
     if (get().loaded && !force) return;
     if (!supabase) return set({ loaded: true });
     try {
-      const [settings, maintenance] = await Promise.all([
+      const [settings, maintenance, authProviders] = await Promise.all([
         supabase.from("platform_settings").select("key, value").in("key", ["brand", "modules"]),
         fetchMaintenance().catch((e) => { console.warn("[platformStore] maintenance unreadable:", e.message); return null; }),
+        fetchAuthProviders().catch((e) => { console.warn("[platformStore] auth providers unreadable (Google stays off):", e.message); return null; }),
       ]);
       if (settings.error) throw settings.error;
       const next = {};
@@ -73,6 +94,7 @@ export const usePlatformStore = create((set, get) => ({
         brand: next.brand || null,
         modules: { ...DEFAULT_MODULES, ...(next.modules || {}) },
         maintenance: maintenance || get().maintenance,
+        authProviders: authProviders || get().authProviders,
         loaded: true,
       });
     } catch (e) {
@@ -92,5 +114,6 @@ export const usePlatformStore = create((set, get) => ({
     if (key === "brand") set({ brand: value });
     if (key === "modules") set({ modules: { ...DEFAULT_MODULES, ...value } });
     if (key === "maintenance") set({ maintenance: normalizeMaintenance(value) });
+    if (key === "auth_providers") set({ authProviders: normalizeAuthProviders(value) });
   },
 }));

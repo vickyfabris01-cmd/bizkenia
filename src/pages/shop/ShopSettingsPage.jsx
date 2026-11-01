@@ -1,4 +1,4 @@
-// src/pages/shop/ShopSettingsPage.jsx — MODIFIED (Phase 6 Danger zone; the M-Pesa card is exported so farm settings can use it too; "Share this business" opens the platform picker; a Share and promote card chooses what shared cards show)
+// src/pages/shop/ShopSettingsPage.jsx — MODIFIED (Phase 6 Danger zone; the M-Pesa card is exported so farm settings can use it too; "Share this business" opens the platform picker; a Share and promote card chooses what shared cards show; Part 7: a quick-nav bar on phones, each section has an id)
 //
 // AIM
 // /app/:slug/settings (owner only) — how the shop delivers and takes payment: delivery on or off
@@ -16,10 +16,20 @@ import BusinessCoverCard from "../../components/business/BusinessCoverCard.jsx";
 import BusinessDangerZone from "../../components/lifecycle/BusinessDangerZone.jsx";
 import ShareButton from "../../components/share/ShareButton.jsx";
 import ShareOptionsCard from "../../components/share/ShareOptionsCard.jsx";
+import SectionNav from "../../components/ui/SectionNav.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { useToast } from "../../hooks/useNotifications.js";
 import { getShopMpesa, getShopSettings, saveShopMpesa, saveShopSettings } from "../../lib/api/shop.js";
 import { Loading, LoadError, PageHead, useShop } from "./shared.jsx";
+
+const SECTIONS = [
+  { id: "set-delivery", label: "Delivery", icon: "building" },
+  { id: "set-profile", label: "Profile", icon: "user" },
+  { id: "set-mpesa", label: "M-Pesa", icon: "card" },
+  { id: "set-branding", label: "Logo and cover", icon: "settings" },
+  { id: "set-share", label: "Share and promote", icon: "megaphone" },
+  { id: "set-danger", label: "Danger zone", icon: "warning" },
+];
 
 export function MpesaCard({ bid }) {
   const toast = useToast();
@@ -83,8 +93,9 @@ export default function ShopSettingsPage() {
       <PageHead title="Settings" lead="How you deliver, how customers pay, and how your shop looks.">
         <ShareButton variant="outline" size="md" request={{ type: "business", business }}>Share this business</ShareButton>
       </PageHead>
+      <SectionNav items={SECTIONS} />
       <div className="shop-grid shop-grid--2">
-        <Card>
+        <Card id="set-delivery">
           <CardHeader title="Delivery and payment" subtitle="Applied to every order at checkout" />
           <CardBody>
             <form className="shop-form" onSubmit={save} noValidate>
@@ -108,22 +119,22 @@ export default function ShopSettingsPage() {
           </CardBody>
         </Card>
 
-        <Card>
+        <Card id="set-profile">
           <CardHeader title="Business profile" subtitle="Name, description, phone and place shown to shoppers" />
           <CardBody><Button as={Link} to={`/start/details?business=${business.slug}`} variant="outline">Edit business details</Button></CardBody>
         </Card>
       </div>
 
-      <MpesaCard bid={bid} />
+      <div id="set-mpesa" className="sec-anchor"><MpesaCard bid={bid} /></div>
 
-      <div className="shop-grid shop-grid--2">
+      <div id="set-branding" className="shop-grid shop-grid--2">
         <BusinessLogoCard business={business} />
         <BusinessCoverCard business={business} />
       </div>
 
-      <ShareOptionsCard business={business} />
+      <div id="set-share" className="sec-anchor"><ShareOptionsCard business={business} /></div>
 
-      <BusinessDangerZone business={business} />
+      <div id="set-danger" className="sec-anchor"><BusinessDangerZone business={business} /></div>
     </div>
   );
 }

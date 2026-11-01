@@ -1,4 +1,4 @@
-// src/pages/farm/FarmSettingsPage.jsx — MODIFIED (Phase 6 Danger zone; M-Pesa details for online orders; "Share this business" opens the platform picker; a Share and promote card chooses what shared cards show)
+// src/pages/farm/FarmSettingsPage.jsx — MODIFIED (Phase 6 Danger zone; M-Pesa details for online orders; "Share this business" opens the platform picker; a Share and promote card chooses what shared cards show; Part 7: a quick-nav bar on phones, each section has an id)
 //
 // AIM
 // /app/:slug/settings (owner only) — the farm's profile and a summary of how it is set up: name,
@@ -14,12 +14,22 @@ import BusinessCoverCard from "../../components/business/BusinessCoverCard.jsx";
 import BusinessDangerZone from "../../components/lifecycle/BusinessDangerZone.jsx";
 import ShareButton from "../../components/share/ShareButton.jsx";
 import ShareOptionsCard from "../../components/share/ShareOptionsCard.jsx";
+import SectionNav from "../../components/ui/SectionNav.jsx";
 import { MpesaCard } from "../shop/ShopSettingsPage.jsx";
 import useAsync from "../../hooks/useAsync.js";
 import { getFarmSummary } from "../../lib/api/farm.js";
 import { formatDate } from "../../lib/format.js";
 import { formatAcres } from "../../lib/geo.js";
 import { Loading, PageHead, useFarm } from "./shared.jsx";
+
+const SECTIONS = [
+  { id: "set-profile", label: "Profile", icon: "user" },
+  { id: "set-recorded", label: "What is recorded", icon: "chart" },
+  { id: "set-branding", label: "Logo and cover", icon: "settings" },
+  { id: "set-mpesa", label: "M-Pesa", icon: "card" },
+  { id: "set-share", label: "Share and promote", icon: "megaphone" },
+  { id: "set-danger", label: "Danger zone", icon: "warning" },
+];
 
 const STATUS = { active: ["success", "Active"], pending_review: ["warning", "In review"], draft: ["neutral", "Draft"], rejected: ["error", "Needs changes"], suspended: ["error", "Suspended"] };
 
@@ -35,9 +45,10 @@ export default function FarmSettingsPage() {
         <Button as={Link} to={`/start/details?business=${business.slug}`} variant="outline">Edit farm details</Button>
         <ShareButton variant="outline" size="md" request={{ type: "business", business }}>Share this business</ShareButton>
       </PageHead>
+      <SectionNav items={SECTIONS} />
 
       <div className="farm-grid farm-grid--2">
-        <Card>
+        <Card id="set-profile">
           <CardHeader title="Profile" action={<Badge variant={variant}>{label}</Badge>} />
           <CardBody>
             <ul className="farm-list">
@@ -51,7 +62,7 @@ export default function FarmSettingsPage() {
             </ul>
           </CardBody>
         </Card>
-        <Card>
+        <Card id="set-recorded">
           <CardHeader title="What is recorded" subtitle="So far" />
           <CardBody>
             {loading || !s ? <p className="farm-card__meta">Loading…</p> : (
@@ -66,16 +77,16 @@ export default function FarmSettingsPage() {
         </Card>
       </div>
 
-      <div className="farm-grid farm-grid--2">
+      <div id="set-branding" className="farm-grid farm-grid--2">
         <BusinessLogoCard business={business} />
         <BusinessCoverCard business={business} />
       </div>
 
-      <MpesaCard bid={bid} />
+      <div id="set-mpesa" className="sec-anchor"><MpesaCard bid={bid} /></div>
 
-      <ShareOptionsCard business={business} />
+      <div id="set-share" className="sec-anchor"><ShareOptionsCard business={business} /></div>
 
-      <BusinessDangerZone business={business} />
+      <div id="set-danger" className="sec-anchor"><BusinessDangerZone business={business} /></div>
     </div>
   );
 }

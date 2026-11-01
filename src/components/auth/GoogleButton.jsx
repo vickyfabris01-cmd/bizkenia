@@ -1,13 +1,16 @@
-// src/components/auth/GoogleButton.jsx — NEW FILE
+// src/components/auth/GoogleButton.jsx — MODIFIED (Part 7: greyed out and disabled until a super admin switches Google on)
 //
 // AIM
 // "Continue with Google". Starts Supabase's Google sign-in. If Google is not switched on in
 // the Supabase dashboard yet (see docs/phase-1/SETUP.md), the person sees a clear message
 // instead of a broken page.
+// Until the platform setting auth_providers.google is true (Admin > Settings > Sign-in methods), and while that
+// setting is still loading, the button is shown grey and disabled with the label "Google (not available yet)".
 
 import { useState } from "react";
 import { Alert, Button } from "../ui";
 import { useSession } from "../../store/sessionStore.js";
+import { usePlatformStore } from "../../store/platformStore.js";
 
 const G = (
   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
@@ -21,11 +24,21 @@ const G = (
 export default function GoogleButton({ next = "", label = "Continue with Google" }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const ready = usePlatformStore((s) => s.loaded && s.authProviders.google === true);
   async function go() {
     setBusy(true);
     setError("");
     const { error: e } = await useSession.getState().signInWithGoogle(next);
     if (e) { setError(/provider is not enabled|unsupported provider/i.test(e) ? "Google sign-in is not switched on yet. Use your email or phone for now." : e); setBusy(false); }
+  }
+  if (!ready) {
+    // No click handler on purpose. The coloured mark is greyed too, so the whole button reads as unavailable.
+    return (
+      <Button type="button" variant="outline" fullWidth disabled aria-disabled="true"
+        leftIcon={<span style={{ display: "inline-flex", filter: "grayscale(1)", opacity: 0.6 }}>{G}</span>}>
+        Google (not available yet)
+      </Button>
+    );
   }
   return (
     <>

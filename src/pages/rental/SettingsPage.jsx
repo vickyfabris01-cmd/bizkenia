@@ -1,4 +1,4 @@
-// src/pages/rental/SettingsPage.jsx — MODIFIED (Phase 6: Danger zone — hand over or delete the business; "Share this business" opens the platform picker; a Share and promote card chooses what shared cards show)
+// src/pages/rental/SettingsPage.jsx — MODIFIED (Phase 6: Danger zone — hand over or delete the business; "Share this business" opens the platform picker; a Share and promote card chooses what shared cards show; Part 7: a quick-nav bar on phones, each section has an id)
 //
 // AIM
 // /app/:slug/settings (owner only). Billing rules (day rent is due, grace days, late fee) and the
@@ -22,6 +22,17 @@ import BusinessCoverCard from "../../components/business/BusinessCoverCard.jsx";
 import BusinessDangerZone from "../../components/lifecycle/BusinessDangerZone.jsx";
 import ShareButton from "../../components/share/ShareButton.jsx";
 import ShareOptionsCard from "../../components/share/ShareOptionsCard.jsx";
+import SectionNav from "../../components/ui/SectionNav.jsx";
+
+const SECTIONS = [
+  { id: "set-billing", label: "Billing", icon: "file" },
+  { id: "set-rooms", label: "Rooms", icon: "building" },
+  { id: "set-mpesa", label: "M-Pesa", icon: "card" },
+  { id: "set-profile", label: "Profile", icon: "user" },
+  { id: "set-branding", label: "Logo and cover", icon: "settings" },
+  { id: "set-share", label: "Share and promote", icon: "megaphone" },
+  { id: "set-danger", label: "Danger zone", icon: "warning" },
+];
 
 const DEFAULTS = { billing_due_day: 5, grace_period_days: 3, late_fee_amount: 500, late_fee_percent: 0 };
 
@@ -84,10 +95,11 @@ export default function SettingsPage() {
       <PageHead title="Settings" lead="How you bill and how residents pay you.">
         <ShareButton variant="outline" size="md" request={{ type: "business", business }}>Share this business</ShareButton>
       </PageHead>
+      <SectionNav items={SECTIONS} />
       {error && <Alert type="error" message={error} />}
       {loading ? <Skeleton height={260} /> : (
         <div className="rent-grid2">
-          <Card>
+          <Card id="set-billing">
             <CardHeader title="Billing rules" subtitle="Applied to every invoice you create" />
             <CardBody>
               <form className="rent-form" onSubmit={saveRules} noValidate>
@@ -105,7 +117,7 @@ export default function SettingsPage() {
             </CardBody>
           </Card>
 
-          <Card>
+          <Card id="set-rooms">
             <CardHeader title="Room assignment" subtitle="Who chooses the room once you approve a request" />
             <CardBody>
               <div className="rent-form">
@@ -121,7 +133,7 @@ export default function SettingsPage() {
             </CardBody>
           </Card>
 
-          <Card>
+          <Card id="set-mpesa">
             <CardHeader title="M-Pesa for rent" subtitle="Paybill or till that receives rent" />
             <CardBody>
               <form className="rent-form" onSubmit={saveTill} noValidate>
@@ -136,18 +148,18 @@ export default function SettingsPage() {
             </CardBody>
           </Card>
 
-          <Card>
+          <Card id="set-profile">
             <CardHeader title="Business profile" subtitle="Name, description, phone and place shown to renters" />
             <CardBody><Button as={Link} to={`/start/details?business=${business.slug}`} variant="outline">Edit business details</Button></CardBody>
           </Card>
 
-          <BusinessLogoCard business={business} />
+          <div id="set-branding" className="sec-anchor"><BusinessLogoCard business={business} /></div>
 
           <BusinessCoverCard business={business} />
 
-          <ShareOptionsCard business={business} />
+          <div id="set-share" className="sec-anchor"><ShareOptionsCard business={business} /></div>
 
-          <BusinessDangerZone business={business} />
+          <div id="set-danger" className="sec-anchor"><BusinessDangerZone business={business} /></div>
         </div>
       )}
     </div>

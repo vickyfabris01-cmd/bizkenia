@@ -1,11 +1,11 @@
-// src/store/sessionStore.js — MODIFIED (the profile also carries avatar_design, the saved recipe the avatar is drawn from)
+// src/store/sessionStore.js — MODIFIED (the profile also carries avatar_design, the saved recipe the avatar is drawn from; Part 7: the unused isSuperAdmin getter is removed)
 //
 // AIM
 // The signed-in person: Supabase session, profile row, and every sign-in method (email,
 // phone + password, Google). The old store/authStore.js stays untouched until Phase 3 removes
 // the old pages; new code uses THIS store.
 //
-//   const { user, profile, loading, isSuperAdmin } = useSession();
+//   const { user, profile, loading } = useSession();
 //   await useSession.getState().signInWithPassword(identifier, password)   // email OR phone
 //
 // Every method returns { error } instead of throwing, so forms can show the message.
@@ -40,10 +40,6 @@ export const useSession = create((set, get) => ({
   loading: true,
   locked: false,   // true when a switched-off account tried to sign in or was signed out
   recovery: false, // true after the person opened a password-reset link
-
-  get isSuperAdmin() {
-    return get().profile?.role === "super_admin";
-  },
 
   /** Call once at start-up (done by <SessionBoot/> in the router). */
   async init() {
