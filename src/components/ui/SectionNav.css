@@ -1,40 +1,47 @@
-/* src/components/ui/SectionNav.css — NEW FILE (Part 7, job C)
-   Styles for SectionNav.jsx. Tokens only: no hex values, so dark mode follows by itself.
-   Phones only (the component also renders nothing at 768px and wider). Sticky just under the top bar. */
+/* Styles for the floating settings quick navigation. */
 
 .sec-nav {
-  position: sticky;
-  top: calc(var(--topbar-h) + var(--safe-top));
-  z-index: calc(var(--z-sticky) - 1);
-  /* run edge to edge inside the page padding */
-  margin-inline: calc(var(--gutter) * -1);
-  margin-block-end: var(--space-3);
+  position: fixed;
+  top: 50%;
+  z-index: var(--z-sticky);
+  width: min(13rem, calc(100vw - 1.5rem));
+  max-height: min(70vh, 32rem);
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-50%);
+  touch-action: none;
+  user-select: none;
+  transition: left var(--duration-fast) var(--ease-standard), right var(--duration-fast) var(--ease-standard);
+}
+.sec-nav--right { right: 0.75rem; }
+.sec-nav--left { left: 0.75rem; }
+.sec-nav.is-dragging {
+  cursor: grabbing;
+  transition: none;
 }
 
 .sec-nav__list {
-  display: flex;
+  display: grid;
   gap: var(--space-2);
   margin: 0;
-  padding: var(--space-1) var(--gutter);
+  padding: var(--space-2);
   list-style: none;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
 }
 .sec-nav__list::-webkit-scrollbar { display: none; }
-.sec-nav__list > li { flex: 0 0 auto; }
 
 .sec-nav__item {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: var(--space-2);
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0 var(--space-3);
+  min-height: 36px;
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
   border: 1px solid transparent;
   border-radius: var(--radius-full);
   background: transparent;
@@ -43,7 +50,7 @@
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
   white-space: nowrap;
-  cursor: pointer;
+  cursor: grab;
   transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
 }
 .sec-nav__item:hover { color: var(--color-text); }
@@ -57,8 +64,7 @@
   color: var(--color-action);
 }
 
-/* A thin wrapper that gives a component we cannot edit an id to jump to. The child fills the wrapper, so a card in a
-   grid keeps its height and width exactly as it had without the wrapper. */
+/* A thin wrapper that gives a component we cannot edit an id to jump to. */
 .sec-anchor {
   display: flex;
   flex-direction: column;
@@ -66,10 +72,10 @@
 }
 .sec-anchor > * { flex: 1 1 auto; min-width: 0; }
 
-@media (min-width: 768px) {
-  .sec-nav { display: none; }
+@media (max-width: 420px) {
+  .sec-nav { width: min(11rem, calc(100vw - 1.5rem)); }
 }
 @media (prefers-reduced-motion: reduce) {
   .sec-nav__item { transition: none; }
-  .sec-nav__list { scroll-behavior: auto; }
+  .sec-nav { transition: none; }
 }
