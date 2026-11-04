@@ -10,11 +10,12 @@
 // results, so a page can say "See all 23". `offset` lets a caller read further down the same list.
 
 import { supabase } from "../../config/supabase.js";
+import { cached } from "../cache.js";
 
 const CARD_FIELDS = "id, name, slug, business_type, description, county, address, logo_url, logo_design, cover_url, phone, email, whatsapp, created_at";
 const NOT_CONNECTED = { data: null, error: "The app is not connected to the database yet. See .env.example." };
 
-export async function listBusinesses({ search = "", type = "", county = "", limit = 60, offset = 0 } = {}) {
+async function fetchBusinesses({ search = "", type = "", county = "", limit = 60, offset = 0 } = {}) {
   if (!supabase) return NOT_CONNECTED;
   // newest first; id breaks ties so reading page after page never repeats or skips a business
   let q = supabase.from("businesses").select(CARD_FIELDS, { count: "exact" }).eq("status", "active")
@@ -27,8 +28,17 @@ export async function listBusinesses({ search = "", type = "", county = "", limi
   return { data: data || [], count: count ?? (data || []).length, error: error?.message || null };
 }
 
+// Remembered in the browser (lib/cache.js): the same answer for every visitor, so going back to a page is instant.
+export function listBusinesses(opts = {}) {
+  return cached(`biz:${JSON.stringify(opts)}`, () => fetchBusinesses(opts));
+}
+
 /** Latest shop products, farm produce and available rooms for the home page: { shop, farm, rooms }. */
-export async function listHomeListings(perType = 4) {
+export function listHomeListings(perType = 4) {
+  return cached(`home:${perType}`, () => fetchHomeListings(perType));
+}
+
+async function fetchHomeListings(perType) {
   if (!supabase) return NOT_CONNECTED;
   const { data, error } = await supabase.rpc("home_listings", { p_per_type: perType });
   const d = data || {};
