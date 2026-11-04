@@ -8,6 +8,7 @@
 
 import { supabase } from "../../config/supabase.js";
 import { formatKsh } from "../format.js";
+import { cached } from "../cache.js";
 
 const NOT_CONNECTED = { data: null, error: "The app is not connected to the database yet. See .env.example." };
 
@@ -23,8 +24,14 @@ export const MARKET_SORTS = [
   { value: "high", label: "Price: high to low" },
 ];
 
+// Both reads are remembered in the browser (lib/cache.js): the same answer for every visitor, so going back is instant.
+
 /** One type at a time. Returns { data: { items, total } }. */
-export async function listMarket({ kind, q = "", county = "", sort = "new", limit = 8, offset = 0 }) {
+export function listMarket(opts) {
+  return cached(`market:${JSON.stringify(opts)}`, () => fetchMarket(opts));
+}
+
+async function fetchMarket({ kind, q = "", county = "", sort = "new", limit = 8, offset = 0 }) {
   if (!supabase) return NOT_CONNECTED;
   const { data, error } = await supabase.rpc("market_listings", {
     p_kind: kind, p_q: q || null, p_county: county || null, p_sort: sort, p_limit: limit, p_offset: offset,
@@ -33,7 +40,11 @@ export async function listMarket({ kind, q = "", county = "", sort = "new", limi
 }
 
 /** Counties that have items of the type ("" = any type). Returns { data: ["Kisumu", "Nairobi", ...] }. */
-export async function listMarketCounties(kind = "") {
+export function listMarketCounties(kind = "") {
+  return cached(`counties:${kind}`, () => fetchMarketCounties(kind));
+}
+
+async function fetchMarketCounties(kind) {
   if (!supabase) return NOT_CONNECTED;
   const { data, error } = await supabase.rpc("market_counties", { p_kind: kind || null });
   return { data: data || [], error: error?.message || null };
