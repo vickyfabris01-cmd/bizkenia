@@ -1,0 +1,17 @@
+# worker/.dev.vars.example — NEW FILE
+# For `npx wrangler dev` on your own computer ONLY. Copy this file to ".dev.vars" (same folder as wrangler.jsonc, NOT inside worker/)
+# and fill the values. ".dev.vars" must never be committed: add the line  .dev.vars  to .gitignore.
+# On the live site these are set with `npx wrangler secret put NAME` instead (see wrangler.jsonc).
+
+# Supabase > Project Settings > API > service_role key. Use a SCRATCH project's key while testing, not production.
+SUPABASE_SERVICE_ROLE_KEY=PASTE_SERVICE_ROLE_KEY_HERE
+# Daraja portal > My Apps > your SANDBOX app
+MPESA_CONSUMER_KEY=PASTE_DARAJA_CONSUMER_KEY_HERE
+MPESA_CONSUMER_SECRET=PASTE_DARAJA_CONSUMER_SECRET_HERE
+# Daraja portal > APIs > M-Pesa Express > Passkey (sandbox)
+MPESA_PASSKEY=PASTE_DARAJA_PASSKEY_HERE
+# Invent: any random text of 32+ characters
+MPESA_CALLBACK_SECRET=CHANGE_ME_RANDOM_32_PLUS_CHARACTERS
+CRON_SECRET=CHANGE_ME_ANOTHER_RANDOM_32_PLUS_CHARACTERS
+# Optional (resend.com > API Keys). Leave empty to only log emails.
+RESEND_API_KEY=
