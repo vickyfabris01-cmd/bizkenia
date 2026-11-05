@@ -1,4 +1,4 @@
-// src/lib/api/directory.js — MODIFIED (cards also carry logo_design so each business logo is drawn the way its owner chose)
+// src/lib/api/directory.js — MODIFIED (remembers public lists in the browser; can read them through the Worker cache; cards still carry logo_design)
 //
 // AIM
 // Public reads: the list of active businesses, one business by slug, subscription plans and
@@ -11,11 +11,14 @@
 
 import { supabase } from "../../config/supabase.js";
 import { cached } from "../cache.js";
+import { publicRead } from "../backend.js";
 
 const CARD_FIELDS = "id, name, slug, business_type, description, county, address, logo_url, logo_design, cover_url, phone, email, whatsapp, created_at";
 const NOT_CONNECTED = { data: null, error: "The app is not connected to the database yet. See .env.example." };
 
 async function fetchBusinesses({ search = "", type = "", county = "", limit = 60, offset = 0 } = {}) {
+  const viaWorker = await publicRead("businesses", { search, type, county, limit, offset }); // Worker cache (VITE_BACKEND_PUBLIC=on); null = ask Supabase as before
+  if (viaWorker) return { data: viaWorker.data || [], count: viaWorker.count ?? (viaWorker.data || []).length, error: null };
   if (!supabase) return NOT_CONNECTED;
   // newest first; id breaks ties so reading page after page never repeats or skips a business
   let q = supabase.from("businesses").select(CARD_FIELDS, { count: "exact" }).eq("status", "active")
@@ -39,6 +42,8 @@ export function listHomeListings(perType = 4) {
 }
 
 async function fetchHomeListings(perType) {
+  const viaWorker = await publicRead("home", { perType });
+  if (viaWorker) return { data: viaWorker.data, error: null };
   if (!supabase) return NOT_CONNECTED;
   const { data, error } = await supabase.rpc("home_listings", { p_per_type: perType });
   const d = data || {};
@@ -54,12 +59,16 @@ export async function getBusinessBySlug(slug) {
 // The plan grid for the public pages: every slot (3 business types x 4 durations) plus any open offer.
 // Slots that are not on sale come back with available = false and no price. Savings come from the database.
 export async function planCatalog() {
+  const viaWorker = await publicRead("plans");
+  if (viaWorker) return { data: viaWorker.data || [], error: null };
   if (!supabase) return NOT_CONNECTED;
   const { data, error } = await supabase.rpc("plan_catalog");
   return { data: data || [], error: error?.message || null };
 }
 
 export async function publicStats() {
+  const viaWorker = await publicRead("stats");
+  if (viaWorker) return { data: viaWorker.data, error: null };
   if (!supabase) return NOT_CONNECTED;
   const { data, error } = await supabase.rpc("public_stats");
   return { data, error: error?.message || null };

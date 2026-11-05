@@ -13,6 +13,7 @@
 // type (submitTypeRequest), and the manager's offer chooses the room (respondRequest roomId).
 
 import { supabase } from "../../config/supabase.js";
+import { invokeFunction } from "../backend.js";
 
 const wrap = ({ data, error }) => ({ data: data ?? null, error: error?.message || null });
 const NOT_CONNECTED = { data: null, error: "The app is not connected to the database yet." };
@@ -132,7 +133,7 @@ export const assignPayment = guard((id, cycleId) => rpc("assign_payment", { p_pa
 
 /** Asks the M-Pesa edge function to send an STK prompt for one invoice. */
 export const sendRentPrompt = guard(async ({ cycleId, amount, phone }) => {
-  const { data, error } = await supabase.functions.invoke("mpesa-stk-push", { body: { purpose: "rent", cycleId, amount, phone } });
+  const { data, error } = await invokeFunction("mpesa-stk-push", { body: { purpose: "rent", cycleId, amount, phone } });
   if (error) {
     let message = error.message;
     try { const body = await error.context?.json?.(); if (body?.error) message = body.error; } catch { /* keep generic message */ }

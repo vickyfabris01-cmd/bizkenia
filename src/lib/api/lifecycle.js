@@ -10,6 +10,7 @@
 //     may call; the database decides who is allowed.
 
 import { supabase } from "../../config/supabase.js";
+import { invokeFunction } from "../backend.js";
 
 const NOT_CONNECTED = { data: null, error: "The app is not connected to the database yet." };
 const wrap = ({ data, error }) => ({ data: data ?? null, error: error?.message || null });
@@ -18,7 +19,7 @@ const rpc = async (fn, args) => (supabase ? wrap(await supabase.rpc(fn, args)) :
 /** Calls a server function and turns every failure into a plain message. */
 async function callFunction(name, body) {
   if (!supabase) return NOT_CONNECTED;
-  const { data, error } = await supabase.functions.invoke(name, { body });
+  const { data, error } = await invokeFunction(name, { body });
   if (error) {
     // For an answer other than 200 the real message is in the response body.
     let message = error.message;

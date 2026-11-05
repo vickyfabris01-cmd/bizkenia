@@ -8,6 +8,7 @@
 // come from database functions are plain English and are shown as they are.
 
 import { supabase } from "../../config/supabase.js";
+import { invokeFunction } from "../backend.js";
 
 const wrap = ({ data, error }) => ({ data: data ?? null, error: error?.message || null });
 const NOT_CONNECTED = { data: null, error: "The app is not connected to the database yet." };
@@ -65,7 +66,7 @@ export const placeOrder = guard(async (bid, lines, f) =>
 
 /** Sends the M-Pesa prompt for an order. */
 export const sendOrderPrompt = guard(async (orderId, phone) => {
-  const { data, error } = await supabase.functions.invoke("mpesa-stk-push", { body: { purpose: "order", orderId, phone } });
+  const { data, error } = await invokeFunction("mpesa-stk-push", { body: { purpose: "order", orderId, phone } });
   if (error) {
     let message = error.message, code = null;
     try { const body = await error.context?.json?.(); if (body?.error) message = body.error; code = body?.code || null; } catch { /* generic */ }

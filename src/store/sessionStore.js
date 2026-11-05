@@ -12,6 +12,7 @@
 
 import { create } from "zustand";
 import { supabase, isSupabaseConfigured } from "../config/supabase.js";
+import { invokeFunction } from "../lib/backend.js";
 import { looksLikePhone, toE164 } from "../lib/phone.js";
 import { normalizeAvatarDesign } from "../lib/brandStudio/index.js";
 
@@ -109,7 +110,7 @@ export const useSession = create((set, get) => ({
     const id = String(identifier || "").trim();
     if (looksLikePhone(id)) {
       if (!toE164(id)) return { error: "Enter a valid Kenyan phone number, like 0712 345 678." };
-      const { data, error } = await supabase.functions.invoke("resolve-login", {
+      const { data, error } = await invokeFunction("resolve-login", {
         body: { phone: toE164(id), password },
       });
       if (error || !data?.session) {

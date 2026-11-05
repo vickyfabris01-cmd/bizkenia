@@ -10,7 +10,7 @@
    "lint": "eslint src --report-unused-disable-directives-severity warn",
     "check:budget": "node scripts/check-budget.mjs",
     "test:e2e": "playwright test",
-    "test:worker": "node --test worker/worker.test.mjs"
+    "test:worker": "node --test worker/worker.test.mjs worker/v1.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",

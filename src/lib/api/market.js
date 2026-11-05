@@ -1,4 +1,4 @@
-// src/lib/api/market.js — MODIFIED (adds marketCard, used by Explore's listing results)
+// src/lib/api/market.js — MODIFIED (remembers public lists in the browser; can read them through the Worker cache; still has marketCard)
 //
 // AIM
 // What the "Shop and rent" page asks of the database: shop products, farm produce and available
@@ -9,6 +9,7 @@
 import { supabase } from "../../config/supabase.js";
 import { formatKsh } from "../format.js";
 import { cached } from "../cache.js";
+import { publicRead } from "../backend.js";
 
 const NOT_CONNECTED = { data: null, error: "The app is not connected to the database yet. See .env.example." };
 
@@ -32,6 +33,8 @@ export function listMarket(opts) {
 }
 
 async function fetchMarket({ kind, q = "", county = "", sort = "new", limit = 8, offset = 0 }) {
+  const viaWorker = await publicRead("market", { kind, q, county, sort, limit, offset }); // Worker cache (VITE_BACKEND_PUBLIC=on); null = ask Supabase as before
+  if (viaWorker) return { data: viaWorker.data, error: null };
   if (!supabase) return NOT_CONNECTED;
   const { data, error } = await supabase.rpc("market_listings", {
     p_kind: kind, p_q: q || null, p_county: county || null, p_sort: sort, p_limit: limit, p_offset: offset,
@@ -45,6 +48,8 @@ export function listMarketCounties(kind = "") {
 }
 
 async function fetchMarketCounties(kind) {
+  const viaWorker = await publicRead("counties", { kind });
+  if (viaWorker) return { data: viaWorker.data || [], error: null };
   if (!supabase) return NOT_CONNECTED;
   const { data, error } = await supabase.rpc("market_counties", { p_kind: kind || null });
   return { data: data || [], error: error?.message || null };

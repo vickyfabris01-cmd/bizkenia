@@ -26,6 +26,7 @@ export function normalizePhone(phone) {
 }
 
 import { supabase } from "../config/supabase.js";
+import { invokeFunction } from "./backend.js";
 
 const PAUSED = "Payments are paused for a short while. Nothing was charged. Please try again later.";
 
@@ -40,7 +41,7 @@ function stkMessage(message, code, status) {
 /** Starts an M-Pesa prompt on the customer's phone. Returns { intentId, simulated }. */
 export async function startStk({ purpose = "subscription", businessId, planId, phone, amount, reference }) {
   if (!supabase) throw new Error("The app is not connected to the database yet.");
-  const { data, error } = await supabase.functions.invoke("mpesa-stk-push", {
+  const { data, error } = await invokeFunction("mpesa-stk-push", {
     body: { purpose, businessId, planId, phone, amount, reference },
   });
   if (error) {
@@ -64,7 +65,7 @@ export async function startStk({ purpose = "subscription", businessId, planId, p
 export async function checkPayment(intentId) {
   if (!supabase) return null;
   try {
-    const { data } = await supabase.functions.invoke("mpesa-status", { body: { intentId } });
+    const { data } = await invokeFunction("mpesa-status", { body: { intentId } });
     return data?.intent || null;
   } catch { return null; }
 }
@@ -78,7 +79,7 @@ export function watchPayment(intentId, onChange, { everyMs = 3000, maxMs = 12000
   const started = Date.now();
   async function tick() {
     if (stopped) return;
-    const { data } = await supabase.functions.invoke("mpesa-status", { body: { intentId } });
+    const { data } = await invokeFunction("mpesa-status", { body: { intentId } });
     if (stopped) return;
     if (data?.intent) onChange(data.intent);
     const done = data?.intent && data.intent.status !== "pending";

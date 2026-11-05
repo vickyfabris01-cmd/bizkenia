@@ -1,4 +1,4 @@
-// wrangler.jsonc — MODIFIED (CF_SITE_TAG corrected to the real Web Analytics site tag)
+// wrangler.jsonc — MODIFIED (adds the /api/v1 backend, its timers and its settings; see docs/BACKEND.md)
 {
   "name": "bizkenia",
   "main": "worker/entry.js",
@@ -8,11 +8,13 @@
     "binding": "ASSETS", // lets the Worker read public/robots.txt (built into dist) for the /robots.txt route
     "not_found_handling": "single-page-application",
     // only file, admin, share-link, robots.txt and sitemap.xml requests wake the Worker; the site itself is still served as free static assets
-    "run_worker_first": ["/api/files/*", "/api/admin/*", "/share/*", "/robots.txt", "/sitemap.xml"]
+    "run_worker_first": ["/api/files/*", "/api/admin/*", "/share/*", "/robots.txt", "/sitemap.xml", "/api/v1/*"]
   },
   "r2_buckets": [
     { "binding": "BIZKENIA_FILES", "bucket_name": "bizkenia-files" }
   ],
+  // Timers (Cloudflare cron, free). Keep these two strings identical to RECONCILE_CRON and PURGE_CRON in worker/v1/cron.js.
+  "triggers": { "crons": ["*/10 * * * *", "0 2 * * *"] },
   // These two are public values (the same ones the site already ships in VITE_*). Fill them in.
   // Secrets are NOT here: FILES_ADMIN_SECRET and CF_API_TOKEN are set with `npx wrangler secret put <NAME>`.
   "vars": {
@@ -21,6 +23,25 @@
     "ALLOWED_ORIGINS": "http://localhost:5173",
     "CF_ACCOUNT_ID": "70bc605390d7d33c212e93aef6db9b1d",
     "CF_SITE_TAG": "f1e668995a994869b286d81608ac5d94",
-    "R2_BUCKET_NAME": "bizkenia-files"
+    "R2_BUCKET_NAME": "bizkenia-files",
+    // ---- added for the /api/v1 backend (public values, safe to commit; all optional) ----
+    // Live address of the site, no trailing slash. Safaricom is told to call <this>/api/v1/mpesa/callback.
+    // Leave "" to use the address the browser reached the Worker on (right for the live site). Set it when testing from another address.
+    "PUBLIC_BASE_URL": "",                                 // <-- optional, e.g. https://bizkenia.co.ke
+    "SITE_URL": "",                                        // <-- optional, same idea; used in sitemap.xml links
+    "MAIL_FROM": "BizKenia <onboarding@resend.dev>",       // <-- later: an address on a domain verified in Resend (the default only delivers to YOUR Resend address)
+    "SITEMAP_IN_WORKER": "false",                           // "true" = the Worker builds /sitemap.xml itself (test it first at /api/v1/sitemap); "false" = the Supabase function, as now
+    "RECONCILE_ENABLED": "true",                           // "false" switches the 10-minute payment check off at once
+    "RECONCILE_BATCH": "6",                                // prompts checked per run (1-10; the free plan allows 50 outbound requests per run)
+    "PURGE_BATCH": "8"                                     // deleted businesses purged per day (1-10)
   }
+  // SECRETS are NOT in this file. Set each one once from the project folder (PowerShell); it asks you to paste the value:
+  //   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY   <- Supabase > Project Settings > API > service_role key (keep private!)
+  //   npx wrangler secret put MPESA_CONSUMER_KEY          <- Daraja portal > My Apps > your app > Consumer Key
+  //   npx wrangler secret put MPESA_CONSUMER_SECRET       <- Daraja portal > My Apps > your app > Consumer Secret
+  //   npx wrangler secret put MPESA_PASSKEY               <- Daraja portal > M-Pesa Express > Passkey (the sandbox one is public)
+  //   npx wrangler secret put MPESA_CALLBACK_SECRET       <- invent a NEW random text of 32+ characters (not the Supabase one)
+  //   npx wrangler secret put CRON_SECRET                 <- invent another random text of 32+ characters
+  //   npx wrangler secret put RESEND_API_KEY              <- resend.com > API Keys (optional; without it emails are only logged)
+  //   (FILES_ADMIN_SECRET and CF_API_TOKEN stay as they are.)
 }
