@@ -24,6 +24,8 @@ dist-ssr
 *.sw?
 .env
 .env.local
+.env.bak
+.env.local.bak
 .env.development.local
 .env.test.local
 .env.production.local
